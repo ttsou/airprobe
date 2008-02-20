@@ -1,0 +1,84 @@
+dnl Process this file with autoconf to produce a configure script.
+AC_INIT(src/gsmdecode.c)
+VER=`cat ${srcdir}/VERSION`
+AC_MSG_RESULT(Begining autoconfiguration process for gsmdecode-$VER...)
+
+AC_CONFIG_AUX_DIR(config)
+AC_CANONICAL_SYSTEM
+
+dnl we use automake
+AM_INIT_AUTOMAKE(gsmdecode, $VER)
+AM_CONFIG_HEADER(config.h)
+dnl for --enable-maintainer-mode fun use:
+dnl AM_MAINTAINER_MODE 
+dnl we use automake anyway...no need for AC_CONFIG_HEADER
+dnl AC_CONFIG_HEADER(config.h)
+
+dnl Checks for programs.
+AC_PROG_CC
+AC_PROG_INSTALL
+AC_PROG_RANLIB
+AC_C_CONST
+dnl
+dnl Use these compiler flags if we have gcc.
+dnl
+if test $ac_cv_prog_gcc = yes; then
+  CCOPTS='-O2 -Wall'
+  CFLAGS="$CCOPTS"
+fi
+test "x$prefix" != "xNONE" || prefix="/usr/local"
+test "x$exec_prefix" != "xNONE" || exec_prefix="${prefix}"
+dnl AC_CHECK_LIB(nsl, gethostbyname)
+
+dnl Checks for header files.
+AC_HEADER_STDC
+AC_HEADER_SYS_WAIT
+AC_CHECK_HEADERS(sys/time.h unistd.h string.h)
+
+dnl Checks for typedefs, structures, and compiler characteristics.
+AC_C_CONST
+AC_TYPE_PID_T
+AC_HEADER_TIME
+
+dnl Checks for library functions.
+AC_FUNC_MEMCMP
+
+AC_TYPE_SIGNAL
+dnl If size_t is not defined, define size_t to be unsigned. 
+AC_TYPE_SIZE_T 
+dnl If uid_t is not defined, define uid_t to be int and gid_t to be int.
+AC_TYPE_UID_T
+
+dnl check if we are on a bigendian b0x
+dnl We dont check for this because autoconf maintainers are pussies and
+dnl yell a warning everytime. Guys, introduce AC_C_BIGENDIAN_CROSS for
+dnl gods sake!
+dnl AC_C_BIGENDIAN
+
+AC_CHECK_FUNCS(gettimeofday memcpy strchr)
+dnl FIXME: repair this later
+dnl SNPRINTF=''
+dnl AC_CHECK_FUNC(snprintf, AC_DEFINE(HAVE_SNPRINTF), SNPRINTF='snprintf.o')
+dnl AC_SUBST(SNPRINTF)
+
+AC_ARG_ENABLE(debug,
+[  --enable-debug          Enable debug information],
+	AC_DEFINE(GSMSP_DEBUG, 1, [Debug infos])
+)
+
+B=`eval echo ${bindir}` ; B=`eval echo ${B}`
+D=`eval echo ${sysconfdir}` ; D=`eval echo ${D}`
+AC_OUTPUT(Makefile src/Makefile)
+
+dnl Just to show the correct values...
+
+echo "gsmdecode has been configured with the following options:"
+echo "                 User binaries: $B"
+echo ""
+echo "              Host: ${host}"
+echo "          Compiler: ${CC}"
+echo "    Compiler flags: ${CFLAGS}"
+echo "Preprocessor flags: ${CPPFLAGS}"
+echo "      Linker flags: ${LDFLAGS}"
+echo "         Libraries: ${LIBS}"
+echo "Configuration complete. Now type: make; src/gsmdecode -x <example_sms2.xml"
