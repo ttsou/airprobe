@@ -28,6 +28,7 @@ struct _ch_info
 	unsigned char flags;
 	int logical;
 	int physical;
+	int direction;
 	int fn;
 	unsigned char data[23];
 	int data_len;
@@ -119,6 +120,13 @@ xml_in(struct _ch_info *chinfo, unsigned char *str)
 	/* First read all kind of meta information (logical channel, fn, ..) */
 	xml_get_int(&chinfo->logical, str, (const unsigned char *)"logicalchannel");
 //		fprintf(stderr, "logical %u\n", chinfo->logical);
+
+	if (strstr((char *)str, "direction=\"up\"") != NULL)
+	{
+		chinfo->direction = 1;
+	} else if (strstr((char *)str, "direction=\"down\"") != NULL) {
+		chinfo->direction = 0;
+	}
 
 	/* Last see if there is a data="..." section. if so convert it into
 	 * binary and prefix it with pseudo length and up/down indicator
@@ -258,16 +266,19 @@ main(int argc, char *argv[])
 			if (chi.data_len <= 0)
 				continue;
 			if ((chi.logical ==  112) || (chi.logical == 176) || (chi.logical == 128))
-				l2_data_out_B(0, chi.data, chi.data_len);
-			else
+			{
+				l2_data_out_B(0, chi.data, chi.data_len, chi.logical, chi.direction);
+			} else {
 				l2_data_out_Bbis(0, chi.data, chi.data_len);
+			}
 
+			memset(buf, 0, sizeof buf);
 			continue;
 		}
 		memset(bin, 0, sizeof bin);
 		len = hex2bin(bin, buf);
 		if (opt.format == MSG_FORMAT_B)
-			l2_data_out_B(0, bin, len);
+			l2_data_out_B(0, bin, len, chi.logical, chi.direction);
 		else
 			l2_data_out_Bbis(0, bin, len);
 	}

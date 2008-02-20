@@ -77,6 +77,7 @@ static void l2_CCReleaseComplete();
 static void l2_ChannelNeeded(char *str, unsigned char ch);
 static void l2_MNCC(const char *str, unsigned char a, unsigned char b, unsigned char c);
 
+static void maio();
 static char *BitRow(unsigned char c, int pos);
 static char *PageMode(unsigned char mode);
 static char *BitRowFill(unsigned char c, unsigned char mask);
@@ -126,6 +127,7 @@ struct _nfo
 	unsigned int flags;
 	unsigned char seq_counter;
 	unsigned char sapi;
+	int direction;	/* 0 == downlink, 1 == uplink */
 };
 #define GSMSP_NFO_SMS			(0x01)
 #define GSMSP_NFO_SEGMENTATION		(0x02)
@@ -156,11 +158,13 @@ struct _con
 {
 	unsigned char buf[248 + 3];
 	unsigned char *ptr;
+	int logicalchannel;
 };
 /* Is initialized to 0 (do not remove from .bss) */
 static struct _sms_con sms_con;
 
 struct _con con[8];
+struct _con conuplink[8];
 struct _con *conptr;
 
 
@@ -169,18 +173,22 @@ struct _con *conptr;
  * B-format (and also A-Format)
  */
 void
-l2_data_out_B(int fn, const unsigned char *input_data, int len)
+l2_data_out_B(int fn, const unsigned char *input_data, int len, int logicalchannel, int direction)
 {
 	const unsigned char *from;
+	int val;
 	data = input_data;
 	start = data;
 	end = data + len;
-	HEXDUMPF(data, 23 /*len*/, "Format B DATA\n");
+
+	HEXDUMPF(data, 23 /*len*/, "Format B DATA (%s)\n", direction?"up":"down");
+
 	/* Need at least 3 octets */
 	if (data + 2 >= end)
 		RETTRUNK();
 
 	memset(&nfo, 0, sizeof nfo);
+	nfo.direction = direction;
 	dcch_address();
 	data++;
 	dcch_control();
@@ -188,16 +196,6 @@ l2_data_out_B(int fn, const unsigned char *input_data, int len)
 	/* FIXME: Why is extended length always set to 1? */
 	OUTF("%s EL, Extended Length: %s\n", BitRow(data[0], 0), (data[0] & 1)?"y":"n");
 	OUTF("%s M, segmentation: %c\n", BitRow(data[0], 1), ((data[0] >> 1) & 1)?'Y':'N');
-	if ((data[0] >> 1) & 1)
-		nfo.flags |= GSMSP_NFO_SEGMENTATION;
-
-	OUTF("%s Length: %u\n", BitRowFill(data[0], 0xfc), data[0] >> 2);
-	if (data + (data[0] >> 2) < end)
-		end = data + (data[0] >> 2) + 1;
-
-	data++;
-	if (data >= end)
-		return;
 
 	/* Initialization. have to do this only once but there
 	 * is no better place to do it atm
@@ -205,12 +203,29 @@ l2_data_out_B(int fn, const unsigned char *input_data, int len)
 	if (conptr->ptr == NULL)
 		conptr->ptr = conptr->buf;
 
+	if ((data[0] >> 1) & 1)
+	{
+		nfo.flags |= GSMSP_NFO_SEGMENTATION;
+		conptr->logicalchannel = logicalchannel;
+	}
+
+	val = data[0] >> 2;
+	OUTF("%s Length: %u\n", BitRowFill(data[0], 0xfc), val);
+	if (data + val < end)
+	{
+		end = data + val + 1;
+	}
+
+	data++;
+	if (data >= end)
+		return;
+
 	/* Chunk of a fragmented. */
 	/* All SMS type messages go into the same buffer.
 	 * Other segmented messages are currently not supported.
 	 */
 	//if (nfo.flags & GSMSP_NFO_SMS)
-	if ((conptr->ptr > conptr->buf) || (nfo.flags & GSMSP_NFO_SEGMENTATION))
+	if ((logicalchannel == conptr->logicalchannel) && ((conptr->ptr > conptr->buf) || (nfo.flags & GSMSP_NFO_SEGMENTATION)))
 	{
 		from = data;
 
@@ -224,32 +239,41 @@ l2_data_out_B(int fn, const unsigned char *input_data, int len)
 		}
 	}
 
-	if (nfo.flags & GSMSP_NFO_SEGMENTATION)
+	//if (nfo.flags & GSMSP_NFO_SEGMENTATION)
+	if (conptr->ptr > conptr->buf)
 	{
-		OUTF("-------- [MORE DATA FOLLOWS...]\n");
-		/* More fragments follow. No need to decode yet */
-		return;
+		if (nfo.flags & GSMSP_NFO_SEGMENTATION)
+		{
+			OUTF("-------- [SEGMENTED MESSAGE. MORE DATA FOLLOWS...]\n");
+			/* More fragments follow. No need to decode yet */
+			return;
+		} else
+			OUTF("-------- [SEGMENTED MESSAGE. LAST...]\n");
 	}
 
 	/* Here: segmentation == No */
 	/* See if we get an SMS message and if this was the last fragment */
-	if (conptr->ptr > conptr->buf)
+	/* Currently only 1 logical channel can contain segmented data.
+ 	 * If there are two channels that both send segmented data
+ 	 * then it's gettin muddled up.
+ 	 */
+	if ((logicalchannel == conptr->logicalchannel) && (conptr->ptr > conptr->buf))
 	{
 		start = conptr->buf;
 		data = conptr->buf;
 		end = conptr->ptr;
+
 		if (nfo.flags & GSMSP_NFO_SMS)
 			HEXDUMPF(data, end - data, "Format SMS data\n");
 		else
 			HEXDUMPF(data, end - data, "Format Bbis (RR, MM or CC)\n");
+
 		l2_Bbis();
 		conptr->ptr = conptr->buf;
 		return;
 	}
-
 		
 	l2_Bbis();
-
 }
 
 static void
@@ -326,7 +350,13 @@ dcch_address()
 	{
 		/* SAPI */
 		nfo.sapi = (data[0] >> 2) & 0x07;
-		conptr = &con[nfo.sapi];
+		if (nfo.direction == 1)
+		{
+			conptr = &conuplink[nfo.sapi];
+		} else {
+			conptr = &con[nfo.sapi];
+		}
+
 		switch ((data[0] >> 2) & 0x07)
 		{
 		case 0x03:
@@ -849,7 +879,7 @@ l2_RRimmediateAssignment()
 	if ((data[0] >> 5) & 0x01)
 		OUTF("--1----- Assigns a resource identified in the IA rest octets.\n");
 	else
-		OUTF("--0----- Downlink assig to MS: No meaning\n");
+		OUTF("--0----- Downlink assign to MS: No meaning\n");
 	if ((data[0] >> 4) & 0x01)
 	{
 		OUTF("---1---- Temporary Block Flow (TBF)\n");
@@ -907,18 +937,9 @@ l2_SingleChannelC()
 static void
 l2_HoppingChannel()
 {
-	unsigned char maio = 0;
 	OUTF("%s Training seq. code : %d\n", BitRowFill(data[0], 0xe0), data[0] >> 5);
-	OUTF("---1---- HoppingChannel\n");
-	maio = (data[0] & 0x0f) << 2;
-	data++;
-	if (data >= end)
-		RETTRUNK();
-	maio |= (data[0] >> 6);
-	OUTF("........ MAIO %d\n", maio);
-	OUTF("%s Hopping Seq. Number: %d\n", BitRowFill(data[0], 0x3f), data[0] & 0x3f);
 
-	data++;
+	maio();
 	RequestReference();
 	TimingAdvance();
 	l2_MobileAllocation();
@@ -926,6 +947,23 @@ l2_HoppingChannel()
 		return;	/* finished. not truncated! */
 
 	OUTF("FIXME, more data left here???\n");
+}
+
+static void
+maio()
+{
+	unsigned char maio = 0;
+
+	OUTF("---1---- HoppingChannel\n");
+	maio = (data[0] & 0x0f) << 2;
+	data++;
+	if (data >= end)
+		RETTRUNK();
+	maio |= (data[0] >> 6);
+	OUTF("........ Mobile Allocation Index Offset (MAIO) %d\n", maio);
+	OUTF("%s Hopping Seq. Number: %d\n", BitRowFill(data[0], 0x3f), data[0] & 0x3f);
+
+	data++;
 }
 
 static void
@@ -1817,8 +1855,8 @@ l2_RRimmAssTBFDirEncHoChaC()
 	if (data >= end)
 		RETTRUNK();
 	maio |= (data[0] >> 6);
-	OUTF("xxxxxxxx MAIO: %u\n", maio);
-	OUTF("%s HSN: %u\n", BitRowFill(data[0], 0x3f), data[0] & 0x3f);
+	OUTF("xxxxxxxx Mobile Allocation Index Offset (MAIO): %u\n", maio);
+	OUTF("%s Hopping Sequence Number: %u\n", BitRowFill(data[0], 0x3f), data[0] & 0x3f);
 	data++;
 
 	RequestReference();
@@ -1827,7 +1865,7 @@ l2_RRimmAssTBFDirEncHoChaC()
 	l2_MobileAllocation();
 
 	if (data >= end)
-		RETTRUNK();
+		return;
 	if (data[0] == 0x7c)
 	{
 		StartingTime();
@@ -2601,7 +2639,9 @@ l2_SingleChannelAssCom()
 static void
 l2_HoppingChannelAssCom()
 {
-	OUTF("FIXME %s\n", __func__);
+	maio();
+	OUTF("FIXME\n");
+
 }
 
 static void

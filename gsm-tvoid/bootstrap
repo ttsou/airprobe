@@ -5,6 +5,7 @@
 echo Removing old files...
 rm -f configure Makefile Makefile.in src/Makefile src/Makefile.in config.h config.status aclocal.m4 config.cache config.log
 
+mkdir config
 echo "aclocal -I config"
 aclocal -I config
 if test $? -ne 0; then
