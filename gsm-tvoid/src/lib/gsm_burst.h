@@ -8,6 +8,7 @@
 
 #include <gsm_constants.h>
 #include <gr_math.h>
+#include "gsmstack.h"
 
 //Console printing options
 #define PRINT_NOTHING		0x00000000
@@ -90,6 +91,9 @@ protected:
 	int 			d_corr_maxpos;
 	int				d_corr_center;
 		
+	///// GSM Stack
+	GS_CTX			d_gs_ctx;
+
 	///// Burst information
 	SYNC_STATE		d_sync_state;
 	BURST_TYPE		d_burst_type;
@@ -111,6 +115,7 @@ protected:
 	float	correlate_pattern(const float *,const int,const int,const int);
 
 	void	print_bits(const float *data,int length);
+	void	soft2hardbit(char *dst, const float *data, int len);
 	void	print_burst(void);
 
 	void	diff_encode(const float *in,float *out,int length,float lastbit = 1.0);	
