@@ -10,13 +10,14 @@
 #include "gsm_constants.h"
 #include "interleave.h"
 #include "sch.h"
+#include "cch.h"
 
-INTERLEAVE_CTX ictx;
+static void out_gsmdecode(char type, int arfcn, int ts, int fn, char *data, int len);
 
 static void
 diff_decode(char *dst, char *src, int len)
 {
-	const unsigned char *end = src + len;
+	const char *end = src + len;
 	unsigned char last;
 
 	src += 3;
@@ -40,7 +41,9 @@ int
 GS_new(GS_CTX *ctx)
 {
 	memset(ctx, 0, sizeof *ctx);
-	interleave_init(&ictx, 456, 114);
+	interleave_init(&ctx->interleave_ctx, 456, 114);
+	ctx->fn = -1;
+	ctx->bsic = -1;
 
 	return 0;
 }
@@ -49,26 +52,84 @@ GS_new(GS_CTX *ctx)
  * 156 bit
  */
 int
-GS_process(GS_CTX *ctx, int ts, int type, char *data)
+GS_process(GS_CTX *ctx, int ts, int type, char *src)
 {
 	int fn;
 	int bsic;
 	int ret;
 	char buf[156];
+	unsigned char *data;
+	int len;
 
-	diff_decode(buf, data, 156);
+	if (ts != 0)
+		return;
 
-	switch (type)
+	diff_decode(buf, src, 156);
+
+	if (type == SCH)
 	{
-	case SCH:
 		ret = decode_sch(buf, &fn, &bsic);
 		if (ret != 0)
-			break;
-		DEBUGF("FN %d, BSIC %d\n", fn, bsic);
-		break;
-	case NORMAL:
-		break;
+			return 0;
+		if ((ctx->bsic > 0) && (bsic != ctx->bsic))
+			fprintf(stderr, "WARN: BSIC changed.\n");
+		//DEBUGF("FN %d, BSIC %d\n", fn, bsic);
+		ctx->fn = fn;
+		ctx->bsic = bsic;
+		/* Reset message concatenator */
+		ctx->burst_count = 0;
+		return 0;
+	}
+
+	/* If we did not get Frame Number yet then return */
+	if (ctx->fn < 0)
+		return 0;
+
+	ctx->fn++;
+	if (type == NORMAL)
+	{
+		/* Interested in these frame numbers (cch)
+ 		 * 2-5, 12-15, 22-25, 23-35, 42-45
+ 		 * 6-9, 16-19, 26-29, 36-39, 46-49
+ 		 */
+		/* Copy content data into new array */
+		//DEBUGF("burst count %d\n", ctx->burst_count);
+		memcpy(ctx->burst + (116 * ctx->burst_count), buf + 3, 58);
+		memcpy(ctx->burst + (116 * ctx->burst_count) + 58, buf + 3 + 58 + 26, 58);
+		ctx->burst_count++;
+		/* Return if not enough bursts for a full gsm message */
+		if (ctx->burst_count < 4)
+			return 0;
+
+		ctx->burst_count = 0;
+		data = decode_cch(ctx, ctx->burst, &len);
+		if (data == NULL)
+			return -1;
+		//DEBUGF("OK TS %d, len %d\n", ts, len);
+
+		out_gsmdecode(0, 0, ts, ctx->fn - 4, data, len);
+#if 0
+		if (ctx->fn % 51 != 0) && ( (((ctx->fn % 51 + 5) % 10 == 0) || (((ctx->fn % 51) + 1) % 10 ==0) ) )
+			ready = 1;
+#endif
+		
+		return 0;
 	}
 }
 
+
+/*
+ * Output data so that it can be parsed from gsmdeocde.
+ */
+static void
+out_gsmdecode(char type, int arfcn, int ts, int fn, char *data, int len)
+{
+	char *end = data + len;
+
+	/* FIXME: speed this up by first printing into an array */
+	while (data < end)
+		printf(" %02.2x", (unsigned char)*data++);
+	printf("\n");
+	fflush(stdout);
+}
 

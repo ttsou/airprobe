@@ -38,7 +38,12 @@ ourlib_LTLIBRARIES = _gsm.la
 
 # These are the source files that go into the shared library
 _gsm_la_SOURCES = 			\
-	gsm.cc					\
+	gsmstack.c			\
+	interleave.c			\
+	conv.c				\
+	sch.c				\
+	cch.c				\
+	gsm.cc				\
 	gsm_burst.cc			\
 	gsm_burst_ff.cc			\
 	gsm_burst_cf.cc
@@ -58,7 +63,13 @@ gsm.cc gsm.py: $(LOCAL_IFILES) $(ALL_IFILES)
 
 # These headers get installed in ${prefix}/include/gnuradio
 grinclude_HEADERS =			\
-	gsm_burst.h				\
+	gsm_burst.h			\
+	gsmstack.h			\
+	interleave.h			\
+	conv.h				\
+	sch.h				\
+	cch.h				\
+	system.h			\
 	gsm_burst_ff.h			\
 	gsm_burst_cf.h			\
 	gsm_constants.h
