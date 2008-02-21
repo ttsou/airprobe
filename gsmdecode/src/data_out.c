@@ -183,6 +183,12 @@ l2_data_out_B(int fn, const unsigned char *input_data, int len, int logicalchann
 
 	HEXDUMPF(data, 23 /*len*/, "Format B DATA (%s)\n", direction?"up":"down");
 
+	/* Do not analyze dummy octets */
+	if (memcmp(data + 3, "\x2b\x2b\x2b\x2b\x2b\x2b\x2b\x2b\x2b\x2b\x2b\x2b\x2b\x2b\x2b\x2b\x2b\x2b\x2b\x2b", 20) == 0)
+		return;
+
+	//printf("Logical channel: %d\n", logicalchannel);
+
 	/* Need at least 3 octets */
 	if (data + 2 >= end)
 		RETTRUNK();
@@ -205,6 +211,18 @@ l2_data_out_B(int fn, const unsigned char *input_data, int len, int logicalchann
 
 	if ((data[0] >> 1) & 1)
 	{
+		/* Segmentation: y */
+		if ((logicalchannel != conptr->logicalchannel) && (conptr->ptr > conptr->buf))
+		{
+			/* Currently we only support 1 segmented stream
+ 			 * at the same time per direction.
+ 			 * If downlink sends two segments on two different
+ 			 * logical channels then we can not handle this..
+ 			 */
+			OUTF("WARN: Two segmented streams at the same time..\n");
+			/* Reset */
+			conptr->ptr = conptr->buf;
+		}
 		nfo.flags |= GSMSP_NFO_SEGMENTATION;
 		conptr->logicalchannel = logicalchannel;
 	}
@@ -239,7 +257,6 @@ l2_data_out_B(int fn, const unsigned char *input_data, int len, int logicalchann
 		}
 	}
 
-	//if (nfo.flags & GSMSP_NFO_SEGMENTATION)
 	if (conptr->ptr > conptr->buf)
 	{
 		if (nfo.flags & GSMSP_NFO_SEGMENTATION)
@@ -247,7 +264,7 @@ l2_data_out_B(int fn, const unsigned char *input_data, int len, int logicalchann
 			OUTF("-------- [SEGMENTED MESSAGE. MORE DATA FOLLOWS...]\n");
 			/* More fragments follow. No need to decode yet */
 			return;
-		} else
+		} else if (logicalchannel == conptr->logicalchannel) 
 			OUTF("-------- [SEGMENTED MESSAGE. LAST...]\n");
 	}
 
