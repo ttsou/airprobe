@@ -243,10 +243,10 @@ int decode_sch(const unsigned char *buf, int *fn_o, int *bsic_o) {
 	unsigned char data[CONV_SIZE], decoded_data[PARITY_OUTPUT_SIZE];
 
 	// extract encoded data from synchronization burst
-	/* buf + 3, 39 bit */
-	/* buf + 3 + 39 + 64 = 106, 39 */
-	memcpy(data, buf + SB_EDATA_OS_1, SB_EDATA_LEN_1);
-	memcpy(data + SB_EDATA_LEN_1, buf + SB_EDATA_OS_2, SB_EDATA_LEN_2);
+	/* buf, 39 bit */
+	/* buf + 39 + 64 = 103, 39 */
+	memcpy(data, buf, SB_EDATA_LEN_1);
+	memcpy(data + SB_EDATA_LEN_1, buf + SB_EDATA_LEN_1 + N_SYNC_BITS, SB_EDATA_LEN_2);
 
 	// Viterbi decode
 	if(errors = conv_decode(data, decoded_data)) {
