@@ -78,7 +78,8 @@ int gsm_burst_cf::general_work (int noutput_items,
 
 			d_clock_counter -= GSM_SYMBOL_PERIOD; //reset clock for next sample, keep the remainder
 
-			float mu = 1.0 - d_clock_counter / GSM_SYMBOL_PERIOD;
+			//float mu = 1.0 - d_clock_counter / GSM_SYMBOL_PERIOD;
+			float mu = d_clock_counter / GSM_SYMBOL_PERIOD;
 			gr_complex sample = d_interp->interpolate (&in[ii], mu);	//FIXME: this seems noisy, make sure it is being used correctly
 
 			gr_complex conjprod = sample * conj(d_last_sample);

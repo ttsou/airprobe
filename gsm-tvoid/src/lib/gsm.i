@@ -1,17 +1,15 @@
 /* -*- c++ -*- */
-
-%feature("autodoc", "1");		// generate python docstrings
-
-%include "exception.i"
+//%feature("autodoc", "1");		// generate python docstrings
+//%include "exception.i"
 %import "gnuradio.i"			// the common stuff
 
 %{
 #include "gnuradio_swig_bug_workaround.h"	// mandatory bug fix
-#include "gsm_constants.h"
-#include "gsm_burst.h"
+//#include "gsm_constants.h"
+//#include "gsm_burst.h"
 #include "gsm_burst_ff.h"
 #include "gsm_burst_cf.h"
-#include <stdexcept>
+//#include <stdexcept>
 
 %}
 
@@ -22,9 +20,10 @@
 #define PRINT_BITS			0x00000001
 #define PRINT_ALL_BITS		0x00000002
 #define PRINT_CORR_BITS		0x00000004
+#define PRINT_STATE			0x00000008
 
 #define PRINT_ALL_TYPES		0x00000FF0
-#define PRINT_KNOWN			0x00000008
+#define PRINT_KNOWN			0x00000FE0
 #define PRINT_UNKNOWN		0x00000010
 #define PRINT_TS0			0x00000020
 #define PRINT_FCCH			0x00000040
@@ -32,6 +31,9 @@
 #define PRINT_DUMMY			0x00000100
 #define PRINT_NORMAL		0x00000200
 
+#define PRINT_GSM_DECODE	0x00000400
+
+#define PRINT_HEX			0x00001000
 
 //Timing/clock options
 #define QB_NONE				0x00000000
@@ -51,8 +53,9 @@ enum EQ_TYPE {
 	EQ_VITERBI
 };
 
-class gsm_burst
-{
+//GR_SWIG_BLOCK_MAGIC(gsm,burst);
+
+class gsm_burst {
 public:
 	~gsm_burst ();
 		
@@ -68,35 +71,37 @@ public:
 	long			d_normal_count;
 	long			d_dummy_count;
 	long			d_unknown_count;
+	long			d_total_count;
 	
 	int				sync_state();
-	float			freq_offset();
+	float 			last_freq_offset(void);
+	double 			mean_freq_offset(void);
+	
+	//Methods
+	void full_reset(void);
 
 protected:
 	gsm_burst();  
 };
 
-GR_SWIG_BLOCK_MAGIC(gsm,burst_ff);
 
+GR_SWIG_BLOCK_MAGIC(gsm,burst_ff);
 gsm_burst_ff_sptr gsm_make_burst_ff ();
 
-class gsm_burst_ff : public gr_block, public gsm_burst
-{
-//public:
+class gsm_burst_ff : public gr_block, public gsm_burst {
 private:
 	gsm_burst_ff ();
 };
 
-
 GR_SWIG_BLOCK_MAGIC(gsm,burst_cf);
-
 gsm_burst_cf_sptr gsm_make_burst_cf (float);
 
-class gsm_burst_cf : public gr_block, public gsm_burst
-{
-//public:
+class gsm_burst_cf : public gr_block, public gsm_burst {
 private:
 	gsm_burst_cf (float);
 };
+
+
+
 
 

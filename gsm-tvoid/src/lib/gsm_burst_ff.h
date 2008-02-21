@@ -8,13 +8,13 @@ class gsm_burst_ff;
 
 typedef boost::shared_ptr<gsm_burst_ff> gsm_burst_ff_sptr;
 
-gsm_burst_ff_sptr gsm_make_burst_ff(void);
+gsm_burst_ff_sptr gsm_make_burst_ff();
 
 class gsm_burst_ff : public gr_block, public gsm_burst
 {
 private:
 	
-	friend gsm_burst_ff_sptr gsm_make_burst_ff(void);
+	friend gsm_burst_ff_sptr gsm_make_burst_ff();
 	gsm_burst_ff();  
 	
 public:

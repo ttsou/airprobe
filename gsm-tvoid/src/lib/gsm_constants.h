@@ -90,6 +90,7 @@ static const unsigned char train_seq[10][N_TRAIN_BITS] = {
 	{0, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1}		// DUMMY  
 };
 
+//Dummy burst 0xFB 76 0A 4E 09 10 1F 1C 5C 5C 57 4A 33 39 E9 F1 2F A8
 static const unsigned char dummy_burst[] = {
 	1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 
 	1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 
