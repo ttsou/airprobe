@@ -1,9 +1,13 @@
 #!/usr/bin/env python
 # TODO:
-#	* Auto-tune offset
+#	* Adjust offset by PPM
+#	* Auto-tune offset (add option to enable)
 #	* Add status info to window (frequency, offset, etc)
 #	* Put direct frequency tuning back
-#	* Add rate-limited of file reads (Fix throttle?)
+#	* Add rate-limited file reads (throttle?)
+#	* Make console only version
+#	* Reset burst_stats on retune
+#	* Add better option checking
 
 import sys
 
@@ -81,11 +85,12 @@ class app_flow_graph(stdgui.gui_flow_graph):
 							help="What to print on console. [default=%default]\n" +
 							"(n)othing, (e)verything, (s)tatus, (a)ll Types, (k)nown, (u)nknown, \n" +
 							"TS(0), (F)CCH, (S)CH, (N)ormal, (D)ummy\n" +
-							"Usefull (b)its, All TS (B)its, (C)orrelation bits")
+							"Usefull (b)its, All TS (B)its, (C)orrelation bits, he(x) burst data, \n" +
+							"(d)ecoded hex for gsmdecode")
 				
 
 		#decoder options
-		parser.add_option("-D", "--decoder", type="string", default="c",
+		parser.add_option("-D", "--decoder", type="string", default="f",
 							help="Select decoder block to use. (c)omplex,(f)loat [default=%default]")
 		parser.add_option("-d", "--decim", type="int", default=112,
 							help="Set fgpa decimation rate to DECIM [default=%default]")
@@ -93,7 +98,7 @@ class app_flow_graph(stdgui.gui_flow_graph):
 							help="Tuning offset frequency")
 		parser.add_option("-C", "--clock-offset", type="eng_float", default=0.0,
 							help="Sample clock offset frequency")
-		parser.add_option("-E", "--equalizer", type="string", default="fixed-dfe",
+		parser.add_option("-E", "--equalizer", type="string", default="none",
 							help="Type of equalizer to use.  none, fixed-dfe [default=%default]")
 		parser.add_option("-t", "--timing", type="string", default="cq",
 							help="Type of timing techniques to use. [default=%default] \n" +
@@ -110,6 +115,7 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		#usrp options
 		parser.add_option("-R", "--rx-subdev-spec", type="subdev", default=None,
 							help="Select USRP Rx side A or B (default=first one with a daughterboard)")
+		#FIXME: gain not working?
 		parser.add_option("-g", "--gain", type="eng_float", default=None,
 							help="Set gain in dB (default is midpoint)")
 		parser.add_option("-c", "--channel", type="int", default=None,
@@ -144,7 +150,12 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		if options.clock_offset:
 			clock_rate = 64e6 + options.clock_offset
 		elif options.channel:		
-			percent_offset = options.offset / get_freq_from_arfcn(options.channel,options.region)
+			f = get_freq_from_arfcn(options.channel,options.region)
+			if f:
+				percent_offset = options.offset / get_freq_from_arfcn(options.channel,options.region)
+			else:
+				percent_offset = 0.0
+				
 			clock_rate += clock_rate * percent_offset
 			print "% offset = ", percent_offset, "clock = ", clock_rate
 			
@@ -284,6 +295,9 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		#console print options
 		popts = 0
 		
+		if options.print_console.count('s'):
+			popts |= gsm.PRINT_STATE
+
 		if options.print_console.count('e'):
 			popts |= gsm.PRINT_EVERYTHING
 		
@@ -306,21 +320,37 @@ class app_flow_graph(stdgui.gui_flow_graph):
 			popts |= gsm.PRINT_SCH
 		
 		if options.print_console.count('N'):
-			popts |= gsm.PRINT_SCH
+			popts |= gsm.PRINT_NORMAL
 		
 		if options.print_console.count('D'):
-			popts |= gsm.PRINT_SCH
+			popts |= gsm.PRINT_DUMMY
+		
+		if options.print_console.count('d'):
+			popts |= gsm.PRINT_GSM_DECODE
 		
 		if options.print_console.count('C'):
 			popts |= gsm.PRINT_BITS | gsm.PRINT_CORR_BITS
+
+		if options.print_console.count('x'):
+			popts |= gsm.PRINT_BITS | gsm.PRINT_HEX
 		
 		if options.print_console.count('B'):
 			popts |= gsm.PRINT_BITS | gsm.PRINT_ALL_BITS
 		
 		elif options.print_console.count('b'):
 			popts |= gsm.PRINT_BITS
+
+		if options.print_console.count('d'):
+			popts |= gsm.PRINT_GSM_DECODE
 		
-		self.burst.d_print_options = popts		
+		#TODO: should warn if PRINT_GSM_DECODE is combined with other flags (will corrupt output for gsmdecode)
+		
+		self.burst.d_print_options = popts	
+		
+		##########################
+		#set burst tuning callback
+		#self.tuner = gsm_tuner()
+		#self.burst.set_tuner_callback(self.tuner)
 		
 		# connect the primary path after source
 		self.v2s = gr.vector_to_stream(gr.sizeof_float,142)		#burst output is 142 (USEFUL_BITS)
@@ -434,21 +464,34 @@ class app_flow_graph(stdgui.gui_flow_graph):
 			self.set_freq(freq)
 		else:
 			self._set_status_msg("Invalid Channel")
-			
-	def on_tick(self, evt):
-		if self.print_status:
-			#TODO: def print_stats:
-			print "======== STATS ========="
-			print 'freq_offset:',self.burst.freq_offset()
-			print 'sync_loss_count:',self.burst.d_sync_loss_count
-			print 'fcch_count:',self.burst.d_fcch_count
-			print 'part_sch_count:',self.burst.d_part_sch_count
-			print 'sch_count:',self.burst.d_sch_count
-			print 'normal_count:',self.burst.d_normal_count
-			print 'dummy_count:',self.burst.d_dummy_count
-			print 'unknown_count:',self.burst.d_unknown_count
-			print ""		
+
+	def print_stats(self):
+		n_total = self.burst.d_total_count
+		n_unknown = self.burst.d_unknown_count
+		n_known = n_total - n_unknown
 		
+		print "======== STATS ========="
+		print 'freq_offset:    ',self.burst.mean_freq_offset()
+		print 'sync_loss_count:',self.burst.d_sync_loss_count
+		print 'total_bursts:   ',n_total
+		print 'fcch_count:     ',self.burst.d_fcch_count
+		print 'part_sch_count: ',self.burst.d_part_sch_count
+		print 'sch_count:      ',self.burst.d_sch_count
+		print 'normal_count:   ',self.burst.d_normal_count
+		print 'dummy_count:    ',self.burst.d_dummy_count
+		print 'unknown_count:  ',self.burst.d_unknown_count
+		print 'known_count:    ',n_known
+		if n_total:
+			print '%known:         ', 100.0 * n_known / n_total
+		print ""		
+				
+	def on_tick(self, evt):
+		#if option.autotune
+			#tune offset
+			
+		if self.print_status:
+			self.print_stats()
+			
 def main ():
 	app = stdgui.stdapp(app_flow_graph, "GSM Scanner", nstatus=1)
 	app.MainLoop()
