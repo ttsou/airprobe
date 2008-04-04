@@ -8,7 +8,7 @@ class gsm_burst_cf;
 
 typedef boost::shared_ptr<gsm_burst_cf> gsm_burst_cf_sptr;
 
-gsm_burst_cf_sptr gsm_make_burst_cf(float);
+gsm_burst_cf_sptr gsm_make_burst_cf(gr_feval_dd *,float);
 
 class gri_mmse_fir_interpolator_cc;
 
@@ -16,8 +16,8 @@ class gsm_burst_cf : public gr_block, public gsm_burst
 {
 private:
 	
-	friend gsm_burst_cf_sptr gsm_make_burst_cf(float);
-	gsm_burst_cf(float);  
+	friend gsm_burst_cf_sptr gsm_make_burst_cf(gr_feval_dd *,float);
+	gsm_burst_cf(gr_feval_dd *,float);  
 	
 	//clocking parameters
 	float			d_relative_sample_rate;

@@ -3,44 +3,93 @@
 #include "config.h"
 #endif
 
+#include "gsm_burst.h"
 #include <gr_math.h>
 #include <stdio.h>
 #include <math.h>
 #include <memory.h>
-#include <gsm_burst.h>
 #include <assert.h>
-#include "system.h"
-#include "gsmstack.h"
 
-gsm_burst::gsm_burst (void) :
-	  	d_bbuf_pos(0),
-		d_burst_start(MAX_CORR_DIST),
-		d_sample_count(0),
-		d_last_burst_s_count(0),
-		d_corr_pattern(0),
-		d_corr_pat_size(0),
-		d_corr_max(0.0),
-		d_corr_maxpos(0),
-		d_corr_center(0),
-		d_sync_state(WAIT_FCCH),
-		d_ts(0),
-		d_burst_count(0),
-		d_freq_offset(0.0),
-		d_sync_loss_count(0),
-		d_fcch_count(0),
-		d_part_sch_count(0),
-		d_sch_count(0),
-		d_normal_count(0),
-		d_dummy_count(0),
-		d_unknown_count(0),
+/*
+void do_tuner_callback(gsm_tuner_callback *t, double f)
+{
+  if (t) t->do_tune(f);
+}
+
+
+//this should be overridden by a python class
+void gsm_tuner_callback::tune(double x) {
+	printf("t1: %f\n",x);
+}
+
+void gsm_tuner_callback::do_tune(double x) {
+	printf("do_");
+	tune(x);
+}
+
+
+void gsm_burst::set_tuner_callback(gsm_tuner_callback *f) {
+	printf("set_tuner_callback: %8.8x\n",(unsigned int)f);
+	p_tuner = f; 
+}
+*/
+
+/*
+void gsm_burst::set_tuner_callback(gr_feval_dd *t) {
+	p_tuner = t; 
+}
+*/
+
+/*
+void gsm_burst::set_status_callback(PSTAT_FUNC func, void *clientdata) {
+	p_stat_func = func; 
+	stat_func_data = clientdata;
+}
+
+void gsm_burst::py_set_status_callback(PyObject *pyfunc) {
+	//set_status_callback(PythonCallBack, (void *) pyfunc);
+	stat_func_data = (void *) pyfunc;
+	Py_INCREF(pyfunc);
+}
+*/
+
+
+/*
+static void PythonCallBack(int a, void *clientdata)
+{
+	PyObject *func, *arglist, *result;
+//	long int dres = 0;
+	
+	func = (PyObject *) clientdata;               // Get Python function
+	arglist = Py_BuildValue("(i)",a);             // Build argument list
+	result = PyEval_CallObject(func,arglist);     // Call Python
+	Py_DECREF(arglist);                           // Trash arglist
+//	if (result) {                                 // If no errors, return double
+//		dres = PyInt_AsLong(result);
+//	}
+	Py_XDECREF(result);
+//	return dres;
+}
+*/
+
+gsm_burst::gsm_burst (gr_feval_dd *t) :
 		d_clock_options(DEFAULT_CLK_OPTS),
 		d_print_options(0),
 		d_equalizer_type(EQ_FIXED_DFE)
-
 {
-  	
+ 
+	printf("gsm_burst: enter constructor (t=%8.8x)\n",(unsigned int)t);
+	  	
 //	M_PI = M_PI; //4.0 * atan(1.0); 
 
+	//p_stat_func = 0;
+	//stat_func_data = 0;
+	
+	//p_callback = 0;
+	p_tuner = t;
+	
+	full_reset();
+	
 	//encode sync bits
 	float tsync[N_SYNC_BITS];
 	
@@ -48,14 +97,14 @@ gsm_burst::gsm_burst (void) :
 		tsync[i] = 2.0*SYNC_BITS[i] - 1.0;
 	}
 
-	fprintf(stdout," Sync: ");
+	fprintf(stderr," Sync: ");
 	print_bits(tsync,N_SYNC_BITS);
-	fprintf(stdout,"\n");
+	fprintf(stderr,"\n");
 
 	diff_encode(tsync,corr_sync,N_SYNC_BITS);
-	fprintf(stdout,"DSync: ");
+	fprintf(stderr,"DSync: ");
 	print_bits(corr_sync,N_SYNC_BITS);
-	fprintf(stdout,"\n\n");
+	fprintf(stderr,"\n\n");
 
 
 	for (int i=0; i < 10; i++) {
@@ -64,17 +113,66 @@ gsm_burst::gsm_burst (void) :
 		}
 		diff_encode(tsync,corr_train_seq[i],N_TRAIN_BITS);
 
-		fprintf(stdout,"TSC%d: ",i);
+		fprintf(stderr,"TSC%d: ",i);
 		print_bits(corr_train_seq[i],N_TRAIN_BITS);
-		fprintf(stdout,"\n");
+		fprintf(stderr,"\n");
 	}
-		
-	/* Initialize GSM Stack */
-	GS_new(&d_gs_ctx);
+
+	print_hex(dummy_burst,USEFUL_BITS);
+	fprintf(stdout,"\n");
+			
 }
 
 gsm_burst::~gsm_burst ()
 {
+}
+
+void gsm_burst::sync_reset(void)
+{
+	d_sync_state = WAIT_FCCH;
+	d_last_good = 0;
+	d_last_sch = 0;
+	d_burst_count = 0;
+}
+
+//TODO: check this for thread safeness
+void gsm_burst::full_reset(void)
+{
+	sync_reset();
+
+	d_sync_loss_count=0;
+	d_fcch_count=0;
+	d_part_sch_count=0;
+	d_sch_count=0;
+	d_normal_count=0;
+	d_dummy_count=0;
+	d_unknown_count=0;
+		  	
+	d_freq_offset=0.0;
+	d_freq_off_sum=0.0;
+	d_freq_off_weight=0;
+	
+	d_ts=0;
+
+	d_bbuf_pos=0;
+	d_burst_start=MAX_CORR_DIST;
+	d_sample_count=0;
+	d_last_burst_s_count=0;
+	d_corr_pattern=0;
+	d_corr_pat_size=0;
+	d_corr_max=0.0;
+	d_corr_maxpos=0;
+	d_corr_center=0;
+	d_last_sync_state=WAIT_FCCH;
+
+}
+
+double gsm_burst::mean_freq_offset(void)
+{
+	if (d_freq_off_weight)
+		return d_freq_off_sum / d_freq_off_weight;
+	else
+		return 0.0;
 }
 
 void gsm_burst::diff_encode(const float *in,float *out,int length,float lastbit) {
@@ -94,24 +192,53 @@ void gsm_burst::diff_decode(const float *in,float *out,int length,float lastbit)
 	}
 }
 
+void gsm_burst::diff_decode_burst(void) {
+	char lastbit = 0;
+	
+	//slice
+	for (int i = 0; i < USEFUL_BITS; i++) {
+		d_decoded_burst[i] = d_burst_buffer[d_burst_start + i] > 0 ? 0 : 1;
+	}
+
+	//diff decode
+	for (int i=0; i < USEFUL_BITS; i++) {
+		d_decoded_burst[i] ^= lastbit;
+		lastbit = d_decoded_burst[i];
+	}
+
+}
+
+void gsm_burst::print_hex(const unsigned char *data,int length)
+{
+	unsigned char tbyte;
+	int i,bitpos=0;
+	
+	assert(data);
+	assert(length >= 0);
+	
+	
+	
+	while (bitpos < length) {
+		tbyte = 0;
+		for (i=0; (i < 8) && (bitpos < length); i++) {
+			tbyte <<= 1;
+			tbyte |= data[bitpos++];
+		}
+		if (i<8)
+			tbyte <<= 8 - i;
+		
+		fprintf(stdout,"%2.2X ",tbyte);
+	}	
+}
+
 void gsm_burst::print_bits(const float *data,int length)
 {
 	assert(data);
 	assert(length >= 0);
 	
 	for (int i=0; i < length; i++)
-		data[i] < 0 ? fprintf(stdout,"+") : fprintf(stdout,".");
+		data[i] < 0 ? fprintf(stderr,"+") : fprintf(stderr,".");
 		
-}
-void gsm_burst::soft2hardbit(char *dst, const float *data, int len)
-{
-	for (int i=0; i < len; i++)
-	{
-		if (data[i] < 0)
-			dst[i] = 0;
-		else
-			dst[i] = 1;
-	}
 }
 
 void gsm_burst::print_burst(void)
@@ -120,7 +247,7 @@ void gsm_burst::print_burst(void)
 
 	int print = 0;
 
-	//fprintf(stdout,"p=%8.8X ",	d_print_options);
+	//fprintf(stderr,"p=%8.8X ",	d_print_options);
 	
 	if ( PRINT_EVERYTHING == d_print_options )
 		print = 1;
@@ -139,35 +266,16 @@ void gsm_burst::print_burst(void)
 
 	if ( print && (d_print_options & PRINT_BITS) ) {
 		if (d_print_options & PRINT_ALL_BITS)
-		{
 			print_bits(d_burst_buffer,BBUF_SIZE);
-		} else {
-			/* 142 useful bits: 2*58 + 26 training */
+		else
 			print_bits(d_burst_buffer + d_burst_start,USEFUL_BITS);
-		}
 		
-		fprintf(stdout," ");
+		fprintf(stderr," ");
 	}
 	
-	/*
-	 * Pass information to GSM stack. GSM stack will try to extract
-	 * information (fn, layer 2 messages, ...)
-	 */
-
-	char buf[156];
-	/* In hardbits include the 3 trial bits */
-	/* FIXME: access burst has 8 trail bits? what is d_burst_start
- 	 * set to? make sure we start at the right position here.
- 	 */
-	soft2hardbit(buf, d_burst_buffer + d_burst_start - 3, 156);
-	/* GS_process will differentially decode the data and then
- 	 * extract SCH infos (and later bcch infos).
- 	 */
-	GS_process(&d_gs_ctx, d_ts, d_burst_type, buf);
-
 	if (print) {
 
-		fprintf(stdout,"%d/%d/%+d/%lu/%lu ",
+		fprintf(stderr,"%d/%d/%+d/%lu/%lu ",
 						d_sync_state,
 						d_ts,
 						d_burst_start - MAX_CORR_DIST,
@@ -176,38 +284,38 @@ void gsm_burst::print_burst(void)
 
 		switch (d_burst_type) {
 		case FCCH:
-			fprintf(stdout,"[FCCH] foff:%g cnt:%lu",d_freq_offset,d_fcch_count);
+			fprintf(stderr,"[FCCH] foff:%g cnt:%lu",d_freq_offset,d_fcch_count);
 			break;
 		case PARTIAL_SCH:
 			bursts_since_sch = d_burst_count - d_last_sch;
 			
-			fprintf(stdout,"[P-SCH] cor:%.2f last:%d cnt: %lu",
+			fprintf(stderr,"[P-SCH] cor:%.2f last:%d cnt: %lu",
 					d_corr_max,bursts_since_sch,d_sch_count);
 			break;
 		case SCH:
 			bursts_since_sch = d_burst_count - d_last_sch;
 			
-			fprintf(stdout,"[SCH] cor:%.2f last:%d cnt: %lu",
+			fprintf(stderr,"[SCH] cor:%.2f last:%d cnt: %lu",
 					d_corr_max,bursts_since_sch,d_sch_count);
 			break;
 		case DUMMY:
-			fprintf(stdout,"[DUMMY] cor:%.2f",d_corr_max);
+			fprintf(stderr,"[DUMMY] cor:%.2f",d_corr_max);
 			break;
 		case ACCESS:
-			fprintf(stdout,"[ACCESS]");		//We don't detect this yet
+			fprintf(stderr,"[ACCESS]");		//We don't detect this yet
 			break;
 		case NORMAL:
-			fprintf(stdout,"[NORM] clr:%d cor:%.2f",d_color_code,d_corr_max);
+			fprintf(stderr,"[NORM] clr:%d cor:%.2f",d_color_code,d_corr_max);
 			break;
 		case UNKNOWN:
-			fprintf(stdout,"[?]");
+			fprintf(stderr,"[?]");
 			break;
 		default:
-			fprintf(stdout,"[oops! default]");
+			fprintf(stderr,"[oops! default]");
 			break;		
 		}
 
-	fprintf(stdout,"\n");
+	fprintf(stderr,"\n");
 
 
 		//print the correlation pattern for visual inspection
@@ -224,20 +332,39 @@ void gsm_burst::print_burst(void)
 			 	pat_indent = d_corr_center - MAX_CORR_DIST;		//useful bits will already be offset
 				
 			for (int i = 0; i < pat_indent; i++)
-				fprintf(stdout," ");
+				fprintf(stderr," ");
 			
-			fprintf(stdout," ");	//extra space for skipped bit
+			fprintf(stderr," ");	//extra space for skipped bit
 			print_bits(d_corr_pattern+1,d_corr_pat_size-1);	//skip first bit (diff encoding)
 			
-			fprintf(stdout,"\t\toffset:%d, max: %.2f \n",d_corr_maxpos,d_corr_max);
+			fprintf(stderr,"\t\toffset:%d, max: %.2f \n",d_corr_maxpos,d_corr_max);
 		}
 	
 	}
+	
+	//Print Burst data in hex
+	if ( d_print_options & PRINT_HEX ) {
+		fprintf(stdout,"%d,%d,",d_ts,d_burst_type);
+		diff_decode_burst();		
+		print_hex(d_decoded_burst,USEFUL_BITS);
+		fprintf(stdout,"\n");
+	}
+	
+	//Print State related messages
+	if ( d_print_options & PRINT_STATE ) {
+		if ( (SYNCHRONIZED == d_sync_state) && (SYNCHRONIZED != d_last_sync_state) ) {
+			fprintf(stderr,"====== SYNC GAINED (FOff: %g Corr: %.2f, Color: %d ) ======\n",d_freq_offset,d_corr_max,d_color_code);
+		}
+		else if ( (SYNCHRONIZED != d_sync_state) && (SYNCHRONIZED == d_last_sync_state) ) {
+			fprintf(stderr,"====== SYNC LOST (%ld) ======\n",d_sync_loss_count);
+		}
+	}
+	
 }
 
 void gsm_burst::shift_burst(int shift_bits)
 {
-	//fprintf(stdout,"sft:%d\n",shift_bits);
+	//fprintf(stderr,"sft:%d\n",shift_bits);
 
 	assert(shift_bits >= 0);
 	assert(shift_bits < BBUF_SIZE );
@@ -273,6 +400,14 @@ void gsm_burst::calc_freq_offset(void)
 	float p_off = mean - (M_PI / 2);
 	d_freq_offset = p_off * 1625000.0 / (12.0 * M_PI);
 	
+
+	//maintain a 100 weight mean
+	if (d_freq_off_weight < 100) 
+		d_freq_off_weight++;
+	else
+		d_freq_off_sum *= 99.0/100.0;
+		
+	d_freq_off_sum += d_freq_offset;
 }
 
 // This will look for a series of positive phase differences comprising
@@ -292,10 +427,12 @@ BURST_TYPE gsm_burst::get_fcch_burst(void)
 		if (d_burst_buffer[i] > 0) {
 			if ( ! hit_count++ )
 				start_pos = i;
-		} else {
+		} 
+		else {
 			if (hit_count >= FCCH_HITS_NEEDED) {
 				break;
-			} else if ( ++miss_count > FCCH_MAX_MISSES ) {
+			} 
+			else if ( ++miss_count > FCCH_MAX_MISSES ) {
 					start_pos = -1;
 					hit_count = miss_count = 0;
 			}
@@ -310,11 +447,13 @@ BURST_TYPE gsm_burst::get_fcch_burst(void)
 			d_bbuf_pos = 0; //load buffer from start
 			return FCCH;
 		
-		} else {
+		} 
+		else {
 			//TODO: don't shift a tiny amount
 			shift_burst(start_pos - MAX_CORR_DIST);
 		}
-	} else {
+	} 
+	else {
 		//Didn't find anything
 		d_burst_start = MAX_CORR_DIST;
 		d_bbuf_pos = 0; //load buffer from start
@@ -344,7 +483,7 @@ void gsm_burst::equalize(void)
 		}
 		break;
 	default:
-		fprintf(stdout,"!EQ");
+		fprintf(stderr,"!EQ");
 	case EQ_NONE:
 		break;
 	}	
@@ -408,7 +547,8 @@ BURST_TYPE gsm_burst::get_sch_burst(void)
 			} else {
 				type = SCH;
 			}
-		} else {
+		} 
+		else {
 			d_burst_start = MAX_CORR_DIST;
 		}
 
@@ -434,7 +574,8 @@ BURST_TYPE gsm_burst::get_norm_burst(void)
 			d_burst_start = MAX_CORR_DIST;
 			d_corr_maxpos = 0;  //we don't want to affect timing
 		
-		} else {
+		} 
+		else {
 			equalize();
 			eq=1;
 			
@@ -451,7 +592,8 @@ BURST_TYPE gsm_burst::get_norm_burst(void)
 		if ( NORM_CORR_THRESHOLD < correlate_pattern(corr_train_seq[TS_DUMMY],N_TRAIN_BITS,MAX_CORR_DIST+TRAIN_POS,MAX_CORR_DIST) ) { 
 			type = DUMMY;
 		
-		} else {
+		} 
+		else {
 			//Match normal training sequences
 			//TODO: start with current color code
 			for (int i=0; i < 8; i++) {
@@ -493,7 +635,8 @@ int gsm_burst::get_burst(void)
 			d_sync_state = WAIT_SCH_ALIGN;
 			d_bbuf_pos = 0; //load buffer from start
 		
-		} else {
+		} 
+		else {
 			got_burst = 0;
 		} 
 		
@@ -565,7 +708,30 @@ int gsm_burst::get_burst(void)
 		break;
 	}	
 
+	if (UNKNOWN != d_burst_type) {
+		d_last_good = d_burst_count;
+	}
+
+
+	//Check for loss of sync
+	int bursts_since_good = d_burst_count - d_last_good;
+	if (bursts_since_good > MAX_SYNC_WAIT) {
+		d_sync_loss_count++;
+		sync_reset();
+	}
+
 	if (got_burst) {
+		//do callback
+		//do_tuner_callback(p_tuner,1.0);
+		//if (p_callback)
+		if (p_tuner)
+			//p_tuner->eval(1.0);
+			p_tuner->calleval(1.0);
+			//p_tuner->do_tune(1.0);
+			//PythonCallBack(STAT_GOT_BURST,stat_func_data);
+			//(*p_stat_func)(STAT_GOT_BURST,stat_func_data);
+			//p_callback->(1.0);
+		
 		//print info
 		print_burst();
 
@@ -574,19 +740,10 @@ int gsm_burst::get_burst(void)
 			d_bbuf_pos += MAX_CORR_DIST - d_burst_start;
 	}
 
-	//Check for loss of sync
-	int bursts_since_sch = d_burst_count - d_last_sch;
-	if (bursts_since_sch > MAX_SYNC_WAIT) {
-		d_sync_loss_count++;
-		d_sync_state = WAIT_FCCH;
-		d_last_sch = 0;
-		d_burst_count = 0;
-		fprintf(stdout,"====== SYNC LOST (%ld) ======\n",d_sync_loss_count);	//TODO: move this to the print routine
-	}
-
+	d_last_sync_state = d_sync_state;
+	
 	d_ts = (++d_ts)%8;	//next TS
 
 	return got_burst;
 }
-
 
