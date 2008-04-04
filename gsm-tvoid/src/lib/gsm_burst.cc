@@ -9,6 +9,8 @@
 #include <math.h>
 #include <memory.h>
 #include <assert.h>
+#include "system.h"
+#include "gsmstack.h"
 
 /*
 void do_tuner_callback(gsm_tuner_callback *t, double f)
@@ -117,10 +119,9 @@ gsm_burst::gsm_burst (gr_feval_dd *t) :
 		print_bits(corr_train_seq[i],N_TRAIN_BITS);
 		fprintf(stderr,"\n");
 	}
-
-	print_hex(dummy_burst,USEFUL_BITS);
-	fprintf(stdout,"\n");
-			
+		
+	/* Initialize GSM Stack */
+	GS_new(&d_gs_ctx);
 }
 
 gsm_burst::~gsm_burst ()
@@ -240,6 +241,16 @@ void gsm_burst::print_bits(const float *data,int length)
 		data[i] < 0 ? fprintf(stderr,"+") : fprintf(stderr,".");
 		
 }
+void gsm_burst::soft2hardbit(char *dst, const float *data, int len)
+{
+	for (int i=0; i < len; i++)
+	{
+		if (data[i] < 0)
+			dst[i] = 0;
+		else
+			dst[i] = 1;
+	}
+}
 
 void gsm_burst::print_burst(void)
 {
@@ -266,13 +277,32 @@ void gsm_burst::print_burst(void)
 
 	if ( print && (d_print_options & PRINT_BITS) ) {
 		if (d_print_options & PRINT_ALL_BITS)
+		{
 			print_bits(d_burst_buffer,BBUF_SIZE);
-		else
+		} else {
+			/* 142 useful bits: 2*58 + 26 training */
 			print_bits(d_burst_buffer + d_burst_start,USEFUL_BITS);
+		}
 		
 		fprintf(stderr," ");
 	}
 	
+	/*
+	 * Pass information to GSM stack. GSM stack will try to extract
+	 * information (fn, layer 2 messages, ...)
+	 */
+
+	char buf[156];
+	/* In hardbits include the 3 trial bits */
+	/* FIXME: access burst has 8 trail bits? what is d_burst_start
+ 	 * set to? make sure we start at the right position here.
+ 	 */
+	soft2hardbit(buf, d_burst_buffer + d_burst_start - 3, 156);
+	/* GS_process will differentially decode the data and then
+ 	 * extract SCH infos (and later bcch infos).
+ 	 */
+	GS_process(&d_gs_ctx, d_ts, d_burst_type, buf);
+
 	if (print) {
 
 		fprintf(stderr,"%d/%d/%+d/%lu/%lu ",
