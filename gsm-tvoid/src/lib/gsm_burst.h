@@ -10,6 +10,8 @@
 #include <gr_math.h>
 //#include <Python.h>		//for callback testing
 #include <gr_feval.h>
+#include "gsmstack.h"
+
 
 //Console printing options
 #define PRINT_NOTHING		0x00000000
@@ -110,6 +112,9 @@ protected:
 	int 			d_corr_maxpos;
 	int				d_corr_center;
 		
+	///// GSM Stack
+	GS_CTX			d_gs_ctx;
+
 	///// Burst information
 	SYNC_STATE		d_sync_state;
 	SYNC_STATE		d_last_sync_state;
@@ -146,6 +151,7 @@ protected:
 
 	void	print_bits(const float *data,int length);
 	void	print_hex(const unsigned char *data,int length);
+	void	soft2hardbit(char *dst, const float *data, int len);
 	void	print_burst(void);
 
 	void	diff_encode(const float *in,float *out,int length,float lastbit = 1.0);	

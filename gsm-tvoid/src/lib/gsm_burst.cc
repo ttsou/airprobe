@@ -241,6 +241,7 @@ void gsm_burst::print_bits(const float *data,int length)
 		data[i] < 0 ? fprintf(stderr,"+") : fprintf(stderr,".");
 		
 }
+
 void gsm_burst::soft2hardbit(char *dst, const float *data, int len)
 {
 	for (int i=0; i < len; i++)
