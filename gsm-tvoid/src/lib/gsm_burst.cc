@@ -148,6 +148,7 @@ void gsm_burst::full_reset(void)
 	d_normal_count=0;
 	d_dummy_count=0;
 	d_unknown_count=0;
+	d_total_count=0;
 		  	
 	d_freq_offset=0.0;
 	d_freq_off_sum=0.0;
@@ -752,6 +753,7 @@ int gsm_burst::get_burst(void)
 	}
 
 	if (got_burst) {
+		d_total_count++;
 		//do callback
 		//do_tuner_callback(p_tuner,1.0);
 		//if (p_callback)

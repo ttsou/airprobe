@@ -108,7 +108,7 @@ class app_flow_graph(stdgui.gui_flow_graph):
 				
 
 		#decoder options
-		parser.add_option("-D", "--decoder", type="string", default="c",
+		parser.add_option("-D", "--decoder", type="string", default="f",
 							help="Select decoder block to use. (c)omplex,(f)loat [default=%default]")
 		parser.add_option("-d", "--decim", type="int", default=112,
 							help="Set fgpa decimation rate to DECIM [default=%default]")
@@ -116,7 +116,7 @@ class app_flow_graph(stdgui.gui_flow_graph):
 							help="Tuning offset frequency")
 		parser.add_option("-C", "--clock-offset", type="eng_float", default=0.0,
 							help="Sample clock offset frequency")
-		parser.add_option("-E", "--equalizer", type="string", default="fixed-dfe",
+		parser.add_option("-E", "--equalizer", type="string", default="none",
 							help="Type of equalizer to use.  none, fixed-dfe [default=%default]")
 		parser.add_option("-t", "--timing", type="string", default="cq",
 							help="Type of timing techniques to use. [default=%default] \n" +
@@ -479,9 +479,10 @@ class app_flow_graph(stdgui.gui_flow_graph):
 			self._set_status_msg("Invalid Channel")
 
 	def print_stats(self):
-		n_known = self.burst.d_fcch_count + self.burst.d_sch_count + self.burst.d_normal_count + self.burst.d_dummy_count
-		n_total = n_known + self.burst.d_dummy_count
-
+		n_total = self.burst.d_total_count
+		n_unknown = self.burst.d_unknown_count
+		n_known = n_total - n_unknown
+		
 		print "======== STATS ========="
 		print 'freq_offset:    ',self.burst.mean_freq_offset()
 		print 'sync_loss_count:',self.burst.d_sync_loss_count

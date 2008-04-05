@@ -69,6 +69,7 @@ public:
 	long			d_normal_count;
 	long			d_dummy_count;
 	long			d_unknown_count;
+	long			d_total_count;
 	
 	int				sync_state();
 	float 			last_freq_offset(void);

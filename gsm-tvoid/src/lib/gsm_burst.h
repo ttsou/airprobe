@@ -180,6 +180,7 @@ public:
 	long			d_normal_count;
 	long			d_dummy_count;
 	long			d_unknown_count;
+	long			d_total_count;
 	
 	////// Options
 	unsigned long	d_clock_options;
