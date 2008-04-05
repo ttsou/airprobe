@@ -8,14 +8,14 @@ class gsm_burst_ff;
 
 typedef boost::shared_ptr<gsm_burst_ff> gsm_burst_ff_sptr;
 
-gsm_burst_ff_sptr gsm_make_burst_ff(gr_feval_dd *);
+gsm_burst_ff_sptr gsm_make_burst_ff();
 
 class gsm_burst_ff : public gr_block, public gsm_burst
 {
 private:
 	
-	friend gsm_burst_ff_sptr gsm_make_burst_ff(gr_feval_dd *);
-	gsm_burst_ff(gr_feval_dd *t);  
+	friend gsm_burst_ff_sptr gsm_make_burst_ff();
+	gsm_burst_ff();  
 	
 public:
 	~gsm_burst_ff ();	

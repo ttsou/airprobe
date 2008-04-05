@@ -12,84 +12,15 @@
 #include "system.h"
 #include "gsmstack.h"
 
-/*
-void do_tuner_callback(gsm_tuner_callback *t, double f)
-{
-  if (t) t->do_tune(f);
-}
 
-
-//this should be overridden by a python class
-void gsm_tuner_callback::tune(double x) {
-	printf("t1: %f\n",x);
-}
-
-void gsm_tuner_callback::do_tune(double x) {
-	printf("do_");
-	tune(x);
-}
-
-
-void gsm_burst::set_tuner_callback(gsm_tuner_callback *f) {
-	printf("set_tuner_callback: %8.8x\n",(unsigned int)f);
-	p_tuner = f; 
-}
-*/
-
-/*
-void gsm_burst::set_tuner_callback(gr_feval_dd *t) {
-	p_tuner = t; 
-}
-*/
-
-/*
-void gsm_burst::set_status_callback(PSTAT_FUNC func, void *clientdata) {
-	p_stat_func = func; 
-	stat_func_data = clientdata;
-}
-
-void gsm_burst::py_set_status_callback(PyObject *pyfunc) {
-	//set_status_callback(PythonCallBack, (void *) pyfunc);
-	stat_func_data = (void *) pyfunc;
-	Py_INCREF(pyfunc);
-}
-*/
-
-
-/*
-static void PythonCallBack(int a, void *clientdata)
-{
-	PyObject *func, *arglist, *result;
-//	long int dres = 0;
-	
-	func = (PyObject *) clientdata;               // Get Python function
-	arglist = Py_BuildValue("(i)",a);             // Build argument list
-	result = PyEval_CallObject(func,arglist);     // Call Python
-	Py_DECREF(arglist);                           // Trash arglist
-//	if (result) {                                 // If no errors, return double
-//		dres = PyInt_AsLong(result);
-//	}
-	Py_XDECREF(result);
-//	return dres;
-}
-*/
-
-gsm_burst::gsm_burst (gr_feval_dd *t) :
+gsm_burst::gsm_burst () :
 		d_clock_options(DEFAULT_CLK_OPTS),
 		d_print_options(0),
 		d_equalizer_type(EQ_FIXED_DFE)
 {
  
-	printf("gsm_burst: enter constructor (t=%8.8x)\n",(unsigned int)t);
-	  	
 //	M_PI = M_PI; //4.0 * atan(1.0); 
 
-	//p_stat_func = 0;
-	//stat_func_data = 0;
-	
-	//p_callback = 0;
-	p_tuner = t;
-	
 	full_reset();
 	
 	//encode sync bits
@@ -289,22 +220,26 @@ void gsm_burst::print_burst(void)
 		fprintf(stderr," ");
 	}
 	
-	/*
-	 * Pass information to GSM stack. GSM stack will try to extract
-	 * information (fn, layer 2 messages, ...)
-	 */
 
-	char buf[156];
-	/* In hardbits include the 3 trial bits */
-	/* FIXME: access burst has 8 trail bits? what is d_burst_start
- 	 * set to? make sure we start at the right position here.
- 	 */
-	soft2hardbit(buf, d_burst_buffer + d_burst_start - 3, 156);
-	/* GS_process will differentially decode the data and then
- 	 * extract SCH infos (and later bcch infos).
- 	 */
-	GS_process(&d_gs_ctx, d_ts, d_burst_type, buf);
+	if ( PRINT_GSM_DECODE == d_print_options ) {
 
+		/*
+		 * Pass information to GSM stack. GSM stack will try to extract
+		 * information (fn, layer 2 messages, ...)
+		 */
+	
+		char buf[156];
+		/* In hardbits include the 3 trial bits */
+		/* FIXME: access burst has 8 trail bits? what is d_burst_start
+	 	 * set to? make sure we start at the right position here.
+	 	 */
+		soft2hardbit(buf, d_burst_buffer + d_burst_start - 3, 156);
+		/* GS_process will differentially decode the data and then
+	 	 * extract SCH infos (and later bcch infos).
+	 	 */
+		GS_process(&d_gs_ctx, d_ts, d_burst_type, buf);
+	}
+	
 	if (print) {
 
 		fprintf(stderr,"%d/%d/%+d/%lu/%lu ",
@@ -754,16 +689,6 @@ int gsm_burst::get_burst(void)
 
 	if (got_burst) {
 		d_total_count++;
-		//do callback
-		//do_tuner_callback(p_tuner,1.0);
-		//if (p_callback)
-		if (p_tuner)
-			//p_tuner->eval(1.0);
-			p_tuner->calleval(1.0);
-			//p_tuner->do_tune(1.0);
-			//PythonCallBack(STAT_GOT_BURST,stat_func_data);
-			//(*p_stat_func)(STAT_GOT_BURST,stat_func_data);
-			//p_callback->(1.0);
 		
 		//print info
 		print_burst();

@@ -69,29 +69,10 @@ def get_freq_from_arfcn(chan,region):
 	return freq * 1e6
 
 
-#class gsm_tuner(gsm.gsm_tuner_callback):
-class gsm_tuner(gr.feval_dd):
-    def __init__(self, fg):
-        gr.feval_dd.__init__(self)
-        self.fg = fg
-
-	def eval(self, x):
-		try:
-			print "tune: ", x, "\n";
-			fg.cb_count += 1
-			return 0.0
-
-		except Exception, e:
-			print "tune: Exception: ", e
-
-
 class app_flow_graph(stdgui.gui_flow_graph):
 	def __init__(self, frame, panel, vbox, argv):
 		stdgui.gui_flow_graph.__init__(self)
 
-		#testing
-		self.cb_count = 0
-		
 		self.frame = frame
 		self.panel = panel
 		
@@ -104,7 +85,8 @@ class app_flow_graph(stdgui.gui_flow_graph):
 							help="What to print on console. [default=%default]\n" +
 							"(n)othing, (e)verything, (s)tatus, (a)ll Types, (k)nown, (u)nknown, \n" +
 							"TS(0), (F)CCH, (S)CH, (N)ormal, (D)ummy\n" +
-							"Usefull (b)its, All TS (B)its, (C)orrelation bits, he(x) burst data")
+							"Usefull (b)its, All TS (B)its, (C)orrelation bits, he(x) burst data, \n" +
+							"(d)ecoded hex for gsmdecode")
 				
 
 		#decoder options
@@ -235,12 +217,9 @@ class app_flow_graph(stdgui.gui_flow_graph):
 			if self.scopes.count("I"):
 				self.connect(self.u, self.input_fft_scope)
 
-		#create a tuner callback
-		self.tuner = gsm_tuner(self)
-		
 		# Setup flow based on decoder selection
 		if options.decoder.count("c"):
-			self.burst = gsm.burst_cf(self.tuner,input_rate)
+			self.burst = gsm.burst_cf(input_rate)
 			self.connect(self.filter, self.burst)
 
 		elif options.decoder.count("f"):
@@ -257,7 +236,7 @@ class app_flow_graph(stdgui.gui_flow_graph):
 													gain_mu,
 													0.3)			#omega_relative_limit, 
 
-			self.burst = gsm.burst_ff(self.tuner)
+			self.burst = gsm.burst_ff()
 			self.connect(self.filter, self.demod, self.clocker, self.burst)
 
 			if self.scopes.count("d"):
@@ -341,10 +320,13 @@ class app_flow_graph(stdgui.gui_flow_graph):
 			popts |= gsm.PRINT_SCH
 		
 		if options.print_console.count('N'):
-			popts |= gsm.PRINT_SCH
+			popts |= gsm.PRINT_NORMAL
 		
 		if options.print_console.count('D'):
-			popts |= gsm.PRINT_SCH
+			popts |= gsm.PRINT_DUMMY
+		
+		if options.print_console.count('d'):
+			popts |= gsm.PRINT_GSM_DECODE
 		
 		if options.print_console.count('C'):
 			popts |= gsm.PRINT_BITS | gsm.PRINT_CORR_BITS
@@ -357,6 +339,11 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		
 		elif options.print_console.count('b'):
 			popts |= gsm.PRINT_BITS
+
+		if options.print_console.count('d'):
+			popts |= gsm.PRINT_GSM_DECODE
+		
+		#TODO: should warn if PRINT_GSM_DECODE is combined with other flags (will corrupt output for gsmdecode)
 		
 		self.burst.d_print_options = popts	
 		
@@ -496,7 +483,6 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		print 'known_count:    ',n_known
 		if n_total:
 			print '%known:         ', 100.0 * n_known / n_total
-		print 'CB count:       ',self.cb_count
 		print ""		
 				
 	def on_tick(self, evt):

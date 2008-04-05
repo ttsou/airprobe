@@ -30,6 +30,8 @@
 #define PRINT_DUMMY			0x00000100
 #define PRINT_NORMAL		0x00000200
 
+#define PRINT_GSM_DECODE	0x00000400
+
 #define PRINT_HEX			0x00001000
 
 //Timing/clock options
@@ -71,28 +73,13 @@ enum EQ_TYPE {
 	EQ_VITERBI
 };
 
-//typedef void (*PSTAT_FUNC)(int, void *);
-//#define STAT_GOT_BURST	1
-//double gr_feval_callback(gr_feval_dd *f, double x);
-
-/*
-class gsm_tuner_callback {
-protected:
-  virtual void tune(double x);
-
-public:
-  virtual void do_tune(double x);
-};
-*/
-//void do_tuner_callback(gsm_tuner_callback *t, double f);
-
 class gsm_burst;
 
 class gsm_burst
 {
 protected:
 	
-	gsm_burst(gr_feval_dd *t);  
+	gsm_burst();  
 
 	//Burst Buffer: Storage for burst data
 	float			d_burst_buffer[BBUF_SIZE];
@@ -129,12 +116,6 @@ protected:
 	double			d_freq_off_sum;
 	double			d_freq_off_weight;
 
-	//PSTAT_FUNC		p_stat_func;
-	//void       		*stat_func_data;
-
-	gr_feval_dd 	*p_tuner;
-	//gsm_tuner_callback	*p_tuner;
-	
 	//////// Methods
 	int				get_burst(void);
 	BURST_TYPE		get_fcch_burst(void);
@@ -160,17 +141,6 @@ protected:
 public:
 	~gsm_burst ();	
 
-	//Set status callback function, needed for quick tune()
-	//void py_set_status_callback(PyObject *pyfunc);
-	//void set_status_callback(PSTAT_FUNC func, void *clientdata);
-
-	//void set_tuner_callback(gr_feval_dd *t);
-	
-	//use swig directors to privide a python override
-	//virtual void notify_status(int status);
-
-	//void set_tuner_callback(gsm_tuner_callback *f);
-	
 	////// General Stats
 	//TODO: Maybe there should be a burst_stats class?
 	long			d_sync_loss_count;
