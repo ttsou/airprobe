@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <gri_mmse_fir_interpolator_cc.h>
 
-gsm_burst_cf_sptr gsm_make_burst_cf (gr_feval_dd *t,float sample_rate)
+gsm_burst_cf_sptr gsm_make_burst_cf (gr_feval_ll *t,float sample_rate)
 {
   return gsm_burst_cf_sptr (new gsm_burst_cf (t,sample_rate));
 }
@@ -19,7 +19,7 @@ static const int MAX_IN = 1;	// maximum number of input streams
 static const int MIN_OUT = 1;	// minimum number of output streams
 static const int MAX_OUT = 1;	// maximum number of output streams
 
-gsm_burst_cf::gsm_burst_cf (gr_feval_dd *t, float sample_rate) : 
+gsm_burst_cf::gsm_burst_cf (gr_feval_ll *t, float sample_rate) : 
 	gr_block (	"burst_cf",
 				gr_make_io_signature (MIN_IN, MAX_IN, sizeof (gr_complex)),
 				gr_make_io_signature (MIN_OUT, MAX_OUT, USEFUL_BITS * sizeof (float))),

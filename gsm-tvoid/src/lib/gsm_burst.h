@@ -8,7 +8,6 @@
 
 #include "gsm_constants.h"
 #include <gr_math.h>
-//#include <Python.h>		//for callback testing
 #include <gr_feval.h>
 #include "gsmstack.h"
 
@@ -71,28 +70,13 @@ enum EQ_TYPE {
 	EQ_VITERBI
 };
 
-//typedef void (*PSTAT_FUNC)(int, void *);
-//#define STAT_GOT_BURST	1
-//double gr_feval_callback(gr_feval_dd *f, double x);
-
-/*
-class gsm_tuner_callback {
-protected:
-  virtual void tune(double x);
-
-public:
-  virtual void do_tune(double x);
-};
-*/
-//void do_tuner_callback(gsm_tuner_callback *t, double f);
-
 class gsm_burst;
 
 class gsm_burst
 {
 protected:
 	
-	gsm_burst(gr_feval_dd *t);  
+	gsm_burst(gr_feval_ll *t);  
 
 	//Burst Buffer: Storage for burst data
 	float			d_burst_buffer[BBUF_SIZE];
@@ -129,11 +113,7 @@ protected:
 	double			d_freq_off_sum;
 	double			d_freq_off_weight;
 
-	//PSTAT_FUNC		p_stat_func;
-	//void       		*stat_func_data;
-
-	gr_feval_dd 	*p_tuner;
-	//gsm_tuner_callback	*p_tuner;
+	gr_feval_ll 	*p_tuner;
 	
 	//////// Methods
 	int				get_burst(void);
@@ -164,7 +144,7 @@ public:
 	//void py_set_status_callback(PyObject *pyfunc);
 	//void set_status_callback(PSTAT_FUNC func, void *clientdata);
 
-	//void set_tuner_callback(gr_feval_dd *t);
+	//void set_tuner_callback(gr_feval_ll *t);
 	
 	//use swig directors to privide a python override
 	//virtual void notify_status(int status);

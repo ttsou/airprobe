@@ -26,6 +26,23 @@ from math import pi
 import wx
 import gsm
 
+
+#class gsm_tuner(gsm.gsm_tuner_callback):
+class tune(gr.feval_ll):
+	def __init__(self, fg):
+		gr.feval_dd.__init__(self)
+		self.fg = fg
+	
+	def eval(self, x):
+		try:
+			#print "tune: ", x, "\n";
+			self.fg.cb_count += 1
+			return 0
+		
+		except Exception, e:
+			print "tune: Exception: ", e
+	
+
 def pick_subdevice(u):
 	if u.db[0][0].dbid() >= 0:
 		return (0, 0)
@@ -68,21 +85,6 @@ def get_freq_from_arfcn(chan,region):
 
 	return freq * 1e6
 
-
-#class gsm_tuner(gsm.gsm_tuner_callback):
-class gsm_tuner(gr.feval_dd):
-    def __init__(self, fg):
-        gr.feval_dd.__init__(self)
-        self.fg = fg
-
-	def eval(self, x):
-		try:
-			print "tune: ", x, "\n";
-			fg.cb_count += 1
-			return 0.0
-
-		except Exception, e:
-			print "tune: Exception: ", e
 
 
 class app_flow_graph(stdgui.gui_flow_graph):
@@ -236,7 +238,8 @@ class app_flow_graph(stdgui.gui_flow_graph):
 				self.connect(self.u, self.input_fft_scope)
 
 		#create a tuner callback
-		self.tuner = gsm_tuner(self)
+		self.tuner = tune(self)
+		#self._tuner = tune()
 		
 		# Setup flow based on decoder selection
 		if options.decoder.count("c"):

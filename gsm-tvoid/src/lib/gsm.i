@@ -76,31 +76,27 @@ public:
 	double 			mean_freq_offset(void);
 	
 	//Methods
-	//void set_tuner_callback(gsm_tuner_callback *);
-	//void set_tuner_callback(gr_feval_dd *);
-
 	void full_reset(void);
 
 protected:
-//	gsm_tuner_callback	*p_tuner;
-	gsm_burst(gr_feval_dd *);  
+	gsm_burst(gr_feval_ll *);  
 };
 
 
 GR_SWIG_BLOCK_MAGIC(gsm,burst_ff);
-gsm_burst_ff_sptr gsm_make_burst_ff (gr_feval_dd *);
+gsm_burst_ff_sptr gsm_make_burst_ff (gr_feval_ll *);
 
 class gsm_burst_ff : public gr_block, public gsm_burst {
 private:
-	gsm_burst_ff (gr_feval_dd *);
+	gsm_burst_ff (gr_feval_ll *);
 };
 
 GR_SWIG_BLOCK_MAGIC(gsm,burst_cf);
-gsm_burst_cf_sptr gsm_make_burst_cf (gr_feval_dd *,float);
+gsm_burst_cf_sptr gsm_make_burst_cf (gr_feval_ll *,float);
 
 class gsm_burst_cf : public gr_block, public gsm_burst {
 private:
-	gsm_burst_cf (gr_feval_dd *,float);
+	gsm_burst_cf (gr_feval_ll *,float);
 };
 
 
