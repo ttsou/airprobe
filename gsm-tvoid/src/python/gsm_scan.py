@@ -383,6 +383,9 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		self.t1.Start(5000,0)
 		self.frame.Bind(wx.EVT_TIMER, self.on_tick)
 
+		#bind the idle routing for message_queue processing	
+		self.frame.Bind(wx.EVT_IDLE, self.on_idle)
+
 
 	def _set_status_msg(self, msg):
 		self.frame.GetStatusBar().SetStatusText(msg, 0)
@@ -428,7 +431,7 @@ class app_flow_graph(stdgui.gui_flow_graph):
 												callback=self.set_channel)
 
 			vbox.Add(hbox, 0, wx.EXPAND)
-
+		
 
 	def set_freq(self, freq):
 
@@ -491,7 +494,10 @@ class app_flow_graph(stdgui.gui_flow_graph):
 			
 		if self.print_status:
 			self.print_stats()
-			
+
+	def on_idle(self, event):
+		print "Idle.\n";
+					
 def main ():
 	app = stdgui.stdapp(app_flow_graph, "GSM Scanner", nstatus=1)
 	app.MainLoop()
