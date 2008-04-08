@@ -173,7 +173,7 @@ void gsm_burst::print_bits(const float *data,int length)
 	assert(length >= 0);
 	
 	for (int i=0; i < length; i++)
-		data[i] < 0 ? fprintf(stderr,"+") : fprintf(stderr,".");
+		data[i] < 0 ? fprintf(stdout,"+") : fprintf(stdout,".");
 		
 }
 
@@ -220,7 +220,7 @@ void gsm_burst::print_burst(void)
 			print_bits(d_burst_buffer + d_burst_start,USEFUL_BITS);
 		}
 		
-		fprintf(stderr," ");
+		fprintf(stdout," ");
 	}
 	
 
@@ -245,7 +245,7 @@ void gsm_burst::print_burst(void)
 	
 	if (print) {
 
-		fprintf(stderr,"%d/%d/%+d/%lu/%lu ",
+		fprintf(stdout,"%d/%d/%+d/%lu/%lu ",
 						d_sync_state,
 						d_ts,
 						d_burst_start - MAX_CORR_DIST,
@@ -254,38 +254,38 @@ void gsm_burst::print_burst(void)
 
 		switch (d_burst_type) {
 		case FCCH:
-			fprintf(stderr,"[FCCH] foff:%g cnt:%lu",d_freq_offset,d_fcch_count);
+			fprintf(stdout,"[FCCH] foff:%g cnt:%lu",d_freq_offset,d_fcch_count);
 			break;
 		case PARTIAL_SCH:
 			bursts_since_sch = d_burst_count - d_last_sch;
 			
-			fprintf(stderr,"[P-SCH] cor:%.2f last:%d cnt: %lu",
+			fprintf(stdout,"[P-SCH] cor:%.2f last:%d cnt: %lu",
 					d_corr_max,bursts_since_sch,d_sch_count);
 			break;
 		case SCH:
 			bursts_since_sch = d_burst_count - d_last_sch;
 			
-			fprintf(stderr,"[SCH] cor:%.2f last:%d cnt: %lu",
+			fprintf(stdout,"[SCH] cor:%.2f last:%d cnt: %lu",
 					d_corr_max,bursts_since_sch,d_sch_count);
 			break;
 		case DUMMY:
-			fprintf(stderr,"[DUMMY] cor:%.2f",d_corr_max);
+			fprintf(stdout,"[DUMMY] cor:%.2f",d_corr_max);
 			break;
 		case ACCESS:
-			fprintf(stderr,"[ACCESS]");		//We don't detect this yet
+			fprintf(stdout,"[ACCESS]");		//We don't detect this yet
 			break;
 		case NORMAL:
-			fprintf(stderr,"[NORM] clr:%d cor:%.2f",d_color_code,d_corr_max);
+			fprintf(stdout,"[NORM] clr:%d cor:%.2f",d_color_code,d_corr_max);
 			break;
 		case UNKNOWN:
-			fprintf(stderr,"[?]");
+			fprintf(stdout,"[?]");
 			break;
 		default:
-			fprintf(stderr,"[oops! default]");
+			fprintf(stdout,"[oops! default]");
 			break;		
 		}
 
-	fprintf(stderr,"\n");
+	fprintf(stdout,"\n");
 
 
 		//print the correlation pattern for visual inspection
@@ -304,10 +304,10 @@ void gsm_burst::print_burst(void)
 			for (int i = 0; i < pat_indent; i++)
 				fprintf(stderr," ");
 			
-			fprintf(stderr," ");	//extra space for skipped bit
+			fprintf(stdout," ");	//extra space for skipped bit
 			print_bits(d_corr_pattern+1,d_corr_pat_size-1);	//skip first bit (diff encoding)
 			
-			fprintf(stderr,"\t\toffset:%d, max: %.2f \n",d_corr_maxpos,d_corr_max);
+			fprintf(stdout,"\t\toffset:%d, max: %.2f \n",d_corr_maxpos,d_corr_max);
 		}
 	
 	}
@@ -323,10 +323,10 @@ void gsm_burst::print_burst(void)
 	//Print State related messages
 	if ( d_print_options & PRINT_STATE ) {
 		if ( (SYNCHRONIZED == d_sync_state) && (SYNCHRONIZED != d_last_sync_state) ) {
-			fprintf(stderr,"====== SYNC GAINED (FOff: %g Corr: %.2f, Color: %d ) ======\n",d_freq_offset,d_corr_max,d_color_code);
+			fprintf(stdout,"====== SYNC GAINED (FOff: %g Corr: %.2f, Color: %d ) ======\n",d_freq_offset,d_corr_max,d_color_code);
 		}
 		else if ( (SYNCHRONIZED != d_sync_state) && (SYNCHRONIZED == d_last_sync_state) ) {
-			fprintf(stderr,"====== SYNC LOST (%ld) ======\n",d_sync_loss_count);
+			fprintf(stdout,"====== SYNC LOST (%ld) ======\n",d_sync_loss_count);
 		}
 	}
 	
@@ -686,7 +686,6 @@ int gsm_burst::get_burst(void)
 		d_last_good = d_burst_count;
 	}
 
-
 	//Check for loss of sync
 	int bursts_since_good = d_burst_count - d_last_good;
 	if (bursts_since_good > MAX_SYNC_WAIT) {
@@ -699,6 +698,43 @@ int gsm_burst::get_burst(void)
 		
 		//print info
 		print_burst();
+
+		/////////////////////
+		//start tune testing
+		static int good_count = -1; //-1: wait sch, >=0: got sch, counting
+	
+		if (UNKNOWN == d_burst_type) {
+			if (good_count >= 0) {
+				fprintf(stdout,"good_count: %d\n",good_count);
+	
+				if (p_tuner) {
+					next_arfcn = 658;	//tune back to the good channel
+					p_tuner->calleval(BURST_CB_TUNE);
+				}
+			}
+			good_count = -1;	// start again at resync
+	
+		} else {
+	
+			if (good_count >= 0 ) {
+				good_count++;
+			}
+	
+			if (SCH == d_burst_type) {	
+				if (good_count < 0) {	// waiting for sch?
+					fprintf(stdout,"restarting good_count\n");
+					good_count = 0;
+					//tune away
+					if (p_tuner) { 
+						next_arfcn = 655;	//this should be an empty channel
+						p_tuner->calleval(BURST_CB_TUNE);
+					}
+				}
+			}
+		}
+		//end tune testing	
+		/////////////////////
+
 
 		//Adjust the buffer write position to align on MAX_CORR_DIST
 		if ( d_clock_options & CLK_CORR_TRACK )

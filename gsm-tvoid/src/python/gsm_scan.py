@@ -36,16 +36,16 @@ class burst_callback(gr.feval_ll):
 		try:
 			#print "burst_callback: ", x, "\n";
 			if gsm.BURST_CB_ADJ_OFFSET == x:
+				return 0
 				#TODO: rework so this will work on file input
 				last_offset = self.fg.burst.last_freq_offset()
-				if last_offset < 200.0:
-					return 0
-
-				self.fg.offset -= last_offset
-				print "burst_callback: ADJ_OFFSET:", last_offset, " ARFCN: ", self.fg.arfcn, "\n";
-				self.fg.set_channel(self.fg.arfcn)
+				if 20000.0 > abs(last_offset) > 200.0:
+					self.fg.offset -= last_offset
+					print "burst_callback: ADJ_OFFSET:", last_offset, " ARFCN: ", self.fg.arfcn, "\n";
+					self.fg.set_channel(self.fg.arfcn)
 
 			elif gsm.BURST_CB_TUNE == x:
+				print "burst_callback: BURST_CB_TUNE: ARFCN: ", self.fg.burst.next_arfcn, "\n";
 				self.fg.set_channel(self.fg.burst.next_arfcn)
 
 			return 0
