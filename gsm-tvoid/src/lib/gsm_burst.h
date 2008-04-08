@@ -13,7 +13,7 @@
 
 //Testing Modes
 //Tune test measures hopping latency by hopping between good and empty ARFCNs
-#define TEST_TUNE_TIMING
+#undef TEST_TUNE_TIMING
 #define TEST_TUNE_GOOD_ARFCN	658
 #define TEST_TUNE_EMPTY_ARFCN	655
 
@@ -78,8 +78,9 @@ enum EQ_TYPE {
 	EQ_VITERBI
 };
 
-#define BURST_CB_ADJ_OFFSET		1
-#define BURST_CB_TUNE			2
+#define BURST_CB_SYNC_OFFSET	1
+#define BURST_CB_ADJ_OFFSET		2
+#define BURST_CB_TUNE			3
 
 
 class gsm_burst;

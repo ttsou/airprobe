@@ -366,7 +366,7 @@ void gsm_burst::calc_freq_offset(void)
 	for (int j = start; j <= end; j++) {
 		sum += d_burst_buffer[j];
 	}
-	float mean = sum / ((float)USEFUL_BITS - 2.0 * (float)padding);
+	float mean = sum / ((float)USEFUL_BITS - (2.0 * (float)padding) );
 	
 	float p_off = mean - (M_PI / 2);
 	d_freq_offset = p_off * 1625000.0 / (12.0 * M_PI);
@@ -651,7 +651,11 @@ int gsm_burst::get_burst(void)
 
 #ifndef TEST_TUNE_TIMING
 		if (p_tuner) {
-			p_tuner->calleval(BURST_CB_ADJ_OFFSET);
+			if (SYNCHRONIZED == d_sync_state)
+				p_tuner->calleval(BURST_CB_ADJ_OFFSET);
+			else
+				p_tuner->calleval(BURST_CB_SYNC_OFFSET);
+				
 		}
 #endif
 

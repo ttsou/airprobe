@@ -43,8 +43,9 @@
 
 #define CLK_CORR_TRACK		0x00000010		//adjust timing based on correlation offsets
 
-#define BURST_CB_ADJ_OFFSET		1
-#define BURST_CB_TUNE			2
+#define BURST_CB_SYNC_OFFSET	1
+#define BURST_CB_ADJ_OFFSET		2
+#define BURST_CB_TUNE			3
 
 //EQ options
 enum EQ_TYPE {

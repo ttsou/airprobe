@@ -31,19 +31,37 @@ class burst_callback(gr.feval_ll):
 	def __init__(self, fg):
 		gr.feval_ll.__init__(self)
 		self.fg = fg
-
+		self.offset_mean_num = 30		#number of FCCH offsets to average
+		self.offset_vals = []
+		
 	def eval(self, x):
 		try:
-			#print "burst_callback: ", x, "\n";
-			if gsm.BURST_CB_ADJ_OFFSET == x:
-				#return 0
-				#TODO: rework so this will work on file input
+			#TODO: rework so this will work on file input
+			if gsm.BURST_CB_SYNC_OFFSET == x:
 				last_offset = self.fg.burst.last_freq_offset()
-				if 20000.0 > abs(last_offset) > 500.0:
-					self.fg.offset -= last_offset
-					print "burst_callback: ADJ_OFFSET:", last_offset, " ARFCN: ", self.fg.arfcn, "\n";
-					self.fg.set_channel(self.fg.arfcn)
+				self.fg.offset -= last_offset
+				print "burst_callback: SYNC_OFFSET:", last_offset, " ARFCN: ", self.fg.arfcn, "\n";
+				self.fg.set_channel(self.fg.arfcn)
 
+			elif gsm.BURST_CB_ADJ_OFFSET == x:
+				last_offset = self.fg.burst.last_freq_offset()
+				#print "burst_callback: ADJ_OFFSET:", last_offset, " ARFCN: ", self.fg.arfcn, "\n";
+
+				self.offset_vals.append(last_offset)
+				
+				if len(self.offset_vals) >= self.offset_mean_num:
+					sum = 0.0
+					while len(self.offset_vals):
+						sum += self.offset_vals.pop(0)
+					
+					mean_offset = sum / self.offset_mean_num
+					self.fg.offset -= mean_offset
+				
+					#retune if greater than 100 Hz
+					if mean_offset > 100.0:	
+						print "burst_callback: mean offset:", mean_offset, "\n";
+						self.fg.set_channel(self.fg.arfcn)
+				
 			elif gsm.BURST_CB_TUNE == x:
 				print "burst_callback: BURST_CB_TUNE: ARFCN: ", self.fg.burst.next_arfcn, "\n";
 				self.fg.set_channel(self.fg.burst.next_arfcn)
@@ -196,25 +214,25 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		sps = input_rate/gsm_symb_rate
 
 
-		# Attempt to enable realtime scheduling
-		r = gr.enable_realtime_scheduling()
-		if r == gr.RT_OK:
-			realtime = True
-			print "Realtime scheduling ENABLED"
-		else:
-			realtime = False
-			print "Realtime scheduling FAILED"
-		
-#		if options.fusb_block_size == 0 and options.fusb_nblocks == 0:
-		if realtime:                        # be more aggressive
-			options.fusb_block_size = gr.prefs().get_long('fusb', 'rt_block_size', 1024)
-			options.fusb_nblocks    = gr.prefs().get_long('fusb', 'rt_nblocks', 16)
-		else:
-			options.fusb_block_size = gr.prefs().get_long('fusb', 'block_size', 4096)
-			options.fusb_nblocks    = gr.prefs().get_long('fusb', 'nblocks', 16)
-		
-		print "fusb_block_size =", options.fusb_block_size
-		print "fusb_nblocks    =", options.fusb_nblocks
+# 		# Attempt to enable realtime scheduling
+# 		r = gr.enable_realtime_scheduling()
+# 		if r == gr.RT_OK:
+# 			realtime = True
+# 			print "Realtime scheduling ENABLED"
+# 		else:
+# 			realtime = False
+# 			print "Realtime scheduling FAILED"
+# 		
+# #		if options.fusb_block_size == 0 and options.fusb_nblocks == 0:
+# 		if realtime:                        # be more aggressive
+# 			options.fusb_block_size = gr.prefs().get_long('fusb', 'rt_block_size', 1024)
+# 			options.fusb_nblocks    = gr.prefs().get_long('fusb', 'rt_nblocks', 16)
+# 		else:
+# 			options.fusb_block_size = gr.prefs().get_long('fusb', 'block_size', 4096)
+# 			options.fusb_nblocks    = gr.prefs().get_long('fusb', 'nblocks', 16)
+# 		
+# 		print "fusb_block_size =", options.fusb_block_size
+# 		print "fusb_nblocks    =", options.fusb_nblocks
 
 		# Build the flowgraph
 		# Setup our input source
@@ -293,31 +311,6 @@ class app_flow_graph(stdgui.gui_flow_graph):
 
 			self.burst = gsm.burst_ff(self.burst_cb)
 			self.connect(self.filter, self.demod, self.clocker, self.burst)
-
-			if self.scopes.count("d"):
-				self.demod_scope = scopesink.scope_sink_f(self, panel, sample_rate=input_rate)
-				self.connect(self.demod, self.demod_scope)
-
-			if self.scopes.count("c"):
-				self.clocked_scope = scopesink.scope_sink_f(self, panel, sample_rate=gsm_symb_rate,v_scale=1)
-				self.connect(self.clocker, self.clocked_scope)
-
-		elif options.decoder.count("F"):
-			#configure clock recovery
-			gain_mu = 0.01
-			gain_omega = .25 * gain_mu * gain_mu		# critically damped
-			self.clocker = gr.clock_recovery_mm_cc(	sps, 
-													gain_omega,
-													0.5,			#mu
-													gain_mu,
-													0.3)			#omega_relative_limit, 
-
-
-			# configure demodulator
-			self.demod = gr.quadrature_demod_cf(1);
-			
-			self.burst = gsm.burst_ff()
-			self.connect(self.filter, self.clocker, self.demod, self.burst)
 
 			if self.scopes.count("d"):
 				self.demod_scope = scopesink.scope_sink_f(self, panel, sample_rate=input_rate)
