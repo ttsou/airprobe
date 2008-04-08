@@ -70,6 +70,10 @@ enum EQ_TYPE {
 	EQ_VITERBI
 };
 
+#define BURST_CB_ADJ_OFFSET		1
+#define BURST_CB_TUNE			2
+
+
 class gsm_burst;
 
 class gsm_burst
@@ -167,12 +171,17 @@ public:
 	unsigned long	d_print_options;
 	EQ_TYPE			d_equalizer_type;
 	
-	int sync_state() { return d_sync_state;}
-	float last_freq_offset() {return d_freq_offset;}
-	double mean_freq_offset(void);
 	
 	//Methods
 	void full_reset(void);
+
+	int sync_state() { return d_sync_state;}
+
+	//Frequency
+	float last_freq_offset() {return d_freq_offset;}
+	double mean_freq_offset(void);
+
+	long next_arfcn;
 };
 
 

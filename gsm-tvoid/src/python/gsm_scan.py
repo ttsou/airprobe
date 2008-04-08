@@ -27,20 +27,31 @@ import wx
 import gsm
 
 
-#class gsm_tuner(gsm.gsm_tuner_callback):
-class tune(gr.feval_ll):
+class burst_callback(gr.feval_ll):
 	def __init__(self, fg):
-		gr.feval_dd.__init__(self)
+		gr.feval_ll.__init__(self)
 		self.fg = fg
 	
 	def eval(self, x):
 		try:
-			#print "tune: ", x, "\n";
-			self.fg.cb_count += 1
+			#print "burst_callback: ", x, "\n";
+			if gsm.BURST_CB_ADJ_OFFSET == x:
+				#TODO: rework so this will work on file input
+				last_offset = self.fg.burst.last_freq_offset()
+				if last_offset < 200.0:
+					return 0
+					
+				self.fg.offset -= last_offset
+				print "burst_callback: ADJ_OFFSET:", last_offset, " ARFCN: ", self.fg.arfcn, "\n";
+				self.fg.set_channel(self.fg.arfcn)
+
+			elif gsm.BURST_CB_TUNE == x:
+				self.fg.set_channel(self.fg.burst.next_arfcn)
+
 			return 0
 		
 		except Exception, e:
-			print "tune: Exception: ", e
+			print "burst_callback: Exception: ", e
 	
 
 def pick_subdevice(u):
@@ -92,7 +103,7 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		stdgui.gui_flow_graph.__init__(self)
 
 		#testing
-		self.cb_count = 0
+		self.status_msg = "Started."
 		
 		self.frame = frame
 		self.panel = panel
@@ -238,12 +249,11 @@ class app_flow_graph(stdgui.gui_flow_graph):
 				self.connect(self.u, self.input_fft_scope)
 
 		#create a tuner callback
-		self.tuner = tune(self)
-		#self._tuner = tune()
+		self.burst_cb = burst_callback(self)
 		
 		# Setup flow based on decoder selection
 		if options.decoder.count("c"):
-			self.burst = gsm.burst_cf(self.tuner,input_rate)
+			self.burst = gsm.burst_cf(self.burst_cb,input_rate)
 			self.connect(self.filter, self.burst)
 
 		elif options.decoder.count("f"):
@@ -260,7 +270,7 @@ class app_flow_graph(stdgui.gui_flow_graph):
 													gain_mu,
 													0.3)			#omega_relative_limit, 
 
-			self.burst = gsm.burst_ff(self.tuner)
+			self.burst = gsm.burst_ff(self.burst_cb)
 			self.connect(self.filter, self.demod, self.clocker, self.burst)
 
 			if self.scopes.count("d"):
@@ -365,8 +375,8 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		
 		##########################
 		#set burst tuning callback
-		#self.tuner = gsm_tuner()
-		#self.burst.set_tuner_callback(self.tuner)
+		#self.burst_cb = gsm_tuner()
+		#self.burst.set_tuner_callback(self.burst_cb)
 		
 		# connect the primary path after source
 		self.v2s = gr.vector_to_stream(gr.sizeof_float,142)		#burst output is 142 (USEFUL_BITS)
@@ -456,10 +466,10 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		r = self.u.tune(0, self.subdev, freq)
 
 		if r:
-			self._set_status_msg('%f' % (freq/1e6))
+			self.status_msg = '%f' % (freq/1e6)
 			return True
 		else:
-			self._set_status_msg("Failed to set frequency (%f)" % (freq/1e6))
+			self.status_msg = "Failed to set frequency (%f)" % (freq/1e6)
 			return False
 
 	def set_gain(self, gain):
@@ -471,6 +481,8 @@ class app_flow_graph(stdgui.gui_flow_graph):
 
 	def set_channel(self, chan):
 
+		self.arfcn = chan
+		
 		if not self.using_usrp:
 			return False
 		
@@ -479,15 +491,19 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		if freq:
 			self.set_freq(freq)
 		else:
-			self._set_status_msg("Invalid Channel")
+			self.status_msg = "Invalid Channel"
 
 	def print_stats(self):
+
+		self._set_status_msg(self.status_msg)
+
 		n_total = self.burst.d_total_count
 		n_unknown = self.burst.d_unknown_count
 		n_known = n_total - n_unknown
 		
 		print "======== STATS ========="
-		print 'freq_offset:    ',self.burst.mean_freq_offset()
+		print 'freq_offset:    ',self.offset
+		print 'mean_offset:    ',self.burst.mean_freq_offset()
 		print 'sync_loss_count:',self.burst.d_sync_loss_count
 		print 'total_bursts:   ',n_total
 		print 'fcch_count:     ',self.burst.d_fcch_count
@@ -499,7 +515,6 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		print 'known_count:    ',n_known
 		if n_total:
 			print '%known:         ', 100.0 * n_known / n_total
-		print 'CB count:       ',self.cb_count
 		print ""		
 				
 	def on_tick(self, evt):

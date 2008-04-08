@@ -41,6 +41,9 @@
 
 #define CLK_CORR_TRACK		0x00000010		//adjust timing based on correlation offsets
 
+#define BURST_CB_ADJ_OFFSET		1
+#define BURST_CB_TUNE			2
+
 //EQ options
 enum EQ_TYPE {
 	EQ_NONE,
@@ -71,12 +74,15 @@ public:
 	long			d_unknown_count;
 	long			d_total_count;
 	
+	long 			next_arfcn;
+
 	int				sync_state();
 	float 			last_freq_offset(void);
 	double 			mean_freq_offset(void);
 	
 	//Methods
 	void full_reset(void);
+
 
 protected:
 	gsm_burst(gr_feval_ll *);  

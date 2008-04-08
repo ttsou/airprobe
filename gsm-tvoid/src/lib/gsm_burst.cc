@@ -647,6 +647,10 @@ int gsm_burst::get_burst(void)
 		
 		d_fcch_count++;
 		calc_freq_offset();
+		if (p_tuner) {
+			p_tuner->calleval(BURST_CB_ADJ_OFFSET);
+		}
+
 		d_ts = 0;
 		break;
 	case PARTIAL_SCH:
@@ -693,13 +697,6 @@ int gsm_burst::get_burst(void)
 
 	if (got_burst) {
 		d_total_count++;
-		//do callback
-		if (p_tuner) {
-			//p_tuner->eval(1.0);
-			long in=1;
-			long out = -1;
-			out = p_tuner->calleval(in);
-		}
 		
 		//print info
 		print_burst();
