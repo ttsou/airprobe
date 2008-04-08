@@ -69,15 +69,14 @@ int gsm_burst_ff::general_work (int noutput_items,
 		
 			if (get_burst()) {
 				//found a burst, send to output
-
-				//ensure that output data is in range
-				int b = d_burst_start;
-				if (b < 0)
-					b = 0;
-				else if (b >= 2 * MAX_CORR_DIST)
-					b = 2 * MAX_CORR_DIST - 1;
-	
 				if (out) {
+					//ensure that output data is in range
+					int b = d_burst_start;
+					if (b < 0)
+						b = 0;
+					else if (b >= 2 * MAX_CORR_DIST)
+						b = 2 * MAX_CORR_DIST - 1;
+		
 					memcpy(out+rval*USEFUL_BITS, d_burst_buffer + b, USEFUL_BITS*sizeof(float));
 					rval++;
 				}
