@@ -195,6 +195,27 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		gsm_symb_rate = 1625000.0 / 6.0
 		sps = input_rate/gsm_symb_rate
 
+
+		# Attempt to enable realtime scheduling
+		r = gr.enable_realtime_scheduling()
+		if r == gr.RT_OK:
+			realtime = True
+			print "Realtime scheduling ENABLED"
+		else:
+			realtime = False
+			print "Realtime scheduling FAILED"
+		
+#		if options.fusb_block_size == 0 and options.fusb_nblocks == 0:
+		if realtime:                        # be more aggressive
+			options.fusb_block_size = gr.prefs().get_long('fusb', 'rt_block_size', 1024)
+			options.fusb_nblocks    = gr.prefs().get_long('fusb', 'rt_nblocks', 16)
+		else:
+			options.fusb_block_size = gr.prefs().get_long('fusb', 'block_size', 4096)
+			options.fusb_nblocks    = gr.prefs().get_long('fusb', 'nblocks', 16)
+		
+		print "fusb_block_size =", options.fusb_block_size
+		print "fusb_nblocks    =", options.fusb_nblocks
+
 		# Build the flowgraph
 		# Setup our input source
 		if options.inputfile:
@@ -381,27 +402,24 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		
 		self.burst.d_print_options = popts	
 		
-		##########################
-		#set burst tuning callback
-		#self.burst_cb = gsm_tuner()
-		#self.burst.set_tuner_callback(self.burst_cb)
-		
-		# connect the primary path after source
-		self.v2s = gr.vector_to_stream(gr.sizeof_float,142)		#burst output is 142 (USEFUL_BITS)
-		self.connect(self.burst, self.v2s)
 
 		# create and connect the scopes that apply to all decoders
 		if self.scopes.count("F"):
 			self.filter_fft_scope = fftsink.fft_sink_c (self, panel, fft_size=1024, sample_rate=input_rate)
 			self.connect(self.filter, self.filter_fft_scope)
 
+		# connect the burst output
+		if self.scopes.count("b") or options.outputfile:
+			self.v2s = gr.vector_to_stream(gr.sizeof_float,142)		#burst output is 142 (USEFUL_BITS)
+			self.connect(self.burst, self.v2s)
+#		else:
+#			self.burst_sink = gr.null_sink(gr.sizeof_float)
+#			self.connect(self.v2s, self.burst_sink)
+
 		#Connect output sinks
 		if self.scopes.count("b"):
 			self.burst_scope = scopesink.scope_sink_f(self, panel, sample_rate=gsm_symb_rate,v_scale=1)
 			self.connect(self.v2s, self.burst_scope)
-		elif not options.outputfile:
-			self.burst_sink = gr.null_sink(gr.sizeof_float)
-			self.connect(self.v2s, self.burst_sink)
 							
 		# setup & connect output file
 		if options.outputfile:

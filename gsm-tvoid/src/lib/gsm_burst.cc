@@ -477,7 +477,8 @@ float gsm_burst::correlate_pattern(const float *pattern,const int pat_size,const
 		corr = 0.0;
 		for (int i = 1; i < pat_size; i++) {	//Start a 1 to skip first bit due to diff encoding
 			//d_corr[j+distance] += d_burst_buffer[center+i+j] * pattern[i];
-			corr += SIGNUM(d_burst_buffer[center+i+j]) * pattern[i];  //binary corr/sliced
+			//corr += SIGNUM(d_burst_buffer[center+i+j]) * pattern[i];  //binary corr/sliced
+			corr += d_burst_buffer[center+i+j] * pattern[i];
 		}
 		corr /= pat_size - 1; //normalize, -1 for skipped first bit
 		if (corr > d_corr_max) {
@@ -647,9 +648,12 @@ int gsm_burst::get_burst(void)
 		
 		d_fcch_count++;
 		calc_freq_offset();
+
+#ifndef TEST_TUNE_TIMING
 		if (p_tuner) {
 			p_tuner->calleval(BURST_CB_ADJ_OFFSET);
 		}
+#endif
 
 		d_ts = 0;
 		break;
@@ -703,6 +707,7 @@ int gsm_burst::get_burst(void)
 		/////////////////////
 		//start tune testing
 #ifdef TEST_TUNE_TIMING
+
 		static int good_count = -1; //-1: wait sch, >=0: got sch, counting
 	
 		if (UNKNOWN == d_burst_type) {
@@ -710,7 +715,7 @@ int gsm_burst::get_burst(void)
 				fprintf(stdout,"good_count: %d\n",good_count);
 	
 				if (p_tuner) {
-					next_arfcn = 658;	//tune back to the good channel
+					next_arfcn = TEST_TUNE_GOOD_ARFCN;
 					p_tuner->calleval(BURST_CB_TUNE);
 				}
 			}
@@ -728,7 +733,7 @@ int gsm_burst::get_burst(void)
 					good_count = 0;
 					//tune away
 					if (p_tuner) { 
-						next_arfcn = 655;	//this should be an empty channel
+						next_arfcn = TEST_TUNE_EMPTY_ARFCN;
 						p_tuner->calleval(BURST_CB_TUNE);
 					}
 				}

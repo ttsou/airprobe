@@ -11,6 +11,12 @@
 #include <gr_feval.h>
 #include "gsmstack.h"
 
+//Testing Modes
+//Tune test measures hopping latency by hopping between good and empty ARFCNs
+#define TEST_TUNE_TIMING
+#define TEST_TUNE_GOOD_ARFCN	658
+#define TEST_TUNE_EMPTY_ARFCN	655
+
 
 //Console printing options
 #define PRINT_NOTHING		0x00000000

@@ -16,7 +16,7 @@ gsm_burst_cf_sptr gsm_make_burst_cf (gr_feval_ll *t,float sample_rate)
 
 static const int MIN_IN = 1;	// minimum number of input streams
 static const int MAX_IN = 1;	// maximum number of input streams
-static const int MIN_OUT = 1;	// minimum number of output streams
+static const int MIN_OUT = 0;	// minimum number of output streams
 static const int MAX_OUT = 1;	// maximum number of output streams
 
 gsm_burst_cf::gsm_burst_cf (gr_feval_ll *t, float sample_rate) : 
@@ -103,9 +103,11 @@ int gsm_burst_cf::general_work (int noutput_items,
 				else if (b >= 2 * MAX_CORR_DIST)
 					b = 2 * MAX_CORR_DIST - 1;
 	
-				memcpy(out+rval*USEFUL_BITS, d_burst_buffer + b, USEFUL_BITS*sizeof(float));
-				rval++;
-
+				if (out) {
+					memcpy(out+rval*USEFUL_BITS, d_burst_buffer + b, USEFUL_BITS*sizeof(float));
+					rval++;
+				}
+				
 				switch ( d_clock_options & QB_MASK ) {
 				case QB_QUARTER: //extra 1/4 bit each burst
 					d_mu -= d_relative_sample_rate / 4.0;
