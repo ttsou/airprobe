@@ -14,21 +14,16 @@
 
 
 gsm_burst::gsm_burst (gr_feval_ll *t) :
+		p_tuner(t),
 		d_clock_options(DEFAULT_CLK_OPTS),
 		d_print_options(0),
 		d_equalizer_type(EQ_FIXED_DFE)
 {
  
-	fprintf(stderr,"gsm_burst: enter constructor (t=%8.8x)\n",(unsigned int)t);
+//	fprintf(stderr,"gsm_burst: enter constructor (t=%8.8x)\n",(unsigned int)t);
 	  	
 //	M_PI = M_PI; //4.0 * atan(1.0); 
 
-	//p_stat_func = 0;
-	//stat_func_data = 0;
-	
-	//p_callback = 0;
-	p_tuner = t;
-	
 	full_reset();
 	
 	//encode sync bits
@@ -228,22 +223,26 @@ void gsm_burst::print_burst(void)
 		fprintf(stderr," ");
 	}
 	
-	/*
-	 * Pass information to GSM stack. GSM stack will try to extract
-	 * information (fn, layer 2 messages, ...)
-	 */
 
-	char buf[156];
-	/* In hardbits include the 3 trial bits */
-	/* FIXME: access burst has 8 trail bits? what is d_burst_start
- 	 * set to? make sure we start at the right position here.
- 	 */
-	soft2hardbit(buf, d_burst_buffer + d_burst_start - 3, 156);
-	/* GS_process will differentially decode the data and then
- 	 * extract SCH infos (and later bcch infos).
- 	 */
-	GS_process(&d_gs_ctx, d_ts, d_burst_type, buf);
+	if ( PRINT_GSM_DECODE == d_print_options ) {
 
+		/*
+		 * Pass information to GSM stack. GSM stack will try to extract
+		 * information (fn, layer 2 messages, ...)
+		 */
+	
+		char buf[156];
+		/* In hardbits include the 3 trial bits */
+		/* FIXME: access burst has 8 trail bits? what is d_burst_start
+	 	 * set to? make sure we start at the right position here.
+	 	 */
+		soft2hardbit(buf, d_burst_buffer + d_burst_start - 3, 156);
+		/* GS_process will differentially decode the data and then
+	 	 * extract SCH infos (and later bcch infos).
+	 	 */
+		GS_process(&d_gs_ctx, d_ts, d_burst_type, buf);
+	}
+	
 	if (print) {
 
 		fprintf(stderr,"%d/%d/%+d/%lu/%lu ",

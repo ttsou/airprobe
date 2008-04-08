@@ -31,6 +31,8 @@
 #define PRINT_DUMMY			0x00000100
 #define PRINT_NORMAL		0x00000200
 
+#define PRINT_GSM_DECODE	0x00000400
+
 #define PRINT_HEX			0x00001000
 
 //Timing/clock options

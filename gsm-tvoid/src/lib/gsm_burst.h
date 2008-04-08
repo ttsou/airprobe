@@ -29,6 +29,8 @@
 #define PRINT_DUMMY			0x00000100
 #define PRINT_NORMAL		0x00000200
 
+#define PRINT_GSM_DECODE	0x00000400
+
 #define PRINT_HEX			0x00001000
 
 //Timing/clock options
@@ -144,17 +146,6 @@ protected:
 public:
 	~gsm_burst ();	
 
-	//Set status callback function, needed for quick tune()
-	//void py_set_status_callback(PyObject *pyfunc);
-	//void set_status_callback(PSTAT_FUNC func, void *clientdata);
-
-	//void set_tuner_callback(gr_feval_ll *t);
-	
-	//use swig directors to privide a python override
-	//virtual void notify_status(int status);
-
-	//void set_tuner_callback(gsm_tuner_callback *f);
-	
 	////// General Stats
 	//TODO: Maybe there should be a burst_stats class?
 	long			d_sync_loss_count;

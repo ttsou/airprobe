@@ -20,16 +20,15 @@ static const int MIN_OUT = 1;	// minimum number of output streams
 static const int MAX_OUT = 1;	// maximum number of output streams
 
 gsm_burst_cf::gsm_burst_cf (gr_feval_ll *t, float sample_rate) : 
+	gsm_burst(t),
 	gr_block (	"burst_cf",
 				gr_make_io_signature (MIN_IN, MAX_IN, sizeof (gr_complex)),
 				gr_make_io_signature (MIN_OUT, MAX_OUT, USEFUL_BITS * sizeof (float))),
-	gsm_burst(t),
 	d_clock_counter(0.0),
 	d_last_sample(0.0,0.0),
 	d_interp(new gri_mmse_fir_interpolator_cc())
 
 {
-	printf("gsm_burst_cf: enter constructor\n");
 
 	//clocking parameters
 	d_sample_interval = 1.0 / sample_rate;

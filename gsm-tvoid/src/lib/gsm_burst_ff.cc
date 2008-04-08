@@ -20,12 +20,11 @@ static const int MIN_OUT = 1;	// minimum number of output streams
 static const int MAX_OUT = 1;	// maximum number of output streams
 
 gsm_burst_ff::gsm_burst_ff (gr_feval_ll *t) : 
+	gsm_burst(t),
 	gr_block(	"burst_ff",
 				gr_make_io_signature (MIN_IN, MAX_IN, sizeof (float)),
-				gr_make_io_signature (MIN_OUT, MAX_OUT, USEFUL_BITS * sizeof (float))),
-	gsm_burst(t)
+				gr_make_io_signature (MIN_OUT, MAX_OUT, USEFUL_BITS * sizeof (float)))
 {
-	printf("gsm_burst_ff: enter constructor\n");
 		
 	set_history(1); 
 	

@@ -31,7 +31,7 @@ class burst_callback(gr.feval_ll):
 	def __init__(self, fg):
 		gr.feval_ll.__init__(self)
 		self.fg = fg
-	
+
 	def eval(self, x):
 		try:
 			#print "burst_callback: ", x, "\n";
@@ -40,7 +40,7 @@ class burst_callback(gr.feval_ll):
 				last_offset = self.fg.burst.last_freq_offset()
 				if last_offset < 200.0:
 					return 0
-					
+
 				self.fg.offset -= last_offset
 				print "burst_callback: ADJ_OFFSET:", last_offset, " ARFCN: ", self.fg.arfcn, "\n";
 				self.fg.set_channel(self.fg.arfcn)
@@ -49,10 +49,10 @@ class burst_callback(gr.feval_ll):
 				self.fg.set_channel(self.fg.burst.next_arfcn)
 
 			return 0
-		
+
 		except Exception, e:
 			print "burst_callback: Exception: ", e
-	
+
 
 def pick_subdevice(u):
 	if u.db[0][0].dbid() >= 0:
@@ -97,7 +97,6 @@ def get_freq_from_arfcn(chan,region):
 	return freq * 1e6
 
 
-
 class app_flow_graph(stdgui.gui_flow_graph):
 	def __init__(self, frame, panel, vbox, argv):
 		stdgui.gui_flow_graph.__init__(self)
@@ -117,7 +116,8 @@ class app_flow_graph(stdgui.gui_flow_graph):
 							help="What to print on console. [default=%default]\n" +
 							"(n)othing, (e)verything, (s)tatus, (a)ll Types, (k)nown, (u)nknown, \n" +
 							"TS(0), (F)CCH, (S)CH, (N)ormal, (D)ummy\n" +
-							"Usefull (b)its, All TS (B)its, (C)orrelation bits, he(x) burst data")
+							"Usefull (b)its, All TS (B)its, (C)orrelation bits, he(x) burst data, \n" +
+							"(d)ecoded hex for gsmdecode")
 				
 
 		#decoder options
@@ -354,10 +354,13 @@ class app_flow_graph(stdgui.gui_flow_graph):
 			popts |= gsm.PRINT_SCH
 		
 		if options.print_console.count('N'):
-			popts |= gsm.PRINT_SCH
+			popts |= gsm.PRINT_NORMAL
 		
 		if options.print_console.count('D'):
-			popts |= gsm.PRINT_SCH
+			popts |= gsm.PRINT_DUMMY
+		
+		if options.print_console.count('d'):
+			popts |= gsm.PRINT_GSM_DECODE
 		
 		if options.print_console.count('C'):
 			popts |= gsm.PRINT_BITS | gsm.PRINT_CORR_BITS
@@ -370,6 +373,11 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		
 		elif options.print_console.count('b'):
 			popts |= gsm.PRINT_BITS
+
+		if options.print_console.count('d'):
+			popts |= gsm.PRINT_GSM_DECODE
+		
+		#TODO: should warn if PRINT_GSM_DECODE is combined with other flags (will corrupt output for gsmdecode)
 		
 		self.burst.d_print_options = popts	
 		
@@ -408,6 +416,9 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		self.t1 = wx.Timer(self.frame)
 		self.t1.Start(5000,0)
 		self.frame.Bind(wx.EVT_TIMER, self.on_tick)
+
+		#bind the idle routing for message_queue processing	
+		self.frame.Bind(wx.EVT_IDLE, self.on_idle)
 
 
 	def _set_status_msg(self, msg):
@@ -454,7 +465,7 @@ class app_flow_graph(stdgui.gui_flow_graph):
 												callback=self.set_channel)
 
 			vbox.Add(hbox, 0, wx.EXPAND)
-
+		
 
 	def set_freq(self, freq):
 
@@ -495,8 +506,6 @@ class app_flow_graph(stdgui.gui_flow_graph):
 
 	def print_stats(self):
 
-		self._set_status_msg(self.status_msg)
-
 		n_total = self.burst.d_total_count
 		n_unknown = self.burst.d_unknown_count
 		n_known = n_total - n_unknown
@@ -523,7 +532,11 @@ class app_flow_graph(stdgui.gui_flow_graph):
 			
 		if self.print_status:
 			self.print_stats()
-			
+
+	def on_idle(self, event):
+		self._set_status_msg(self.status_msg)
+		#print "Idle.\n";
+
 def main ():
 	app = stdgui.stdapp(app_flow_graph, "GSM Scanner", nstatus=1)
 	app.MainLoop()
