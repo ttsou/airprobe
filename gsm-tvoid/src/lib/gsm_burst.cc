@@ -358,14 +358,15 @@ void gsm_burst::shift_burst(int shift_bits)
 //of the mean phase  from pi/2.
 void gsm_burst::calc_freq_offset(void) 
 {
-	int start = d_burst_start + 10;
-	int end = d_burst_start + USEFUL_BITS - 10;
+	const int padding = 20;
+	int start = d_burst_start + padding;
+	int end = d_burst_start + USEFUL_BITS - padding;
 	
 	float sum = 0.0;
 	for (int j = start; j <= end; j++) {
 		sum += d_burst_buffer[j];
 	}
-	float mean = sum / ((float)USEFUL_BITS - 20.0);
+	float mean = sum / ((float)USEFUL_BITS - 2.0 * (float)padding);
 	
 	float p_off = mean - (M_PI / 2);
 	d_freq_offset = p_off * 1625000.0 / (12.0 * M_PI);
@@ -701,6 +702,7 @@ int gsm_burst::get_burst(void)
 
 		/////////////////////
 		//start tune testing
+#ifdef TEST_TUNE_TIMING
 		static int good_count = -1; //-1: wait sch, >=0: got sch, counting
 	
 		if (UNKNOWN == d_burst_type) {
@@ -732,6 +734,7 @@ int gsm_burst::get_burst(void)
 				}
 			}
 		}
+#endif
 		//end tune testing	
 		/////////////////////
 

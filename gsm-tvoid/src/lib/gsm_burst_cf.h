@@ -20,11 +20,13 @@ private:
 	gsm_burst_cf(gr_feval_ll *,float);  
 	
 	//clocking parameters
-	float			d_relative_sample_rate;
 	double			d_sample_interval;
 	double			d_clock_counter;
 	gr_complex		d_last_sample;
 
+	float			d_relative_sample_rate;		//omega
+	float			d_mu;
+	
 	gri_mmse_fir_interpolator_cc 	*d_interp;  //sub-sample interpolator from GR
 		
 public:
