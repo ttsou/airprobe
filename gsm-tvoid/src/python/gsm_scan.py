@@ -214,25 +214,25 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		sps = input_rate/gsm_symb_rate
 
 
-# 		# Attempt to enable realtime scheduling
-# 		r = gr.enable_realtime_scheduling()
-# 		if r == gr.RT_OK:
-# 			realtime = True
-# 			print "Realtime scheduling ENABLED"
-# 		else:
-# 			realtime = False
-# 			print "Realtime scheduling FAILED"
-# 		
-# #		if options.fusb_block_size == 0 and options.fusb_nblocks == 0:
-# 		if realtime:                        # be more aggressive
-# 			options.fusb_block_size = gr.prefs().get_long('fusb', 'rt_block_size', 1024)
-# 			options.fusb_nblocks    = gr.prefs().get_long('fusb', 'rt_nblocks', 16)
-# 		else:
-# 			options.fusb_block_size = gr.prefs().get_long('fusb', 'block_size', 4096)
-# 			options.fusb_nblocks    = gr.prefs().get_long('fusb', 'nblocks', 16)
-# 		
-# 		print "fusb_block_size =", options.fusb_block_size
-# 		print "fusb_nblocks    =", options.fusb_nblocks
+		# Attempt to enable realtime scheduling
+		r = gr.enable_realtime_scheduling()
+		if r == gr.RT_OK:
+			realtime = True
+			print "Realtime scheduling ENABLED"
+		else:
+			realtime = False
+			print "Realtime scheduling FAILED"
+		
+#		if options.fusb_block_size == 0 and options.fusb_nblocks == 0:
+		if realtime:                        # be more aggressive
+			options.fusb_block_size = gr.prefs().get_long('fusb', 'rt_block_size', 1024)
+			options.fusb_nblocks    = gr.prefs().get_long('fusb', 'rt_nblocks', 16)
+		else:
+			options.fusb_block_size = gr.prefs().get_long('fusb', 'block_size', 4096)
+			options.fusb_nblocks    = gr.prefs().get_long('fusb', 'nblocks', 16)
+		
+		print "fusb_block_size =", options.fusb_block_size
+		print "fusb_nblocks    =", options.fusb_nblocks
 
 		# Build the flowgraph
 		# Setup our input source

@@ -713,7 +713,8 @@ int gsm_burst::get_burst(void)
 #ifdef TEST_TUNE_TIMING
 
 		static int good_count = -1; //-1: wait sch, >=0: got sch, counting
-	
+		static int wait_count = 0;
+			
 		if (UNKNOWN == d_burst_type) {
 			if (good_count >= 0) {
 				fprintf(stdout,"good_count: %d\n",good_count);
@@ -732,9 +733,9 @@ int gsm_burst::get_burst(void)
 			}
 	
 			if (SCH == d_burst_type) {	
-				if (good_count < 0) {	// waiting for sch?
+				if ((good_count < 0) && (++wait_count > 20)) {	// get some good syncs before trying again
 					fprintf(stdout,"restarting good_count\n");
-					good_count = 0;
+					good_count = wait_count = 0;
 					//tune away
 					if (p_tuner) { 
 						next_arfcn = TEST_TUNE_EMPTY_ARFCN;
