@@ -34,6 +34,6 @@ done
 
 FILE="capture_${FREQ}_${DECIM}.cfile"
 samples=`expr 64000000 / $DECIM '*' $DURATION`
-echo "Capturing for $DURATION seconds to $FILE"
+echo "Capturing for $DURATION seconds to $FILE ($samples samples)"
 $USRP_PROG -d "$DECIM" -f "$FREQ" -N $samples $FILE
 
