@@ -37,16 +37,17 @@ ourpython_PYTHON =			\
 ourlib_LTLIBRARIES = _gsm.la
 
 # These are the source files that go into the shared library
-_gsm_la_SOURCES = 			\
+_gsm_la_SOURCES = 		\
 	gsmstack.c			\
-	interleave.c			\
+	interleave.c		\
 	conv.c				\
 	sch.c				\
 	cch.c				\
 	gsm.cc				\
-	gsm_burst.cc			\
-	gsm_burst_ff.cc			\
-	gsm_burst_cf.cc
+	gsm_burst.cc		\
+	gsm_burst_ff.cc		\
+	gsm_burst_cf.cc		\
+	gsm_burst_sink_c.cc
 	
 
 # magic flags
@@ -62,16 +63,17 @@ gsm.cc gsm.py: $(LOCAL_IFILES) $(ALL_IFILES)
 	$(SWIG) $(SWIGPYTHONARGS) -module gsm -o gsm.cc $(LOCAL_IFILES) 
 
 # These headers get installed in ${prefix}/include/gnuradio
-grinclude_HEADERS =			\
+grinclude_HEADERS =		\
 	gsm_burst.h			\
 	gsmstack.h			\
-	interleave.h			\
+	interleave.h		\
 	conv.h				\
 	sch.h				\
 	cch.h				\
 	system.h			\
-	gsm_burst_ff.h			\
-	gsm_burst_cf.h			\
+	gsm_burst_ff.h		\
+	gsm_burst_cf.h		\
+	gsm_burst_sink_c.h	\
 	gsm_constants.h
 
 

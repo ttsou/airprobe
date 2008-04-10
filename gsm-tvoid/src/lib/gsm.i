@@ -9,6 +9,7 @@
 //#include "gsm_burst.h"
 #include "gsm_burst_ff.h"
 #include "gsm_burst_cf.h"
+#include "gsm_burst_sink_c.h"
 //#include <stdexcept>
 
 %}
@@ -106,6 +107,14 @@ gsm_burst_cf_sptr gsm_make_burst_cf (gr_feval_ll *,float);
 class gsm_burst_cf : public gr_block, public gsm_burst {
 private:
 	gsm_burst_cf (gr_feval_ll *,float);
+};
+
+GR_SWIG_BLOCK_MAGIC(gsm,burst_sink_c);
+gsm_burst_sink_c_sptr gsm_make_burst_sink_c(gr_feval_ll *,float);
+
+class gsm_burst_sink_c : public gr_sync_block, public gsm_burst {
+private:
+	gsm_burst_sink_c (gr_feval_ll *,float);
 };
 
 

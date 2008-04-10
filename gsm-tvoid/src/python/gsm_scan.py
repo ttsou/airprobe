@@ -59,7 +59,7 @@ class burst_callback(gr.feval_ll):
 				
 					#retune if greater than 100 Hz
 					if mean_offset > 100.0:	
-						print "burst_callback: mean offset:", mean_offset, "\n";
+						print "burst_callback: mean offset adjust:", mean_offset, "\n";
 						self.fg.set_channel(self.fg.arfcn)
 				
 			elif gsm.BURST_CB_TUNE == x:
@@ -149,7 +149,7 @@ class app_flow_graph(stdgui.gui_flow_graph):
 							help="Sample clock offset frequency")
 		parser.add_option("-E", "--equalizer", type="string", default="none",
 							help="Type of equalizer to use.  none, fixed-dfe [default=%default]")
-		parser.add_option("-t", "--timing", type="string", default="cq",
+		parser.add_option("-t", "--timing", type="string", default="cn",
 							help="Type of timing techniques to use. [default=%default] \n" +
 							"(n)one, (c)orrelation track, (q)uarter bit, (f)ull04 ")
 
@@ -225,11 +225,13 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		
 #		if options.fusb_block_size == 0 and options.fusb_nblocks == 0:
 		if realtime:                        # be more aggressive
-			options.fusb_block_size = gr.prefs().get_long('fusb', 'rt_block_size', 1024)
+#			options.fusb_block_size = gr.prefs().get_long('fusb', 'rt_block_size', 1024)
+			options.fusb_block_size = gr.prefs().get_long('fusb', 'rt_block_size', 512)
 			options.fusb_nblocks    = gr.prefs().get_long('fusb', 'rt_nblocks', 16)
 		else:
-			options.fusb_block_size = gr.prefs().get_long('fusb', 'block_size', 4096)
-			options.fusb_nblocks    = gr.prefs().get_long('fusb', 'nblocks', 16)
+#			options.fusb_block_size = gr.prefs().get_long('fusb', 'block_size', 4096)
+			options.fusb_block_size = gr.prefs().get_long('fusb', 'block_size', 1024)
+			options.fusb_nblocks    = gr.prefs().get_long('fusb', 'nblocks', 32)
 		
 		print "fusb_block_size =", options.fusb_block_size
 		print "fusb_nblocks    =", options.fusb_nblocks
@@ -242,7 +244,8 @@ class app_flow_graph(stdgui.gui_flow_graph):
 			self.source = gr.file_source(gr.sizeof_gr_complex, options.inputfile, options.fileloop)
 		else:
 			self.using_usrp = True
-			self.u = usrp.source_c(decim_rate=options.decim)
+			self.u = usrp.source_c(decim_rate=options.decim,fusb_block_size=options.fusb_block_size,fusb_nblocks=options.fusb_nblocks)
+				
 			if options.rx_subdev_spec is None:
 				options.rx_subdev_spec = pick_subdevice(self.u)
 			self.u.set_mux(usrp.determine_rx_mux_value(self.u, options.rx_subdev_spec))
@@ -292,7 +295,12 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		
 		# Setup flow based on decoder selection
 		if options.decoder.count("c"):
-			self.burst = gsm.burst_cf(self.burst_cb,input_rate)
+			#use the sink version if burst scope not selected
+			if self.scopes.count("b"):
+				self.burst = gsm.burst_cf(self.burst_cb,input_rate)
+			else:
+				self.burst = gsm.burst_sink_c(self.burst_cb,input_rate)
+			
 			self.connect(self.filter, self.burst)
 
 		elif options.decoder.count("f"):
