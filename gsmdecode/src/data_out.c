@@ -9,6 +9,7 @@
 //#include <netinet/in.h>
 #include "id_list.h"
 #include "gsm_desc.h"
+#include "mcc_list.h"
 
 #define OUTF(a...)	do { \
 	printf("  %3d: %02x ", (int)(data - start), data[0]); \
@@ -75,7 +76,7 @@ static void l2_UssData();
 static void l2_CCReleaseComplete();
 
 static void l2_ChannelNeeded(char *str, unsigned char ch);
-static void l2_MNCC(const char *str, unsigned char a, unsigned char b, unsigned char c);
+static int l2_MNCC(int mcc, unsigned char a, unsigned char b, unsigned char c);
 
 static void maio();
 static char *BitRow(unsigned char c, int pos);
@@ -177,6 +178,7 @@ l2_data_out_B(int fn, const unsigned char *input_data, int len, int logicalchann
 {
 	const unsigned char *from;
 	int val;
+
 	data = input_data;
 	start = data;
 	end = data + len;
@@ -429,7 +431,6 @@ l2_data_out_Bbis(int fn, const unsigned char *input_data, int len)
 {
 	int i;
 
-
 	memset(&nfo, 0, sizeof nfo);
 	if (len <= 0)
 		return;
@@ -549,7 +550,26 @@ l2_Bbis()	/* GSM 04.07 11.2.3.2.1 */
 	default:
 		OUTF("%s 0x%02x UNKNOWN\n", BitRowFill(data[0], 0x0f), data[0] & 0x0f);
 	}
+	if (data < end)
+		OUTF("XXXXXXXX UNKNOWN DATA (%d bytes)\n", end - data);
+	if (data > end)
+	{
+		OUTF("INTERNAL ERROR. Processed to many data\n");
+		return;
+	}
 
+	while (1)
+	{
+		if (end >= start + 23)
+			break;
+		if (*end == 0x2b)
+			break;
+		end++;
+	}
+	if (end > data)
+	{
+		OUTF("YYYYYYYY REST OCTETS (%d)\n", end - data);
+	}
 }
 
 /*
@@ -1136,8 +1156,9 @@ l2_RRimmediateAssTBFC()
 	RequestReference();
 	TimingAdvance();
 	l2_MobileAllocation();
-	if (data >= end)
-		RETTRUNK();
+	if (data == end)
+		return;
+	/* FIXME: rest octets?? */
 	OUTF("FIXME: implenet\n");
 }
 
@@ -1458,13 +1479,15 @@ l2_RRsystemInfo4C()
 static void
 l2_MccMncLac()
 {
+	int mcc;
+
 	if (data + 2 >= end)
 		return;
 	unsigned short lac;
 	
-	l2_MNCC("Mobile Country Code", data[0] & 0x0f, (data[0] >> 4) & 0x0f, data[1] & 0x0f);
+	mcc = l2_MNCC(0, data[0] & 0x0f, (data[0] >> 4) & 0x0f, data[1] & 0x0f);
 	data++;
-	l2_MNCC("Mobile Network Code", data[1] & 0x0f, (data[1] >> 4) & 0x0f, (data[0] >> 4) & 0x0f);
+	l2_MNCC(mcc, data[1] & 0x0f, (data[1] >> 4) & 0x0f, (data[0] >> 4) & 0x0f);
 	data += 2;
 
 	if (data + 1 >= end)
@@ -1589,15 +1612,32 @@ CellOptionsBcch()
 	data++;
 }
 
-static void
-l2_MNCC(const char *str, unsigned char a, unsigned char b, unsigned char c)
+/*
+ * If mcc is 0 then output MCC and return MCC as value.
+ * Otherwise output MNC.
+ */
+static int
+l2_MNCC(int mcc, unsigned char a, unsigned char b, unsigned char c)
 {
 	char buf[128];
 	char f[12];
+	const char *country;
+	const char *mnc;
 
 	snprintf(f, sizeof f, "%x%x%x", a, b, c);
 	/* Nokia netmonitor shows NC's like '30F' and '10F' */
-	snprintf(buf, sizeof buf, "%-8s %s\n", f, str);
+	if (mcc == 0)
+	{
+		/* Find out MCC */
+		mcc = atoi(f);
+		country = mcc_get(mcc);
+		if (country == NULL)
+			country = "UNKNOWN";
+		snprintf(buf, sizeof buf, "%-8s %s (%s)\n", f, "Mobile Country Code", country);
+	} else {
+		mnc = mnc_get(mcc, atoi(f));
+		snprintf(buf, sizeof buf, "%-8s %s (%s)\n", f, "Mobile Network Code", mnc);
+	}
 
 #if 0
 	buf[0] = '\0';
@@ -1615,6 +1655,8 @@ l2_MNCC(const char *str, unsigned char a, unsigned char b, unsigned char c)
 #endif
 
 	OUTF(buf);
+
+	return mcc;
 }
 
 static char *
