@@ -197,7 +197,17 @@ void gsm_burst::print_burst(void)
 	int print = 0;
 
 	//fprintf(stderr,"p=%8.8X ",	d_print_options);
-	
+
+	if ( PRINT_GSM_DECODE & d_print_options ) {
+
+		/*
+		 * Pass information to GSM stack. GSM stack will try to extract
+		 * information (fn, layer 2 messages, ...)
+		 */
+		diff_decode_burst();		
+		GS_process(&d_gs_ctx, d_ts, d_burst_type, d_decoded_burst);
+	}
+		
 	if ( PRINT_EVERYTHING == d_print_options )
 		print = 1;
 	else if ( (!d_ts) && (d_print_options & PRINT_TS0) )
@@ -224,18 +234,7 @@ void gsm_burst::print_burst(void)
 		
 		fprintf(stderr," ");
 	}
-	
 
-	if ( PRINT_GSM_DECODE == d_print_options ) {
-
-		/*
-		 * Pass information to GSM stack. GSM stack will try to extract
-		 * information (fn, layer 2 messages, ...)
-		 */
-		diff_decode_burst();		
-		GS_process(&d_gs_ctx, d_ts, d_burst_type, d_decoded_burst);
-	}
-	
 	if (print) {
 
 		fprintf(stderr,"%d/%d/%+d/%lu/%lu ",
@@ -278,7 +277,7 @@ void gsm_burst::print_burst(void)
 			break;		
 		}
 
-	fprintf(stderr,"\n");
+		fprintf(stderr,"\n");
 
 
 		//print the correlation pattern for visual inspection
