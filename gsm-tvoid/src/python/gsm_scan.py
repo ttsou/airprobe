@@ -81,7 +81,7 @@ class burst_callback(gr.feval_ll):
 			return 0
 
 		except Exception, e:
-			print "burst_callback: Exception: ", e
+			print >> sys.stderr, "burst_callback: Exception: ", e
 
 
 def pick_subdevice(u):
@@ -232,7 +232,7 @@ class app_flow_graph(stdgui.gui_flow_graph):
 				percent_offset = 0.0
 				
 			clock_rate += clock_rate * percent_offset
-			print "% offset = ", percent_offset, "clock = ", clock_rate
+			print >> sys.stderr, "% offset = ", percent_offset, "clock = ", clock_rate
 			
 		#set the default input rate, we will check with the USRP if it is being used
 		input_rate = clock_rate / options.decim
@@ -244,10 +244,10 @@ class app_flow_graph(stdgui.gui_flow_graph):
 			r = gr.enable_realtime_scheduling()
 			if r == gr.RT_OK:
 				realtime = True
-				print "Realtime scheduling ENABLED"
+				print >> sys.stderr, "Realtime scheduling ENABLED"
 			else:
 				realtime = False
-				print "Realtime scheduling FAILED"
+				print >> sys.stderr, "Realtime scheduling FAILED"
 		
 		#set resonable defaults if no user prefs set
 		if options.realtime:                        # be more aggressive
@@ -261,14 +261,14 @@ class app_flow_graph(stdgui.gui_flow_graph):
 			if options.fusb_nblocks == 0:
 				options.fusb_nblocks    = gr.prefs().get_long('fusb', 'nblocks', 16)
 		
-		print "fusb_block_size =", options.fusb_block_size
-		print "fusb_nblocks    =", options.fusb_nblocks
+		print >> sys.stderr, "fusb_block_size =", options.fusb_block_size
+		print >> sys.stderr, "fusb_nblocks    =", options.fusb_nblocks
 
 		# Build the flowgraph
 		# Setup our input source
 		if options.inputfile:
 			self.using_usrp = False
-			print "Reading data from: " + options.inputfile
+			print >> sys.stderr, "Reading data from: " + options.inputfile
 			self.source = gr.file_source(gr.sizeof_gr_complex, options.inputfile, options.fileloop)
 		else:
 			self.using_usrp = True
@@ -521,7 +521,9 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		
 		if not self.using_usrp:
 			#if reading from file just adjust for offset in the freq translator
-			print "Setting filter center freq to offset: ", self.offset, "\n"
+			if self.print_status:
+				print >> sys.stderr, "Setting filter center freq to offset: ", self.offset, "\n"
+			
 			self.filter.set_center_freq(self.offset) 
 			return True
 	
@@ -555,30 +557,29 @@ class app_flow_graph(stdgui.gui_flow_graph):
 			self.status_msg = "Invalid Channel"
 
 	def print_stats(self):
-
+		out = sys.stderr
+		
 		n_total = self.burst.d_total_count
 		n_unknown = self.burst.d_unknown_count
 		n_known = n_total - n_unknown
 		
-		print "======== STATS ========="
-		print 'freq_offset:    ',self.offset
-		print 'mean_offset:    ',self.mean_offset
-		print 'sync_loss_count:',self.burst.d_sync_loss_count
-		print 'total_bursts:   ',n_total
-		print 'fcch_count:     ',self.burst.d_fcch_count
-		print 'part_sch_count: ',self.burst.d_part_sch_count
-		print 'sch_count:      ',self.burst.d_sch_count
-		print 'normal_count:   ',self.burst.d_normal_count
-		print 'dummy_count:    ',self.burst.d_dummy_count
-		print 'unknown_count:  ',self.burst.d_unknown_count
-		print 'known_count:    ',n_known
+		print >> out, "======== STATS ========="
+		print >> out, 'freq_offset:    ',self.offset
+		print >> out, 'mean_offset:    ',self.mean_offset
+		print >> out, 'sync_loss_count:',self.burst.d_sync_loss_count
+		print >> out, 'total_bursts:   ',n_total
+		print >> out, 'fcch_count:     ',self.burst.d_fcch_count
+		print >> out, 'part_sch_count: ',self.burst.d_part_sch_count
+		print >> out, 'sch_count:      ',self.burst.d_sch_count
+		print >> out, 'normal_count:   ',self.burst.d_normal_count
+		print >> out, 'dummy_count:    ',self.burst.d_dummy_count
+		print >> out, 'unknown_count:  ',self.burst.d_unknown_count
+		print >> out, 'known_count:    ',n_known
 		if n_total:
-			print '%known:         ', 100.0 * n_known / n_total
-		print ""		
+			print >> out, '%known:         ', 100.0 * n_known / n_total
+		print >> out, ""		
 				
 	def on_tick(self, evt):
-		#if option.autotune
-			#tune offset
 			
 		if self.print_status:
 			self.print_stats()
