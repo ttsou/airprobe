@@ -30,6 +30,10 @@ private:
 	int				d_ii;	//save index between work calls for interp advance
 	
 	gri_mmse_fir_interpolator_cc 	*d_interp;  //sub-sample interpolator from GR
+	
+	gr_complex		d_complex_burst[BBUF_SIZE];
+
+	void 			shift_burst(int shift_bits);
 		
 public:
 	~gsm_burst_sink_c ();	

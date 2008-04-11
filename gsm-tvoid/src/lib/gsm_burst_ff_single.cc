@@ -23,7 +23,9 @@ gsm_burst_ff::gsm_burst_ff (gr_feval_ll *t) :
 	gsm_burst(t),
 	gr_block(	"burst_ff",
 				gr_make_io_signature (MIN_IN, MAX_IN, sizeof (float)),
-				gr_make_io_signature (MIN_OUT, MAX_OUT, USEFUL_BITS * sizeof (float)))
+//				gr_make_io_signature (MIN_OUT, MAX_OUT, USEFUL_BITS * sizeof (float)))
+				gr_make_io_signature (0, 0, 0))
+//				gr_make_io_signature (MIN_OUT, MAX_OUT, sizeof (float)))
 {
 		
 	set_history(1); 
@@ -34,13 +36,14 @@ gsm_burst_ff::~gsm_burst_ff ()
 {
 }
 
+/*
 void gsm_burst_ff::forecast (int noutput_items, gr_vector_int &ninput_items_required)
 {
   unsigned ninputs = ninput_items_required.size ();
   for (unsigned i = 0; i < ninputs; i++)
-    ninput_items_required[i] = noutput_items * BBUF_SIZE;
+    ninput_items_required[i] = noutput_items * BBUF_SIZE + history();
 }
-
+*/
 
 int gsm_burst_ff::general_work (int noutput_items,
 				   gr_vector_int &ninput_items,
@@ -51,13 +54,18 @@ int gsm_burst_ff::general_work (int noutput_items,
 	float *out = (float *) output_items[0];
 	
 	int ii=0;
-	int rval = 0;  //default to no output
-	int do_output = output_items.size() > 0 ? 1 : 0;
+	//int rval = 0;  //default to no output
+	int rval = noutput_items;  //default to no output
+
+	//int do_output = output_items.size() > 0 ? 1 : 0;
+	int do_output = 0;
 	
 	int n_input = ninput_items[0];
 //	fprintf(stderr,"out=%8.8x/#i=%d/#o=%d",(unsigned)out,n_input,noutput_items);
+//	fprintf(stderr,"#i=%d/#o=%d",n_input,noutput_items);
 
-	while (( rval < noutput_items) && ( ii < n_input ) ) {
+//	while (( rval < noutput_items) && ( ii < n_input ) ) {
+	while ( ii < n_input ) {
 
 		assert(d_bbuf_pos <= BBUF_SIZE );
 		
@@ -80,7 +88,8 @@ int gsm_burst_ff::general_work (int noutput_items,
 		
 					memcpy(out+rval*USEFUL_BITS, d_burst_buffer + b, USEFUL_BITS*sizeof(float));
 				}
-				rval++;
+				//rval++;
+				//rval += USEFUL_BITS*sizeof(float);
 
 				switch ( d_clock_options & QB_MASK  ) {
 				case QB_QUARTER: //Can't do this in the FF version

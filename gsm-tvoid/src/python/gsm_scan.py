@@ -1,13 +1,15 @@
 #!/usr/bin/env python
 # TODO:
-#	* Adjust offset by PPM
-#	* Auto-tune offset (add option to enable)
 #	* Add status info to window (frequency, offset, etc)
 #	* Put direct frequency tuning back
 #	* Add rate-limited file reads (throttle?)
 #	* Make console only version
 #	* Reset burst_stats on retune
 #	* Add better option checking
+#	* Wideband (multi-channel) processing (usrp and/or file input)
+#	* Automatic beacon scan (quick scan RSSI, then check for BCCH)
+#	* AGC
+#	* Refactor, this is too messy
 
 import sys
 
@@ -31,40 +33,50 @@ class burst_callback(gr.feval_ll):
 	def __init__(self, fg):
 		gr.feval_ll.__init__(self)
 		self.fg = fg
-		self.offset_mean_num = 30		#number of FCCH offsets to average
+		self.offset_mean_num = 10		#number of FCCH offsets to average
 		self.offset_vals = []
 		
 	def eval(self, x):
+		#print "burst_callback: eval(",x,")\n";
 		try:
 			#TODO: rework so this will work on file input
 			if gsm.BURST_CB_SYNC_OFFSET == x:
-				last_offset = self.fg.burst.last_freq_offset()
-				self.fg.offset -= last_offset
-				print "burst_callback: SYNC_OFFSET:", last_offset, " ARFCN: ", self.fg.arfcn, "\n";
-				self.fg.set_channel(self.fg.arfcn)
+				#print "burst_callback: SYNC_OFFSET\n";
+				if self.fg.options.tuning.count("o"):
+					last_offset = self.fg.burst.last_freq_offset()
+					self.fg.offset -= last_offset
+					#print "burst_callback: SYNC_OFFSET:", last_offset, " ARFCN: ", self.fg.channel, "\n";
+					self.fg.set_channel(self.fg.channel)
 
 			elif gsm.BURST_CB_ADJ_OFFSET == x:
 				last_offset = self.fg.burst.last_freq_offset()
-				#print "burst_callback: ADJ_OFFSET:", last_offset, " ARFCN: ", self.fg.arfcn, "\n";
 
 				self.offset_vals.append(last_offset)
-				
-				if len(self.offset_vals) >= self.offset_mean_num:
+				count =  len(self.offset_vals)
+				#print "burst_callback: ADJ_OFFSET:", last_offset, ", count=",count,"\n";
+
+				if count >= self.offset_mean_num:
 					sum = 0.0
 					while len(self.offset_vals):
 						sum += self.offset_vals.pop(0)
-					
-					mean_offset = sum / self.offset_mean_num
-					self.fg.offset -= mean_offset
-				
+
+					self.fg.mean_offset = sum / self.offset_mean_num
+
+					#print "burst_callback: mean offset:", self.fg.mean_offset, "\n";
+
 					#retune if greater than 100 Hz
-					if mean_offset > 100.0:	
-						print "burst_callback: mean offset adjust:", mean_offset, "\n";
-						self.fg.set_channel(self.fg.arfcn)
-				
-			elif gsm.BURST_CB_TUNE == x:
-				print "burst_callback: BURST_CB_TUNE: ARFCN: ", self.fg.burst.next_arfcn, "\n";
-				self.fg.set_channel(self.fg.burst.next_arfcn)
+					if abs(self.fg.mean_offset) > 100.0:	
+						#print "burst_callback: mean offset adjust:", self.fg.mean_offset, "\n";
+						if self.fg.options.tuning.count("o"):	
+							#print "burst_callback: tuning.\n";
+							self.fg.offset -= self.fg.mean_offset
+							self.fg.set_channel(self.fg.channel)
+
+			elif gsm.BURST_CB_TUNE == x and self.fg.options.tuning.count("h"):
+				#print "burst_callback: BURST_CB_TUNE: ARFCN: ", self.fg.burst.next_arfcn, "\n";
+				if self.fg.options.tuning.count("h"):
+					#print "burst_callback: tuning.\n";
+					self.fg.set_channel(self.fg.burst.next_arfcn)
 
 			return 0
 
@@ -153,6 +165,11 @@ class app_flow_graph(stdgui.gui_flow_graph):
 							help="Type of timing techniques to use. [default=%default] \n" +
 							"(n)one, (c)orrelation track, (q)uarter bit, (f)ull04 ")
 
+		#tuning options
+		parser.add_option("-T", "--tuning", type="string", default="oh",
+							help="Type of tuning to perform. [default=%default] \n" +
+							"(n)one, (o)ffset adjustment, (h)opping ")
+		
 		#file options
 		parser.add_option("-I", "--inputfile", type="string", default=None,
 							help="Select a capture file to read")
@@ -164,10 +181,17 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		#usrp options
 		parser.add_option("-R", "--rx-subdev-spec", type="subdev", default=None,
 							help="Select USRP Rx side A or B (default=first one with a daughterboard)")
+		parser.add_option("--fusb-block-size", type="int", default=0,
+							help="Set USRP blocksize")
+		parser.add_option("--fusb-nblocks", type="int", default=0,
+							help="Set USRP block buffers")
+		parser.add_option("--realtime",action="store_true", dest="realtime",
+							help="Use realtime scheduling.")
+
 		#FIXME: gain not working?
 		parser.add_option("-g", "--gain", type="eng_float", default=None,
 							help="Set gain in dB (default is midpoint)")
-		parser.add_option("-c", "--channel", type="int", default=None,
+		parser.add_option("-c", "--channel", type="int", default=1,
 							help="Tune to GSM ARFCN.  Overrides --freq")
 		parser.add_option("-r", "--region", type="string", default="u",
 							help="Frequency bands to use for channels.  (u)s or (e)urope [default=%default]")
@@ -183,6 +207,8 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		self.region = options.region
 		self.channel = options.channel
 		self.offset = options.offset
+
+		self.mean_offset = 0.0		#this is relative averaged freq offset
 		
 		self.print_status = options.print_console.count('s')
 		
@@ -213,25 +239,27 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		gsm_symb_rate = 1625000.0 / 6.0
 		sps = input_rate/gsm_symb_rate
 
-
 		# Attempt to enable realtime scheduling
-		r = gr.enable_realtime_scheduling()
-		if r == gr.RT_OK:
-			realtime = True
-			print "Realtime scheduling ENABLED"
-		else:
-			realtime = False
-			print "Realtime scheduling FAILED"
+		if options.realtime:
+			r = gr.enable_realtime_scheduling()
+			if r == gr.RT_OK:
+				realtime = True
+				print "Realtime scheduling ENABLED"
+			else:
+				realtime = False
+				print "Realtime scheduling FAILED"
 		
-#		if options.fusb_block_size == 0 and options.fusb_nblocks == 0:
-		if realtime:                        # be more aggressive
-#			options.fusb_block_size = gr.prefs().get_long('fusb', 'rt_block_size', 1024)
-			options.fusb_block_size = gr.prefs().get_long('fusb', 'rt_block_size', 512)
-			options.fusb_nblocks    = gr.prefs().get_long('fusb', 'rt_nblocks', 16)
+		#set resonable defaults if no user prefs set
+		if options.realtime:                        # be more aggressive
+			if options.fusb_block_size == 0:
+				options.fusb_block_size = gr.prefs().get_long('fusb', 'rt_block_size', 1024)
+			if options.fusb_nblocks == 0:
+				options.fusb_nblocks    = gr.prefs().get_long('fusb', 'rt_nblocks', 16)
 		else:
-#			options.fusb_block_size = gr.prefs().get_long('fusb', 'block_size', 4096)
-			options.fusb_block_size = gr.prefs().get_long('fusb', 'block_size', 1024)
-			options.fusb_nblocks    = gr.prefs().get_long('fusb', 'nblocks', 32)
+			if options.fusb_block_size == 0:
+				options.fusb_block_size = gr.prefs().get_long('fusb', 'block_size', 4096)
+			if options.fusb_nblocks == 0:
+				options.fusb_nblocks    = gr.prefs().get_long('fusb', 'nblocks', 16)
 		
 		print "fusb_block_size =", options.fusb_block_size
 		print "fusb_nblocks    =", options.fusb_nblocks
@@ -274,6 +302,7 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		else:
 			offset = 0.0
 
+		#TODO: try a differnet filter for latency (and CPU)
 		filter_taps = gr.firdes.low_pass(1.0, input_rate, filter_cutoff, filter_t_width, gr.firdes.WIN_HAMMING)
 		self.filter = gr.freq_xlating_fir_filter_ccf(1, filter_taps, offset, input_rate)
 
@@ -487,9 +516,15 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		
 
 	def set_freq(self, freq):
-
+		#TODO: for wideband processing, determine if the desired freq is within our current sample range.
+		#		If so, use the frequency translator to tune.  Tune the USRP otherwise.
+		#		Maybe have a flag to force tuning the USRP?
+		
 		if not self.using_usrp:
-			return False
+			#if reading from file just adjust for offset in the freq translator
+			print "Setting filter center freq to offset: ", self.offset, "\n"
+			self.filter.set_center_freq(self.offset) 
+			return True
 	
 		freq = freq - self.offset
 
@@ -511,10 +546,7 @@ class app_flow_graph(stdgui.gui_flow_graph):
 
 	def set_channel(self, chan):
 
-		self.arfcn = chan
-		
-		if not self.using_usrp:
-			return False
+		self.chan = chan
 		
 		freq = get_freq_from_arfcn(chan,self.region)
 
@@ -531,7 +563,7 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		
 		print "======== STATS ========="
 		print 'freq_offset:    ',self.offset
-		print 'mean_offset:    ',self.burst.mean_freq_offset()
+		print 'mean_offset:    ',self.mean_offset
 		print 'sync_loss_count:',self.burst.d_sync_loss_count
 		print 'total_bursts:   ',n_total
 		print 'fcch_count:     ',self.burst.d_fcch_count
@@ -553,6 +585,7 @@ class app_flow_graph(stdgui.gui_flow_graph):
 			self.print_stats()
 
 	def on_idle(self, event):
+		#We can't update this while in the tune functions since they can be invoked by callbaks and the GUI croaks...
 		self._set_status_msg(self.status_msg)
 		#print "Idle.\n";
 

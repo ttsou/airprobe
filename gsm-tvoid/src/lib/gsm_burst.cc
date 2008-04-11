@@ -621,8 +621,9 @@ int gsm_burst::get_burst(void)
 		case PARTIAL_SCH:
 			d_sync_state = WAIT_SCH;
 			break;
-		case SCH:
-			d_sync_state = SYNCHRONIZED;
+		//case SCH:
+		//let the burst type switch handle this so it knows if new or old sync
+		//	d_sync_state = SYNCHRONIZED;
 		break;
 		default:
 			break;
@@ -648,17 +649,6 @@ int gsm_burst::get_burst(void)
 		
 		d_fcch_count++;
 		calc_freq_offset();
-
-#ifndef TEST_TUNE_TIMING
-		if (p_tuner) {
-			if (SYNCHRONIZED == d_sync_state)
-				p_tuner->calleval(BURST_CB_ADJ_OFFSET);
-			else
-				p_tuner->calleval(BURST_CB_SYNC_OFFSET);
-				
-		}
-#endif
-
 		d_ts = 0;
 		break;
 	case PARTIAL_SCH:
@@ -668,6 +658,18 @@ int gsm_burst::get_burst(void)
 		d_ts = 0;		//TODO: check this
 		break;
 	case SCH:
+#ifndef TEST_TUNE_TIMING
+		//TODO: it would be better to adjust tuning on first FCCH (for better SCH detection),
+		//		but tuning can run away with false FCCHs
+		//		Some logic to retune back to original offset on false FCCH might work
+		if (p_tuner) {
+			if (SYNCHRONIZED == d_sync_state)
+				p_tuner->calleval(BURST_CB_ADJ_OFFSET);
+			else
+				p_tuner->calleval(BURST_CB_SYNC_OFFSET);
+				
+		}
+#endif
 		d_burst_count++;
 		d_sch_count++;
 		d_last_sch = d_burst_count;

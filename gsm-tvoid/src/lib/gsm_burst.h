@@ -134,24 +134,25 @@ protected:
 	BURST_TYPE		get_sch_burst(void);
 	BURST_TYPE		get_norm_burst(void);
 	
-	void	shift_burst(int);
-	void	calc_freq_offset(void); 
-	void	equalize(void);
-	float	correlate_pattern(const float *,const int,const int,const int);
-	void	diff_decode_burst(void);
+	virtual void	shift_burst(int);
+	void			calc_freq_offset(void); 
+	virtual void	equalize(void);
+	float			correlate_pattern(const float *,const int,const int,const int);
+	void			diff_decode_burst(void);
 
-	void	sync_reset(void);
+	void			sync_reset(void);
 
-	void	print_bits(const float *data,int length);
-	void	print_hex(const unsigned char *data,int length);
-	void	soft2hardbit(char *dst, const float *data, int len);
-	void	print_burst(void);
+	void			print_bits(const float *data,int length);
+	void			print_hex(const unsigned char *data,int length);
 
-	void	diff_encode(const float *in,float *out,int length,float lastbit = 1.0);	
-	void	diff_decode(const float *in,float *out,int length,float lastbit = 1.0);	
+	void			soft2hardbit(char *dst, const float *data, int len);	//need this?
+	void			print_burst(void);
+
+	void			diff_encode(const float *in,float *out,int length,float lastbit = 1.0);	
+	void			diff_decode(const float *in,float *out,int length,float lastbit = 1.0);	
 
 public:
-	~gsm_burst ();	
+	virtual 		~gsm_burst ();	
 
 	////// General Stats
 	//TODO: Maybe there should be a burst_stats class?

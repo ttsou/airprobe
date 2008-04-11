@@ -49,7 +49,26 @@ gsm_burst_sink_c::~gsm_burst_sink_c ()
 	delete d_interp;
 }
 
+void gsm_burst_sink_c::shift_burst(int shift_bits)
+{
+	//fprintf(stderr,"sft:%d\n",shift_bits);
 
+	assert(shift_bits >= 0);
+	assert(shift_bits < BBUF_SIZE );
+
+	gr_complex *p_src = d_complex_burst + shift_bits;
+	gr_complex *p_dst = d_complex_burst;
+	int num = BBUF_SIZE - shift_bits;
+	
+	memmove(p_dst,p_src,num * sizeof(gr_complex));  //need memmove because of overlap
+
+	//DON'T adjust the buffer positions, the superclass method will do that...
+	//d_bbuf_pos -= shift_bits;
+	//call the parent method to shift the float version
+	gsm_burst::shift_burst(shift_bits);
+}
+
+//TODO: put everything but GR stuff in a common complex type class (share w/ gsm_burst_cf)
 int gsm_burst_sink_c::work(int noutput_items,
 		gr_vector_const_void_star &input_items,
 		gr_vector_void_star &output_items)
@@ -61,15 +80,9 @@ int gsm_burst_sink_c::work(int noutput_items,
 
 	assert( d_ii >= 0 );
 
-//	while (( rval < noutput_items) && ( ii < ni ) ) {
 	while ( d_ii < noutput_items ) {
-//	while ( oo++ < noutput_items ) {
 		//clock symbols 
-		//TODO: this is very basic and can be improved.  Need tracking...
-		//TODO: use burst_start offsets as timing feedback
-		//TODO: save complex samples for Viterbi EQ
-		
-		//from m&m
+
 		gr_complex sample = d_interp->interpolate (&in[d_ii], d_mu);
 		
 		gr_complex conjprod = sample * conj(d_last_sample);
@@ -80,8 +93,10 @@ int gsm_burst_sink_c::work(int noutput_items,
 #if 1		
 		assert(d_bbuf_pos <= BBUF_SIZE );
 		
-		if (d_bbuf_pos >= 0)	//could be negative offset from burst alignment.  TODO: perhaps better just to add some padding to the buffer
+		if (d_bbuf_pos >= 0) {	//could be negative offset from burst alignment.  TODO: perhaps better just to add some padding to the buffer
 			d_burst_buffer[d_bbuf_pos] = diff_angle;
+			d_complex_burst[d_bbuf_pos] = sample;
+		}
 		
 		d_bbuf_pos++;
 		
