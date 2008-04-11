@@ -14,6 +14,7 @@
 
 static void out_gsmdecode(char type, int arfcn, int ts, int fn, char *data, int len);
 
+#if 0
 static void
 diff_decode(char *dst, char *src, int len)
 {
@@ -33,6 +34,7 @@ diff_decode(char *dst, char *src, int len)
 		dst++;
 	}
 }
+#endif
 
 /*
  * Initialize a new GSMSTACK context.
@@ -49,26 +51,23 @@ GS_new(GS_CTX *ctx)
 }
 
 /*
- * 156 bit
+ * 142 bit
  */
 int
-GS_process(GS_CTX *ctx, int ts, int type, char *src)
+GS_process(GS_CTX *ctx, int ts, int type, const unsigned char *src)
 {
 	int fn;
 	int bsic;
 	int ret;
-	char buf[156];
 	unsigned char *data;
 	int len;
 
 	if (ts != 0)
 		return;
 
-	diff_decode(buf, src, 156);
-
 	if (type == SCH)
 	{
-		ret = decode_sch(buf, &fn, &bsic);
+		ret = decode_sch(src, &fn, &bsic);
 		if (ret != 0)
 			return 0;
 		if ((ctx->bsic > 0) && (bsic != ctx->bsic))
@@ -94,8 +93,8 @@ GS_process(GS_CTX *ctx, int ts, int type, char *src)
  		 */
 		/* Copy content data into new array */
 		//DEBUGF("burst count %d\n", ctx->burst_count);
-		memcpy(ctx->burst + (116 * ctx->burst_count), buf + 3, 58);
-		memcpy(ctx->burst + (116 * ctx->burst_count) + 58, buf + 3 + 58 + 26, 58);
+		memcpy(ctx->burst + (116 * ctx->burst_count), src, 58);
+		memcpy(ctx->burst + (116 * ctx->burst_count) + 58, src + 58 + 26, 58);
 		ctx->burst_count++;
 		/* Return if not enough bursts for a full gsm message */
 		if (ctx->burst_count < 4)

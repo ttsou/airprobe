@@ -145,7 +145,7 @@ protected:
 	void			print_bits(const float *data,int length);
 	void			print_hex(const unsigned char *data,int length);
 
-	void			soft2hardbit(char *dst, const float *data, int len);	//need this?
+//	void			soft2hardbit(char *dst, const float *data, int len);	//need this?
 	void			print_burst(void);
 
 	void			diff_encode(const float *in,float *out,int length,float lastbit = 1.0);	

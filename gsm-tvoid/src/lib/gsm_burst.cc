@@ -173,10 +173,11 @@ void gsm_burst::print_bits(const float *data,int length)
 	assert(length >= 0);
 	
 	for (int i=0; i < length; i++)
-		data[i] < 0 ? fprintf(stdout,"+") : fprintf(stdout,".");
+		data[i] < 0 ? fprintf(stderr,"+") : fprintf(stderr,".");
 		
 }
 
+#if 0
 void gsm_burst::soft2hardbit(char *dst, const float *data, int len)
 {
 	for (int i=0; i < len; i++)
@@ -187,6 +188,7 @@ void gsm_burst::soft2hardbit(char *dst, const float *data, int len)
 			dst[i] = 1;
 	}
 }
+#endif
 
 void gsm_burst::print_burst(void)
 {
@@ -220,7 +222,7 @@ void gsm_burst::print_burst(void)
 			print_bits(d_burst_buffer + d_burst_start,USEFUL_BITS);
 		}
 		
-		fprintf(stdout," ");
+		fprintf(stderr," ");
 	}
 	
 
@@ -230,22 +232,13 @@ void gsm_burst::print_burst(void)
 		 * Pass information to GSM stack. GSM stack will try to extract
 		 * information (fn, layer 2 messages, ...)
 		 */
-	
-		char buf[156];
-		/* In hardbits include the 3 trial bits */
-		/* FIXME: access burst has 8 trail bits? what is d_burst_start
-	 	 * set to? make sure we start at the right position here.
-	 	 */
-		soft2hardbit(buf, d_burst_buffer + d_burst_start - 3, 156);
-		/* GS_process will differentially decode the data and then
-	 	 * extract SCH infos (and later bcch infos).
-	 	 */
-		GS_process(&d_gs_ctx, d_ts, d_burst_type, buf);
+		diff_decode_burst();		
+		GS_process(&d_gs_ctx, d_ts, d_burst_type, d_decoded_burst);
 	}
 	
 	if (print) {
 
-		fprintf(stdout,"%d/%d/%+d/%lu/%lu ",
+		fprintf(stderr,"%d/%d/%+d/%lu/%lu ",
 						d_sync_state,
 						d_ts,
 						d_burst_start - MAX_CORR_DIST,
@@ -254,38 +247,38 @@ void gsm_burst::print_burst(void)
 
 		switch (d_burst_type) {
 		case FCCH:
-			fprintf(stdout,"[FCCH] foff:%g cnt:%lu",d_freq_offset,d_fcch_count);
+			fprintf(stderr,"[FCCH] foff:%g cnt:%lu",d_freq_offset,d_fcch_count);
 			break;
 		case PARTIAL_SCH:
 			bursts_since_sch = d_burst_count - d_last_sch;
 			
-			fprintf(stdout,"[P-SCH] cor:%.2f last:%d cnt: %lu",
+			fprintf(stderr,"[P-SCH] cor:%.2f last:%d cnt: %lu",
 					d_corr_max,bursts_since_sch,d_sch_count);
 			break;
 		case SCH:
 			bursts_since_sch = d_burst_count - d_last_sch;
 			
-			fprintf(stdout,"[SCH] cor:%.2f last:%d cnt: %lu",
+			fprintf(stderr,"[SCH] cor:%.2f last:%d cnt: %lu",
 					d_corr_max,bursts_since_sch,d_sch_count);
 			break;
 		case DUMMY:
-			fprintf(stdout,"[DUMMY] cor:%.2f",d_corr_max);
+			fprintf(stderr,"[DUMMY] cor:%.2f",d_corr_max);
 			break;
 		case ACCESS:
-			fprintf(stdout,"[ACCESS]");		//We don't detect this yet
+			fprintf(stderr,"[ACCESS]");		//We don't detect this yet
 			break;
 		case NORMAL:
-			fprintf(stdout,"[NORM] clr:%d cor:%.2f",d_color_code,d_corr_max);
+			fprintf(stderr,"[NORM] clr:%d cor:%.2f",d_color_code,d_corr_max);
 			break;
 		case UNKNOWN:
-			fprintf(stdout,"[?]");
+			fprintf(stderr,"[?]");
 			break;
 		default:
-			fprintf(stdout,"[oops! default]");
+			fprintf(stderr,"[oops! default]");
 			break;		
 		}
 
-	fprintf(stdout,"\n");
+	fprintf(stderr,"\n");
 
 
 		//print the correlation pattern for visual inspection
@@ -304,10 +297,10 @@ void gsm_burst::print_burst(void)
 			for (int i = 0; i < pat_indent; i++)
 				fprintf(stderr," ");
 			
-			fprintf(stdout," ");	//extra space for skipped bit
+			fprintf(stderr," ");	//extra space for skipped bit
 			print_bits(d_corr_pattern+1,d_corr_pat_size-1);	//skip first bit (diff encoding)
 			
-			fprintf(stdout,"\t\toffset:%d, max: %.2f \n",d_corr_maxpos,d_corr_max);
+			fprintf(stderr,"\t\toffset:%d, max: %.2f \n",d_corr_maxpos,d_corr_max);
 		}
 	
 	}
@@ -323,10 +316,10 @@ void gsm_burst::print_burst(void)
 	//Print State related messages
 	if ( d_print_options & PRINT_STATE ) {
 		if ( (SYNCHRONIZED == d_sync_state) && (SYNCHRONIZED != d_last_sync_state) ) {
-			fprintf(stdout,"====== SYNC GAINED (FOff: %g Corr: %.2f, Color: %d ) ======\n",d_freq_offset,d_corr_max,d_color_code);
+			fprintf(stderr,"====== SYNC GAINED (FOff: %g Corr: %.2f, Color: %d ) ======\n",d_freq_offset,d_corr_max,d_color_code);
 		}
 		else if ( (SYNCHRONIZED != d_sync_state) && (SYNCHRONIZED == d_last_sync_state) ) {
-			fprintf(stdout,"====== SYNC LOST (%ld) ======\n",d_sync_loss_count);
+			fprintf(stderr,"====== SYNC LOST (%ld) ======\n",d_sync_loss_count);
 		}
 	}
 	

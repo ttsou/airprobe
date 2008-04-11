@@ -429,7 +429,6 @@ class app_flow_graph(stdgui.gui_flow_graph):
 			popts |= gsm.PRINT_GSM_DECODE
 		
 		#TODO: should warn if PRINT_GSM_DECODE is combined with other flags (will corrupt output for gsmdecode)
-		
 		self.burst.d_print_options = popts	
 		
 
@@ -586,6 +585,7 @@ class app_flow_graph(stdgui.gui_flow_graph):
 
 	def on_idle(self, event):
 		#We can't update this while in the tune functions since they can be invoked by callbaks and the GUI croaks...
+		#FIXME: This is icky.
 		self._set_status_msg(self.status_msg)
 		#print "Idle.\n";
 

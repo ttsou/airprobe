@@ -87,7 +87,6 @@ public:
 	//Methods
 	void full_reset(void);
 
-
 protected:
 	gsm_burst(gr_feval_ll *);  
 };

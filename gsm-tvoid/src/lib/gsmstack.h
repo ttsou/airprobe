@@ -22,7 +22,7 @@ typedef struct
 } GS_CTX;
 
 int GS_new(GS_CTX *ctx);
-int GS_process(GS_CTX *ctx, int ts, int type, char *data);
+int GS_process(GS_CTX *ctx, int ts, int type, const unsigned char *src);
 
 #ifdef __cplusplus
 }
