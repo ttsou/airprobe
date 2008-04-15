@@ -16,6 +16,9 @@
 
 // ----------------------------------------------------------------
 
+#define OPT_TEST_HOP_SPEED	0x00000001
+
+
 #define PRINT_NOTHING		0x00000000
 #define PRINT_EVERYTHING	0x7FFFFFFF		//7 for SWIG overflow check work around
 #define PRINT_BITS			0x00000001
@@ -66,6 +69,8 @@ public:
 		
 	unsigned long	d_clock_options;
 	unsigned long	d_print_options;
+	unsigned long	d_test_options;
+
 	EQ_TYPE			d_equalizer_type;
 
 	//stats
@@ -79,6 +84,10 @@ public:
 	long			d_total_count;
 	
 	long 			next_arfcn;
+
+	//hop testing
+	long			d_hop_good_arfcn;
+	long			d_hop_bad_arfcn;
 
 	int				sync_state();
 	float 			last_freq_offset(void);

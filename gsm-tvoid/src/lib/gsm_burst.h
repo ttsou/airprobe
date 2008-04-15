@@ -13,10 +13,10 @@
 
 //Testing Modes
 //Tune test measures hopping latency by hopping between good and empty ARFCNs
-#undef TEST_TUNE_TIMING
-#define TEST_TUNE_GOOD_ARFCN	658
-#define TEST_TUNE_EMPTY_ARFCN	655
+#define TEST_HOP_SPEED
 
+//Test Options
+#define OPT_TEST_HOP_SPEED	0x00000001
 
 //Console printing options
 #define PRINT_NOTHING		0x00000000
@@ -59,7 +59,8 @@
 //  G  T     D1         TS         D2      T   G
 // Start ^
 
-#define MAX_SYNC_WAIT	32	//Number of missed bursts before reverting to WAIT_FCCH. 
+//#define MAX_SYNC_WAIT	32	//Number of missed bursts before reverting to WAIT_FCCH. 
+#define MAX_SYNC_WAIT	64	//Number of missed bursts before reverting to WAIT_FCCH.
 
 #define MAX_CORR_DIST   7	// 4 + 3 =  1/2 GUARD + TAIL
 #define SCH_CORR_THRESHOLD	0.80
@@ -166,11 +167,15 @@ public:
 	long			d_total_count;
 	
 	////// Options
+	unsigned long	d_test_options;
 	unsigned long	d_clock_options;
 	unsigned long	d_print_options;
 	EQ_TYPE			d_equalizer_type;
-	
-	
+
+	//Hop speed info
+	long			d_hop_good_arfcn;
+	long			d_hop_bad_arfcn;
+		
 	//Methods
 	void full_reset(void);
 

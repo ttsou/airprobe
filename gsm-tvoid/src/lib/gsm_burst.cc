@@ -17,6 +17,9 @@ gsm_burst::gsm_burst (gr_feval_ll *t) :
 		p_tuner(t),
 		d_clock_options(DEFAULT_CLK_OPTS),
 		d_print_options(0),
+		d_test_options(0),
+		d_hop_good_arfcn(1),
+		d_hop_bad_arfcn(2),
 		d_equalizer_type(EQ_FIXED_DFE)
 {
  
@@ -33,15 +36,17 @@ gsm_burst::gsm_burst (gr_feval_ll *t) :
 		tsync[i] = 2.0*SYNC_BITS[i] - 1.0;
 	}
 
+	diff_encode(tsync,corr_sync,N_SYNC_BITS);
+
+/*
 	fprintf(stderr," Sync: ");
 	print_bits(tsync,N_SYNC_BITS);
 	fprintf(stderr,"\n");
 
-	diff_encode(tsync,corr_sync,N_SYNC_BITS);
 	fprintf(stderr,"DSync: ");
 	print_bits(corr_sync,N_SYNC_BITS);
 	fprintf(stderr,"\n\n");
-
+*/
 
 	for (int i=0; i < 10; i++) {
 		for (int j=0; j < N_TRAIN_BITS; j++) {
@@ -49,9 +54,11 @@ gsm_burst::gsm_burst (gr_feval_ll *t) :
 		}
 		diff_encode(tsync,corr_train_seq[i],N_TRAIN_BITS);
 
+/*
 		fprintf(stderr,"TSC%d: ",i);
 		print_bits(corr_train_seq[i],N_TRAIN_BITS);
 		fprintf(stderr,"\n");
+*/
 	}
 		
 	/* Initialize GSM Stack */
@@ -650,7 +657,6 @@ int gsm_burst::get_burst(void)
 		d_ts = 0;		//TODO: check this
 		break;
 	case SCH:
-#ifndef TEST_TUNE_TIMING
 		//TODO: it would be better to adjust tuning on first FCCH (for better SCH detection),
 		//		but tuning can run away with false FCCHs
 		//		Some logic to retune back to original offset on false FCCH might work
@@ -661,7 +667,6 @@ int gsm_burst::get_burst(void)
 				p_tuner->calleval(BURST_CB_SYNC_OFFSET);
 				
 		}
-#endif
 		d_burst_count++;
 		d_sch_count++;
 		d_last_sch = d_burst_count;
@@ -704,35 +709,39 @@ int gsm_burst::get_burst(void)
 
 		/////////////////////
 		//start tune testing
-#ifdef TEST_TUNE_TIMING
-
+#ifdef TEST_HOP_SPEED
 		static int good_count = -1; //-1: wait sch, >=0: got sch, counting
 		static int wait_count = 0;
+
+		if (OPT_TEST_HOP_SPEED & d_test_options ) {
+			//have we started counting?
+			if ( good_count >= 0 ) {
+				
+				if (UNKNOWN == d_burst_type) {
+					if (good_count >= 0) {
+						fprintf(stdout,"good_count: %d\n",good_count);
 			
-		if (UNKNOWN == d_burst_type) {
-			if (good_count >= 0) {
-				fprintf(stdout,"good_count: %d\n",good_count);
-	
-				if (p_tuner) {
-					next_arfcn = TEST_TUNE_GOOD_ARFCN;
-					p_tuner->calleval(BURST_CB_TUNE);
+						if (p_tuner) {
+							next_arfcn = d_hop_good_arfcn;
+							p_tuner->calleval(BURST_CB_TUNE);
+						}
+					}
+					good_count = -1;	// start again at resync
+				
+				} else {
+					//count good bursts
+					good_count++;
 				}
-			}
-			good_count = -1;	// start again at resync
-	
-		} else {
-	
-			if (good_count >= 0 ) {
-				good_count++;
-			}
-	
-			if (SCH == d_burst_type) {	
-				if ((good_count < 0) && (++wait_count > 20)) {	// get some good syncs before trying again
+						
+			} else {
+				//haven't started counting
+				// get some good syncs before trying again
+				if ((SCH == d_burst_type) && (++wait_count > 5)) {	
 					fprintf(stdout,"restarting good_count\n");
 					good_count = wait_count = 0;
 					//tune away
 					if (p_tuner) { 
-						next_arfcn = TEST_TUNE_EMPTY_ARFCN;
+						next_arfcn = d_hop_bad_arfcn;
 						p_tuner->calleval(BURST_CB_TUNE);
 					}
 				}

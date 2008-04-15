@@ -72,7 +72,7 @@ class burst_callback(gr.feval_ll):
 							self.fg.offset -= self.fg.mean_offset
 							self.fg.set_channel(self.fg.channel)
 
-			elif gsm.BURST_CB_TUNE == x and self.fg.options.tuning.count("h"):
+			elif gsm.BURST_CB_TUNE == x:
 				#print "burst_callback: BURST_CB_TUNE: ARFCN: ", self.fg.burst.next_arfcn, "\n";
 				if self.fg.options.tuning.count("h"):
 					#print "burst_callback: tuning.\n";
@@ -218,6 +218,13 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		parser.add_option("-r", "--region", type="string", default="u",
 							help="Frequency bands to use for channels.  (u)s or (e)urope [default=%default]")
 
+		#testing options
+		parser.add_option("--test-hop-speed",action="store_true", dest="test_hop_speed",
+							help="Test hopping speed.")
+		parser.add_option("--hopgood", type="int", default=658,
+							help="Good ARFCN [default=%default]")
+		parser.add_option("--hopbad", type="int", default=655,
+							help="Emtpy ARFCN [default=%default]")
 
 		(options, args) = parser.parse_args()
 		if (len(args) != 0) or (not (options.channel or options.inputfile)):
@@ -486,6 +493,22 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		
 		self.burst.d_clock_options = topts
 
+		#test modes
+		testopts = 0
+		
+		if options.test_hop_speed:
+			testopts |= gsm.OPT_TEST_HOP_SPEED
+			self.burst.d_hop_good_arfcn = options.hopgood
+			self.burst.d_hop_bad_arfcn = options.hopbad
+			
+			options.tuning = 'h'	#hopping only, no offset
+			
+			print "!!!!! Enabling Hop Speed Testing (good=%d, bad=%d) !!!!!" % (options.hopgood,options.hopbad)
+
+		self.burst.d_test_options = testopts
+		print "Test Options: 0x%8.8x" % (self.burst.d_test_options)
+		
+		
 
 ####################
 	def setup_flowgraph(self):
