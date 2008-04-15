@@ -32,7 +32,7 @@
 #define PRINT_DUMMY			0x00000100
 #define PRINT_NORMAL		0x00000200
 
-#define PRINT_GSM_DECODE	0x00000400
+#define PRINT_GSM_DECODE	0x00004000
 
 #define PRINT_HEX			0x00001000
 
@@ -82,7 +82,7 @@ public:
 
 	int				sync_state();
 	float 			last_freq_offset(void);
-	double 			mean_freq_offset(void);
+	float 			mean_freq_offset(void);
 	
 	//Methods
 	void full_reset(void);
@@ -104,6 +104,9 @@ GR_SWIG_BLOCK_MAGIC(gsm,burst_cf);
 gsm_burst_cf_sptr gsm_make_burst_cf (gr_feval_ll *,float);
 
 class gsm_burst_cf : public gr_block, public gsm_burst {
+public:
+	float			get_omega();
+
 private:
 	gsm_burst_cf (gr_feval_ll *,float);
 };

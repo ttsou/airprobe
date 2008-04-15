@@ -2,7 +2,8 @@
 #define INCLUDED_GSM_BURST_CF_H
 
 #include <gr_block.h>
-#include <gsm_burst.h>
+#include "gsm_burst.h"
+#include "mm_f.h"
 
 class gsm_burst_cf;
 
@@ -20,15 +21,18 @@ private:
 	gsm_burst_cf(gr_feval_ll *,float);  
 	
 	//clocking parameters
-	double			d_sample_interval;
-	double			d_clock_counter;
+	float			d_sample_interval;
+	float			d_clock_counter;		//??? sample count ???
+
 	gr_complex		d_last_sample;
 
-	float			d_relative_sample_rate;		//omega
-	float			d_mu;
-	
-	gri_mmse_fir_interpolator_cc 	*d_interp;  //sub-sample interpolator from GR
+	//M&M clock recovery
+	mm_f			mm;
 		
+	gri_mmse_fir_interpolator_cc 	*d_interp;  //sub-sample interpolator from GR
+
+	gr_complex		slicer(gr_complex x);
+			
 public:
 	~gsm_burst_cf ();	
 
@@ -38,6 +42,9 @@ public:
 						gr_vector_int &ninput_items,
 						gr_vector_const_void_star &input_items,
 						gr_vector_void_star &output_items);
+
+	float			get_omega() {return mm.d_omega;}
+
 };
 
 #endif /* INCLUDED_GSM_BURST_CF_H */

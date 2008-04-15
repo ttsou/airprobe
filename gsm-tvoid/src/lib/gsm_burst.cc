@@ -103,7 +103,7 @@ void gsm_burst::full_reset(void)
 
 }
 
-double gsm_burst::mean_freq_offset(void)
+float gsm_burst::mean_freq_offset(void)
 {
 	if (d_freq_off_weight)
 		return d_freq_off_sum / d_freq_off_weight;

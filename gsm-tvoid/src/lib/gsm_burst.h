@@ -35,7 +35,7 @@
 #define PRINT_DUMMY			0x00000100
 #define PRINT_NORMAL		0x00000200
 
-#define PRINT_GSM_DECODE	0x00000400
+#define PRINT_GSM_DECODE	0x00004000
 
 #define PRINT_HEX			0x00001000
 
@@ -123,8 +123,8 @@ protected:
 	int				d_color_code;
 
 	float			d_freq_offset;
-	double			d_freq_off_sum;
-	double			d_freq_off_weight;
+	float			d_freq_off_sum;
+	float			d_freq_off_weight;
 
 	gr_feval_ll 	*p_tuner;
 	
@@ -178,7 +178,7 @@ public:
 
 	//Frequency
 	float last_freq_offset() {return d_freq_offset;}
-	double mean_freq_offset(void);
+	float mean_freq_offset(void);
 
 	long next_arfcn;
 };

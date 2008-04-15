@@ -173,7 +173,7 @@ class app_flow_graph(stdgui.gui_flow_graph):
 				
 
 		#decoder options
-		parser.add_option("-D", "--decoder", type="string", default="f",
+		parser.add_option("-D", "--decoder", type="string", default="c",
 							help="Select decoder block to use. (c)omplex,(f)loat [default=%default]")
 		parser.add_option("-E", "--equalizer", type="string", default="none",
 							help="Type of equalizer to use.  none, fixed-dfe [default=%default]")
@@ -280,9 +280,6 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		if options.print_console.count('D'):
 			popts |= gsm.PRINT_DUMMY
 
-		if options.print_console.count('C'):
-			popts |= gsm.PRINT_BITS | gsm.PRINT_CORR_BITS
-
 		if options.print_console.count('x'):
 			popts |= gsm.PRINT_BITS | gsm.PRINT_HEX
 
@@ -291,6 +288,9 @@ class app_flow_graph(stdgui.gui_flow_graph):
 
 		elif options.print_console.count('b'):
 			popts |= gsm.PRINT_BITS
+
+		elif options.print_console.count('C'):
+			popts |= gsm.PRINT_BITS | gsm.PRINT_CORR_BITS
 
 		print  "Print flags: 0x%8.8x\n" %(popts)
 		
@@ -357,7 +357,7 @@ class app_flow_graph(stdgui.gui_flow_graph):
 			print >> sys.stderr, "% offset = ", percent_offset, "clock = ", clock_rate
 			
 		self.clock_rate = clock_rate
-		self.input_rate = clock_rate / options.decim
+		self.input_rate = clock_rate / options.decim		#TODO: what about usrp value?
 		self.gsm_symb_rate = 1625000.0 / 6.0
 		self.sps = self.input_rate / self.gsm_symb_rate
 	
@@ -394,18 +394,41 @@ class app_flow_graph(stdgui.gui_flow_graph):
 												gain_omega,
 												0.5,			#mu
 												gain_mu,
-												0.3)			#omega_relative_limit, 
+												0.5)			#omega_relative_limit, 
 
 		self.burst = gsm.burst_ff(self.burst_cb)
 		self.connect(self.filter, self.demod, self.clocker, self.burst)
 	
 ####################
+	def setup_f_flowgraph2(self):
+		#This version uses a complex clock recovery prior to demod
+		#one advantage is the availability of clock error output in the cc version
+		
+		#configure clock recovery
+		gain_mu = 0.01
+		gain_omega = .25 * gain_mu * gain_mu		# critically damped
+		self.clocker = gr.clock_recovery_mm_cc(	self.sps, 
+												gain_omega,
+												0.5,			#mu
+												gain_mu,
+												0.3)			#omega_relative_limit, 
+
+		# configure demodulator
+		# adjust the phase gain for sampling rate
+		self.demod = gr.quadrature_demod_cf(self.sps);
+		
+		self.burst = gsm.burst_ff(self.burst_cb)
+		self.connect(self.filter, self.clocker, self.demod, self.burst)
+	
+####################
 	def setup_c_flowgraph(self):
 			#use the sink version if burst scope not selected
-			if self.scopes.count("b"):
-				self.burst = gsm.burst_cf(self.burst_cb,input_rate)
-			else:
-				self.burst = gsm.burst_sink_c(self.burst_cb,input_rate)
+# 			if self.scopes.count("b"):
+# 				self.burst = gsm.burst_cf(self.burst_cb,self.input_rate)
+# 			else:
+# 				self.burst = gsm.burst_sink_c(self.burst_cb,self.input_rate)
+
+			self.burst = gsm.burst_cf(self.burst_cb,self.input_rate)
 			
 			self.connect(self.filter, self.burst)	
 
@@ -418,7 +441,7 @@ class app_flow_graph(stdgui.gui_flow_graph):
 
 		#Filter FFT
 		if self.scopes.count("F"):
-			self.filter_fft_scope = fftsink.fft_sink_c (self, self.panel, fft_size=1024, sample_rate=input_rate)
+			self.filter_fft_scope = fftsink.fft_sink_c (self, self.panel, fft_size=1024, sample_rate=self.input_rate)
 			self.connect(self.filter, self.filter_fft_scope)
 
 		#Burst Scope
@@ -433,8 +456,13 @@ class app_flow_graph(stdgui.gui_flow_graph):
 				self.connect(self.demod, self.demod_scope)
 
 			if self.scopes.count("c"):
+				#f_flowgraph
 				self.clocked_scope = scopesink.scope_sink_f(self, self.panel, sample_rate=self.gsm_symb_rate,v_scale=1)
 				self.connect(self.clocker, self.clocked_scope)
+				#for testing: f_flowgraph2
+				#self.clocked_scope = scopesink.scope_sink_c(self, self.panel, sample_rate=self.gsm_symb_rate,v_scale=1)
+				#self.connect(self.clocker, self.clocked_scope)
+				#self.connect((self.clocker,1),(self.clocked_scope,1))
 
 ####################
 	def configure_burst_decoder(self):
@@ -496,6 +524,7 @@ class app_flow_graph(stdgui.gui_flow_graph):
 			self.setup_c_flowgraph()
 		elif options.decoder.count("f"):
 			self.setup_f_flowgraph()
+			#self.setup_f_flowgraph2()
 
 		self.configure_burst_decoder()
 		
@@ -630,6 +659,16 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		print >> out, 'known_count:    ',n_known
 		if n_total:
 			print >> out, '%known:         ', 100.0 * n_known / n_total
+
+		#timing
+		if self.options.decoder.count("c"):
+			omega = self.burst.get_omega()
+		else:
+			omega = self.clocker.omega()
+
+		percent_sps = omega / self.sps 
+		print >> out, 'omega:          %f (%f / %f)' % (omega,self.sps,percent_sps)
+		
 		print >> out, ""		
 				
 ####################
