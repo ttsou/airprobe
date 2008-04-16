@@ -39,6 +39,10 @@ gsm_burst_cf::gsm_burst_cf (gr_feval_ll *t, float sample_rate) :
 	
 //	fprintf(stderr,"Sample interval      : %e\n",d_sample_interval);
 //	fprintf(stderr,"Relative sample rate : %g\n",d_omega);
+	
+	
+	//set_relative_rate( mm.d_omega / 156);
+	set_relative_rate( 1.0 / (mm.d_omega * 156) );
 			
 	set_history(4); //need history for interpolator
 	
@@ -51,9 +55,11 @@ gsm_burst_cf::~gsm_burst_cf ()
 
 void gsm_burst_cf::forecast (int noutput_items, gr_vector_int &ninput_items_required)
 {
-  unsigned ninputs = ninput_items_required.size ();
-  for (unsigned i = 0; i < ninputs; i++)
-    ninput_items_required[i] = noutput_items * (int)ceil(mm.d_omega) * BBUF_SIZE + history();
+	unsigned ninputs = ninput_items_required.size ();
+	for (unsigned i = 0; i < ninputs; i++) {
+		ninput_items_required[i] = noutput_items * (int)ceil(mm.d_omega) * TS_BITS;
+		//fprintf(stderr,"forecast[%d]: %d = %d\n",i,noutput_items,ninput_items_required[i]);
+	}
 }
 
 int gsm_burst_cf::general_work (int noutput_items,
@@ -70,7 +76,7 @@ int gsm_burst_cf::general_work (int noutput_items,
 	int do_output = num_outputs > 0 ? 1 : 0;
 
 	int ninput = ninput_items[0];
-	//fprintf(stderr,"#i=%d/#o=%d",n_input,noutput_items);
+	//fprintf(stderr,"#i=%d/#o=%d",ninput,noutput_items);
 
 	int  ni = ninput - d_interp->ntaps() - 16;  // interpolator need -4/+3 samples NTAPS = 8  , - 16 for safety margin
 	

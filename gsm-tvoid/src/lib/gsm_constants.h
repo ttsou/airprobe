@@ -13,7 +13,7 @@
 #define USEFUL_BITS		142	 //(2*DATA_BITS + N_TRAIN_BITS )
 #define FCCH_BITS		USEFUL_BITS
 
-#define TS_BITS			(TAIL_BITS+USEFUL_BITS+TAIL_BITS+GUARD_BITS)  //a full TS
+#define TS_BITS			(TAIL_BITS+USEFUL_BITS+TAIL_BITS+GUARD_BITS)  //a full TS (156)
 #define TS_PER_FRAME	8
 #define FRAME_BITS		(TS_PER_FRAME * TS_BITS + 2)	// +2 for extra 8*0.25 guard bits
 #define FCCH_POS		TAIL_BITS

@@ -39,7 +39,6 @@ class burst_callback(gr.feval_ll):
 	def eval(self, x):
 		#print "burst_callback: eval(",x,")\n";
 		try:
-			#TODO: rework so this will work on file input
 			if gsm.BURST_CB_SYNC_OFFSET == x:
 				#print "burst_callback: SYNC_OFFSET\n";
 				if self.fg.options.tuning.count("o"):
@@ -176,7 +175,7 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		parser.add_option("-D", "--decoder", type="string", default="c",
 							help="Select decoder block to use. (c)omplex,(f)loat [default=%default]")
 		parser.add_option("-E", "--equalizer", type="string", default="none",
-							help="Type of equalizer to use.  none, fixed-dfe [default=%default]")
+							help="Type of equalizer to use.  none, fixed-dfe, fixed-linear [default=%default]")
 		parser.add_option("-t", "--timing", type="string", default="cn",
 							help="Type of timing techniques to use. [default=%default] \n" +
 							"(n)one, (c)orrelation track, (q)uarter bit, (f)ull04 ")
@@ -214,7 +213,7 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		parser.add_option("-g", "--gain", type="eng_float", default=None,
 							help="Set gain in dB (default is midpoint)")
 		parser.add_option("-c", "--channel", type="int", default=1,
-							help="Tune to GSM ARFCN.  Overrides --freq")
+							help="Tune to GSM ARFCN.")
 		parser.add_option("-r", "--region", type="string", default="u",
 							help="Frequency bands to use for channels.  (u)s or (e)urope [default=%default]")
 
@@ -227,7 +226,7 @@ class app_flow_graph(stdgui.gui_flow_graph):
 							help="Emtpy ARFCN [default=%default]")
 
 		(options, args) = parser.parse_args()
-		if (len(args) != 0) or (not (options.channel or options.inputfile)):
+		if (len(args) != 0):
 			parser.print_help()
 			sys.exit(1)
 
@@ -235,6 +234,9 @@ class app_flow_graph(stdgui.gui_flow_graph):
 #		   print "datafile option cannot be used with USRP options."
 #		   sys.exit(1)
 
+		if options.test_hop_speed:
+			options.tuning = 'h'	#hopping only, no offset
+			options.channel = options.hopgood
 
 		self.options = options
 		self.scopes = options.scopes
@@ -299,7 +301,7 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		elif options.print_console.count('C'):
 			popts |= gsm.PRINT_BITS | gsm.PRINT_CORR_BITS
 
-		print  "Print flags: 0x%8.8x\n" %(popts)
+		#print  "Print flags: 0x%8.8x\n" %(popts)
 		
 		self.burst.d_print_options = popts	
 
@@ -370,6 +372,10 @@ class app_flow_graph(stdgui.gui_flow_graph):
 	
 ####################
 	def setup_filter(self):
+		#test w/o filter (for buffer latency)
+		#self.filter = self.source
+		#return
+		
 		options = self.options
 
 		# configure channel filter
@@ -405,27 +411,6 @@ class app_flow_graph(stdgui.gui_flow_graph):
 
 		self.burst = gsm.burst_ff(self.burst_cb)
 		self.connect(self.filter, self.demod, self.clocker, self.burst)
-	
-####################
-	def setup_f_flowgraph2(self):
-		#This version uses a complex clock recovery prior to demod
-		#one advantage is the availability of clock error output in the cc version
-		
-		#configure clock recovery
-		gain_mu = 0.01
-		gain_omega = .25 * gain_mu * gain_mu		# critically damped
-		self.clocker = gr.clock_recovery_mm_cc(	self.sps, 
-												gain_omega,
-												0.5,			#mu
-												gain_mu,
-												0.3)			#omega_relative_limit, 
-
-		# configure demodulator
-		# adjust the phase gain for sampling rate
-		self.demod = gr.quadrature_demod_cf(self.sps);
-		
-		self.burst = gsm.burst_ff(self.burst_cb)
-		self.connect(self.filter, self.clocker, self.demod, self.burst)
 	
 ####################
 	def setup_c_flowgraph(self):
@@ -476,7 +461,7 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		options = self.options
 		
 		# equalizer
-		eq_types = {'none': gsm.EQ_NONE, 'fixed-dfe': gsm.EQ_FIXED_DFE}
+		eq_types = {'none': gsm.EQ_NONE, 'fixed-dfe': gsm.EQ_FIXED_DFE, 'fixed-linear': gsm.EQ_FIXED_LINEAR }
 		self.burst.d_equalizer_type = eq_types[options.equalizer]
 
 		# timing
@@ -501,12 +486,10 @@ class app_flow_graph(stdgui.gui_flow_graph):
 			self.burst.d_hop_good_arfcn = options.hopgood
 			self.burst.d_hop_bad_arfcn = options.hopbad
 			
-			options.tuning = 'h'	#hopping only, no offset
-			
 			print "!!!!! Enabling Hop Speed Testing (good=%d, bad=%d) !!!!!" % (options.hopgood,options.hopbad)
 
 		self.burst.d_test_options = testopts
-		print "Test Options: 0x%8.8x" % (self.burst.d_test_options)
+		#print "Test Options: 0x%8.8x" % (self.burst.d_test_options)
 		
 		
 
@@ -547,7 +530,6 @@ class app_flow_graph(stdgui.gui_flow_graph):
 			self.setup_c_flowgraph()
 		elif options.decoder.count("f"):
 			self.setup_f_flowgraph()
-			#self.setup_f_flowgraph2()
 
 		self.configure_burst_decoder()
 		

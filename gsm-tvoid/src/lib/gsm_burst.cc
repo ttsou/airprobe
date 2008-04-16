@@ -737,7 +737,7 @@ int gsm_burst::get_burst(void)
 				//haven't started counting
 				// get some good syncs before trying again
 				if ((SCH == d_burst_type) && (++wait_count > 5)) {	
-					fprintf(stdout,"restarting good_count\n");
+					//fprintf(stdout,"restarting good_count\n");
 					good_count = wait_count = 0;
 					//tune away
 					if (p_tuner) { 
