@@ -22,6 +22,9 @@
 # define DEBUGF(a...)
 #endif
 
+/* True if bit at position 'pos' in 'data' is set */
+#define BIT(data, pos)		((data) >> (pos)) & 1
+
 # define HEXDUMPF(data, len, a...)	do { \
 	printf("HEX %s:%d ", __func__, __LINE__); \
 	printf(a); \

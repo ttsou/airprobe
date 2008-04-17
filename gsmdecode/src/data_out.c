@@ -27,6 +27,10 @@
 
 extern struct _opt opt;
 
+/* Prototype helper functions */
+static unsigned int Bit_extract_val(unsigned char *data, int bit_pos, int numbits);
+
+
 static void l2_rrm();
 static void l2_sms();
 static void l2_cc();
@@ -118,6 +122,7 @@ static void simdatadownload();
 static void LocationUpdateRequest();
 static void MultiSupportTwo();
 static void MeasurmentReport();
+static int CellAllocation(unsigned char format, char *str);
 
 static const unsigned char *start;
 static const unsigned char *data;
@@ -573,6 +578,43 @@ l2_Bbis()	/* GSM 04.07 11.2.3.2.1 */
 }
 
 /*
+ *  Extract up to 24 bit from a data field and return as integer.
+ */
+static unsigned int
+Bit_extract_val(unsigned char *data, int bit_pos, int numbits)
+{
+	unsigned int ofs;
+	unsigned int val = 0;
+	unsigned int bit_ofs;
+	char len;
+	char overlap;
+	int i;
+
+	ofs = bit_pos / 8;
+	bit_ofs = bit_pos % 8;
+
+	len = ((7 - bit_ofs) + numbits + 7) / 8;
+	//OUTF("len = %u\n", len);
+
+	i = 0;
+	while (i < len)
+	{
+		val = val << 8;
+		val = val | data[i + ofs];
+		i++;
+	}
+	overlap = (numbits + (7 - bit_ofs)) % 8;
+	//OUTF("overlap = %u bit\n", overlap);
+	if (overlap != 0)
+	{
+		val = val >> (8 - overlap);
+	}
+	val = val & (((unsigned int)1 << numbits) - 1);
+
+	return val;
+}
+
+/*
  * Broadcast Call Control (04.69)
  */
 static void
@@ -761,6 +803,10 @@ l2_rrm()
 		OUTF("00000000 System Information Type 13\n");
 		data++;
 		l2_RRsystemInfo13C();
+		break;
+	case 0x02:
+		OUTF("00000010 System Information Type 2bis\n");
+		l2_RRsystemInfo2bis();
 		break;
 	case 0x06:
 		OUTF("00000110 System Information Type 5ter\n");
@@ -1015,11 +1061,15 @@ l2_MobileAllocation()
 	int c = 64, pos;
 	char *str = "Mobile allocation RF chann.";
 	const unsigned char *thisend;
+	int len;
 
 	if (data >= end)
 		RETTRUNK();
 	OUTF("%s Length of Mobile Allocation: %d\n", BitRowFill(data[0], 0xff), data[0]);
-	thisend = data + data[0] + 1;
+
+	len = data[0];
+
+	thisend = data + len + 1;
 	if (thisend > end)
 	{
 		OUTF("xxxxxxxx ERROR: Packet to short or length to long\n");
@@ -1031,21 +1081,22 @@ l2_MobileAllocation()
 	if (data >= thisend)
 		return;
 
+	/* This is the index into the list of arfcn's */
+	pos = 7;
 	while (data < thisend)
 	{
-		pos = 7;
 		while (pos >= 0)
 		{
 			if ((data[0] >> pos) & 1)
-				OUTF("%s %s%d\n", BitRow(data[0], pos), str, c - (7 - pos));
+			{
+				OUTF("%s Mobile Allocation ARFCN #%d\n", BitRow(data[0], pos), 8 * len - (7 - pos));
+
+			}
 			pos--;
-
 		}
-
-		c -= 8;
+		pos = 7;
+		len--;
 		data++;
-		if (c <= 0)
-			break;
 	}
 }
 
@@ -1055,65 +1106,8 @@ l2_MobileAllocation()
 static void
 l2_BcchAllocation()
 {
-	int c, pos;
-	char *str = "BCCH alloc. RF chan.: ";
-
-#if 0
-	/* goeller script for Info2 outputs channels 128 + 127
-	 * but opengpa outputs bitmap format for info2.
-	 * We do what opengpa does. (correct?)
-	 */
-	if ((data[0] >> 7))
-		OUTF("1------- %s%d\n", str, 128);
-	if ((data[0] >> 6) & 1)
-		OUTF("-1------ %s%d\n", str, 127);
-#endif
-	if ((data[0] >> 6) == 0x00)
-		OUTF("00------ Bitmap format: 0\n");
-	else {
-		OUTF("%s Bitmap format: UNKNOWN [FIXME]\n", BitRowFill(data[0], 0xc0));
-		return;
-	}
-
-	if ((data[0] & 0x8e) == 0x8e)
-	{
-		/* From System Information Type 5ter */
-		OUTF("1---111- Variable Bitmap SI5ter [FIXME]\n");
-		return;
-	}
-
-	if ((data[0] >> 5) & 1)
-		OUTF("--1----- Extension Indicator: The IE carries only a part of the BA\n");
-	else
-		OUTF("--0----- Extension Indicator: The IE carries the complete BA\n");
 	OUTF("---x---- BCCH alloc. seq. num: %d\n", (data[0] >> 4) & 1);
-	if ((data[0] >> 3) & 1)
-		OUTF("----1--- %s%d\n", str, 124);
-	if ((data[0] >> 2) & 1)
-		OUTF("-----1-- %s%d\n", str, 123);
-	if ((data[0] >> 1) & 1)
-		OUTF("------1- %s%d\n", str, 122);
-	if (data[0] & 1)
-		OUTF("-------1 %s%d\n", str, 121);
-
-	data++;
-	c = 120;
-	while (data < end)
-	{
-		pos = 7;
-		while (pos >= 0)
-		{
-			if ((data[0] >> pos) & 1)
-				OUTF("%s %s%d\n", BitRow(data[0], pos), str, c - (7 - pos));
-			pos--;
-
-		}
-
-		c -= 8;
-		data++;
-		if (c <= 0)
-			break;
-	}
+	CellAllocation(data[0], "BCCH Allocation    : ARFCN");
 }
 
 static void
@@ -1163,31 +1157,18 @@ l2_RRimmediateAssTBFC()
 }
 
 static void
-l2_RRsystemInfo1()
+CellAllocationBitmapZero(char *str)
 {
 	int ca;
 
-	if (data + 1 >= end)
-		return;
-	switch (data[0] >> 6)
-	{
-		case 0x00:
-			OUTF("00------ Bitmap 0 format\n");
-			break;
-		case 0x01:
-			OUTF("10------ Bitmap format: (FIXME)\n");
-			break;
-		default:
-			OUTF("%s Bitmap %d format (FIXME)\n", BitRowFill(data[0], 0xc0), data[0] >> 6);
-	}
 	if ((data[0] >> 3) & 1)
-		OUTF("----1--- Cell Allocation   : ARFCN 124\n");
+		OUTF("----1--- %s 124\n", str);
 	if ((data[0] >> 2) & 1)
-		OUTF("-----1-- Cell Allocation   : ARFCN 123\n");
+		OUTF("-----1-- %s 123\n", str);
 	if ((data[0] >> 1) & 1)
-		OUTF("------1- Cell Allocation   : ARFCN 122\n");
+		OUTF("------1- %s 122\n", str);
 	if (data[0] & 1)
-		OUTF("-------1 Cell Allocation   : ARFCN 121\n");
+		OUTF("-------1 %s 121\n", str);
 
 	ca = 120;
 	while (ca > 0)
@@ -1196,26 +1177,228 @@ l2_RRsystemInfo1()
 		if (data >= end)
 			return;
 		if ((data[0] >> 7) & 1)
-			OUTF("1------- Cell Allocation   : ARFCN %d\n", ca);
+			OUTF("1------- %s %d\n", str, ca);
 		if ((data[0] >> 6) & 1)
-			OUTF("-1------ Cell Allocation   : ARFCN %d\n", ca - 1);
+			OUTF("-1------ %s %d\n", str, ca - 1);
 		if ((data[0] >> 5) & 1)
-			OUTF("--1----- Cell Allocation   : ARFCN %d\n", ca - 2);
+			OUTF("--1----- %s %d\n", str, ca - 2);
 		if ((data[0] >> 4) & 1)
-			OUTF("---1---- Cell Allocation   : ARFCN %d\n", ca - 3);
+			OUTF("---1---- %s %d\n", str, ca - 3);
 		if ((data[0] >> 3) & 1)
-			OUTF("----1--- Cell Allocation   : ARFCN %d\n", ca - 4);
+			OUTF("----1--- %s %d\n", str, ca - 4);
 		if ((data[0] >> 2) & 1)
-			OUTF("-----1-- Cell Allocation   : ARFCN %d\n", ca - 5);
+			OUTF("-----1-- %s %d\n", str, ca - 5);
 		if ((data[0] >> 1) & 1)
-			OUTF("------1- Cell Allocation   : ARFCN %d\n", ca - 6);
+			OUTF("------1- %s %d\n", str, ca - 6);
 		if (data[0] & 1)
-			OUTF("-------1 Cell Allocation   : ARFCN %d\n", ca - 7);
+			OUTF("-------1 %s %d\n", str, ca - 7);
 
 		ca -= 8;
 	}
-
 	data++;
+}
+
+/*
+ * Return number of bits required to store val.
+ */
+static int
+num_bits(unsigned int val)
+{
+	int i = 32;
+
+	while (1)
+	{
+		i--;
+		if (i <= 0)
+			break;
+		if ((((unsigned int)1) << i) <= val)
+			break;
+	}
+
+	return i + 1;
+}
+
+static int
+Bitmap256_extract_frequency(unsigned short *w, int index)
+{
+	int j;
+	int n = w[index];
+
+	j = 1 << (num_bits(index) - 1);
+	//OUTF("j = %d\n", j);
+	while (index > 1)
+	{
+		if (2 * index < 3 * j)
+		{
+			index = index - j / 2;
+			n = (n + w[index] - 256 / j - 1) % (512 / j - 1) + 1;
+		} else {
+			index = index - j;
+			n = (n + w[index] - 1) % (512 / j - 1) + 1;
+		}
+		j = j / 2;
+	}
+	//OUTF("freq %d\n", (w[0] + n) % 1024);
+
+	return (w[0] + n) % 1024;
+}
+
+
+static void
+CellAllocationBitmap256(char *str)
+{
+	int arfcn = 0;
+	int i;
+	unsigned short w[30];
+	int pos, len, border;
+	int ii;
+
+	memset(w, 0, sizeof w);
+
+	arfcn = (data[0] & 1) << 9;
+	data++;
+	arfcn |= (data[0] << 1);
+	data++;
+	arfcn |= (data[0] >> 7);
+	w[0] = arfcn;
+
+#if 0
+	w[0] = 0xff;
+	w[1] = 0x00;
+	w[2] = 0xff;
+	w[3] = 0x00;
+	OUTF("XXX 6,8 254 %u\n", Bit_extract_val(w, 6, 8));
+	OUTF("XXX 7,7 127 %u\n", Bit_extract_val(w, 7, 7));
+	OUTF("XXX 7,8 255 %u\n", Bit_extract_val(w, 7, 8));
+	OUTF("XXX 6,7 127 %u\n", Bit_extract_val(w, 6, 7));
+	OUTF("XXX 0,8 128 %u\n", Bit_extract_val(w, 0, 8));
+	OUTF("XXX 7,16 65280 %u\n", Bit_extract_val(w, 7, 16));
+	OUTF("XXX 7,1 1 %u\n", Bit_extract_val(w, 7, 1));
+	OUTF("XXX 8,1 0 %u\n", Bit_extract_val(w, 8, 1));
+#endif
+
+	pos = 6;
+	len = 8;
+	border = 2;
+	for (i = 1; i <= 29; i++)
+	{
+		if (i == border)
+		{
+			border = border * 2;
+			len--;
+			if (len <= 0)
+			{
+				i--;
+				break;
+			}
+		}
+		w[i] = Bit_extract_val((unsigned char *)data, pos, len);
+		if (w[i] == 0)
+			break;
+		pos += len;
+	}
+	//OUTF("%d entries\n", i);
+
+	OUTF("xxxxxxxx %s %d (original)\n", str, w[0]);
+	for (ii = 1; ii <= i; ii++)
+	{
+		OUTF("xxxxxxxx %s %d\n", str, Bitmap256_extract_frequency(w, ii));
+	}
+	data += (pos + 7) / 8;
+
+}
+
+static void
+CellAllocationBitmapVariable(char *str)
+{
+	int arfcn = 0;
+	int i;
+	const unsigned char *thisend;
+
+	arfcn = (data[0] & 1) << 9;
+	data++;
+	arfcn |= (data[0] << 1);
+	data++;
+	arfcn |= (data[0] >> 7);
+
+	OUTF("........ %s %d (original)\n", str, arfcn);
+
+	for (i = 1; i < 8; i++)
+	{
+		if (BIT(data[0], 7-i))
+			OUTF("%s %s %d\n", BitRow(data[0], 7-i), str, (arfcn + i) % 1024);
+	}
+	data++;
+
+	thisend = data + 13;
+	while (data < thisend)
+	{
+		for (i = 0; i < 8; i++)
+		{
+			if (BIT(data[0], 7 - i))
+				OUTF("%s %s %d\n", BitRow(data[0], 7-i), str, (arfcn + (104 + i)) % 1024);
+		}
+		data++;
+	}
+}
+
+/*
+ * Return 0 on success (e.g. caller continues processing).
+ * Cell Channel Description (for example SystemInformationType 1)
+ */
+static int
+CellAllocation(unsigned char format, char *str)
+{
+	const unsigned char *orig_data = data;
+
+	if ((format >> 6) == 0x00)
+	{
+		OUTF("00------ Bitmap 0 format\n");
+		CellAllocationBitmapZero(str);
+		data = orig_data + 16;
+		return 0;
+	}
+	if (((format >> 3) & 1) == 0x00)
+	{
+		OUTF("-------- Bitmap format: 1024 Range (FIXME)\n");
+		data = orig_data + 16;
+		return -1;
+	}
+
+	switch ((format >> 1) & 0x07)
+	{
+	case 0x04:
+		OUTF("10--100- Bitmap format: 512 Range (FIXME)\n");
+		data = orig_data + 16;
+		return -1;
+	case 0x05:
+		OUTF("10--101- Bitmap format: 256 Range\n");
+		CellAllocationBitmap256(str);
+		data = orig_data + 16;
+		return 0;
+	case 0x06:
+		OUTF("10--110- Bitmap format: 128 Range (FIXME)\n");
+		data = orig_data + 16;
+		return -1;
+	case 0x07:
+		OUTF("10--111- Bitmap format: Variable Range\n");
+		CellAllocationBitmapVariable(str);
+		data = orig_data + 16;
+		return 0;
+	}
+
+	return -1;
+}
+
+static void
+l2_RRsystemInfo1()
+{
+
+	if (data + 1 >= end)
+		return;
+
+	if (CellAllocation(data[0], "Cell Allocation     : ARFCN") != 0)
+		return;
 
 	l2_RachControlParameters();
 	if (data >= end)
@@ -1381,6 +1564,7 @@ l2_RRsystemInfo2()
 	if (data >= end)
 		RETTRUNK();
 
+STOP HERE: laut 04.08 ist hier ne liste von ARFCN's.
 	int c = 7;
 	while (c >= 0)
 	{
@@ -1397,6 +1581,19 @@ l2_RRsystemInfo2()
 	if (data > end)	/* Note: not >= */
 		RETTRUNK();
 }
+
+static void
+l2_RRsystemInfo2()
+{
+	if (data >= end)
+		RETTRUNK();
+
+	/* Extended BCCH Frequency List */
+STOP HERE: frequenz liste!
+
+	l2_RachControlParameters();
+}
+
 
 #if 0
 static void
