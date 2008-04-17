@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 # TODO:
-#	* Adjust offset by PPM
-#	* Auto-tune offset (add option to enable)
 #	* Add status info to window (frequency, offset, etc)
 #	* Put direct frequency tuning back
 #	* Add rate-limited file reads (throttle?)
 #	* Make console only version
 #	* Reset burst_stats on retune
 #	* Add better option checking
+#	* Wideband (multi-channel) processing (usrp and/or file input)
+#	* Automatic beacon scan (quick scan RSSI, then check for BCCH)
+#	* AGC
 
 import sys
 
@@ -26,6 +27,64 @@ from math import pi
 import wx
 import gsm
 
+####################
+class burst_callback(gr.feval_ll):
+	def __init__(self, fg):
+		gr.feval_ll.__init__(self)
+		self.fg = fg
+		self.offset_mean_num = 10		#number of FCCH offsets to average
+		self.offset_vals = []
+		
+####################
+	def eval(self, x):
+		#print "burst_callback: eval(",x,")\n";
+		try:
+			#TODO: rework so this will work on file input
+			if gsm.BURST_CB_SYNC_OFFSET == x:
+				#print "burst_callback: SYNC_OFFSET\n";
+				if self.fg.options.tuning.count("o"):
+					last_offset = self.fg.burst.last_freq_offset()
+					self.fg.offset -= last_offset
+					#print "burst_callback: SYNC_OFFSET:", last_offset, " ARFCN: ", self.fg.channel, "\n";
+					self.fg.set_channel(self.fg.channel)
+
+			elif gsm.BURST_CB_ADJ_OFFSET == x:
+				last_offset = self.fg.burst.last_freq_offset()
+
+				self.offset_vals.append(last_offset)
+				count =  len(self.offset_vals)
+				#print "burst_callback: ADJ_OFFSET:", last_offset, ", count=",count,"\n";
+
+				if count >= self.offset_mean_num:
+					sum = 0.0
+					while len(self.offset_vals):
+						sum += self.offset_vals.pop(0)
+
+					self.fg.mean_offset = sum / self.offset_mean_num
+
+					#print "burst_callback: mean offset:", self.fg.mean_offset, "\n";
+
+					#retune if greater than 100 Hz
+					if abs(self.fg.mean_offset) > 100.0:	
+						#print "burst_callback: mean offset adjust:", self.fg.mean_offset, "\n";
+						if self.fg.options.tuning.count("o"):	
+							#print "burst_callback: tuning.\n";
+							self.fg.offset -= self.fg.mean_offset
+							self.fg.set_channel(self.fg.channel)
+
+			elif gsm.BURST_CB_TUNE == x and self.fg.options.tuning.count("h"):
+				#print "burst_callback: BURST_CB_TUNE: ARFCN: ", self.fg.burst.next_arfcn, "\n";
+				if self.fg.options.tuning.count("h"):
+					#print "burst_callback: tuning.\n";
+					self.fg.set_channel(self.fg.burst.next_arfcn)
+
+			return 0
+
+		except Exception, e:
+			print >> sys.stderr, "burst_callback: Exception: ", e
+
+
+####################
 def pick_subdevice(u):
 	if u.db[0][0].dbid() >= 0:
 		return (0, 0)
@@ -33,6 +92,7 @@ def pick_subdevice(u):
 		return (1, 0)
 	return (0, 0)
 
+####################
 def get_freq_from_arfcn(chan,region):
 
 	#P/E/R-GSM 900
@@ -69,13 +129,36 @@ def get_freq_from_arfcn(chan,region):
 	return freq * 1e6
 
 
+####################
 class app_flow_graph(stdgui.gui_flow_graph):
+
 	def __init__(self, frame, panel, vbox, argv):
 		stdgui.gui_flow_graph.__init__(self)
 
 		self.frame = frame
 		self.panel = panel
+		self.parse_options()
+		self.setup_flowgraph()	
+		self.setup_print_options()
+		self._build_gui(vbox)
+
+		#some non-gui wxwindows handlers
+		self.t1 = wx.Timer(self.frame)
+		self.t1.Start(5000,0)
+		self.frame.Bind(wx.EVT_TIMER, self.on_tick)
+
+		#bind the idle routing for message_queue processing	
+		self.frame.Bind(wx.EVT_IDLE, self.on_idle)
 		
+		#tune
+		self.set_channel(self.channel)
+	
+		#giddyup
+		self.status_msg = "Started."
+
+
+####################
+	def parse_options(self):
 		parser = OptionParser(option_class=eng_option)
 
 		#view options
@@ -85,25 +168,26 @@ class app_flow_graph(stdgui.gui_flow_graph):
 							help="What to print on console. [default=%default]\n" +
 							"(n)othing, (e)verything, (s)tatus, (a)ll Types, (k)nown, (u)nknown, \n" +
 							"TS(0), (F)CCH, (S)CH, (N)ormal, (D)ummy\n" +
-							"Usefull (b)its, All TS (B)its, (C)orrelation bits, he(x) burst data, \n" +
+							"Usefull (b)its, All TS (B)its, (C)orrelation bits, he(x) raw burst data, \n" +
 							"(d)ecoded hex for gsmdecode")
 				
 
 		#decoder options
 		parser.add_option("-D", "--decoder", type="string", default="f",
 							help="Select decoder block to use. (c)omplex,(f)loat [default=%default]")
-		parser.add_option("-d", "--decim", type="int", default=112,
-							help="Set fgpa decimation rate to DECIM [default=%default]")
-		parser.add_option("-o", "--offset", type="eng_float", default=0.0,
-							help="Tuning offset frequency")
-		parser.add_option("-C", "--clock-offset", type="eng_float", default=0.0,
-							help="Sample clock offset frequency")
 		parser.add_option("-E", "--equalizer", type="string", default="none",
 							help="Type of equalizer to use.  none, fixed-dfe [default=%default]")
-		parser.add_option("-t", "--timing", type="string", default="cq",
+		parser.add_option("-t", "--timing", type="string", default="cn",
 							help="Type of timing techniques to use. [default=%default] \n" +
 							"(n)one, (c)orrelation track, (q)uarter bit, (f)ull04 ")
 
+		#tuning options
+		parser.add_option("-T", "--tuning", type="string", default="oh",
+							help="Type of tuning to perform. [default=%default] \n" +
+							"(n)one, (o)ffset adjustment, (h)opping ")
+		parser.add_option("-o", "--offset", type="eng_float", default=0.0,
+							help="Tuning offset frequency")
+		
 		#file options
 		parser.add_option("-I", "--inputfile", type="string", default=None,
 							help="Select a capture file to read")
@@ -113,12 +197,23 @@ class app_flow_graph(stdgui.gui_flow_graph):
 							help="Continuously loop data from input file")
 		
 		#usrp options
+		parser.add_option("-d", "--decim", type="int", default=112,
+							help="Set USRP decimation rate to DECIM [default=%default]")
 		parser.add_option("-R", "--rx-subdev-spec", type="subdev", default=None,
 							help="Select USRP Rx side A or B (default=first one with a daughterboard)")
+		parser.add_option("--fusb-block-size", type="int", default=0,
+							help="Set USRP blocksize")
+		parser.add_option("--fusb-nblocks", type="int", default=0,
+							help="Set USRP block buffers")
+		parser.add_option("--realtime",action="store_true", dest="realtime",
+							help="Use realtime scheduling.")
+		parser.add_option("-C", "--clock-offset", type="eng_float", default=0.0,
+							help="Sample clock offset frequency")
+
 		#FIXME: gain not working?
 		parser.add_option("-g", "--gain", type="eng_float", default=None,
 							help="Set gain in dB (default is midpoint)")
-		parser.add_option("-c", "--channel", type="int", default=None,
+		parser.add_option("-c", "--channel", type="int", default=1,
 							help="Tune to GSM ARFCN.  Overrides --freq")
 		parser.add_option("-r", "--region", type="string", default="u",
 							help="Frequency bands to use for channels.  (u)s or (e)urope [default=%default]")
@@ -129,27 +224,129 @@ class app_flow_graph(stdgui.gui_flow_graph):
 			parser.print_help()
 			sys.exit(1)
 
-		self.options = options
-		self.scopes = options.scopes
-		self.region = options.region
-		self.channel = options.channel
-		self.offset = options.offset
-		
-		self.print_status = options.print_console.count('s')
-		
-		if options.print_console.count('e'):
-			self.print_status = 1
-			
 #	   if (options.inputfile and ( options.freq or options.rx_subdev_spec or options.gain)):
 #		   print "datafile option cannot be used with USRP options."
 #		   sys.exit(1)
 
 
-		#adjust or caclulate sample clock
+		self.options = options
+		self.scopes = options.scopes
+		self.region = options.region
+		self.channel = options.channel
+		self.offset = options.offset
+
+####################
+	def	setup_print_options(self):
+		options = self.options
+
+		self.print_status = options.print_console.count('s')
+
+		if options.print_console.count('e'):
+			self.print_status = 1
+
+		#console print options
+		popts = 0
+
+		if options.print_console.count('d'):
+			popts |= gsm.PRINT_GSM_DECODE
+
+		if options.print_console.count('s'):
+			popts |= gsm.PRINT_STATE
+
+		if options.print_console.count('e'):
+			popts |= gsm.PRINT_EVERYTHING
+
+		if options.print_console.count('a'):
+			popts |= gsm.PRINT_ALL_TYPES
+
+		if options.print_console.count('k'):
+			popts |= gsm.PRINT_KNOWN
+
+		if options.print_console.count('u'):
+			popts |= gsm.PRINT_UNKNOWN
+
+		if options.print_console.count('0'):
+			popts |= gsm.PRINT_TS0
+
+		if options.print_console.count('F'):
+			popts |= gsm.PRINT_FCCH
+
+		if options.print_console.count('S'):
+			popts |= gsm.PRINT_SCH
+
+		if options.print_console.count('N'):
+			popts |= gsm.PRINT_NORMAL
+
+		if options.print_console.count('D'):
+			popts |= gsm.PRINT_DUMMY
+
+		if options.print_console.count('C'):
+			popts |= gsm.PRINT_BITS | gsm.PRINT_CORR_BITS
+
+		if options.print_console.count('x'):
+			popts |= gsm.PRINT_BITS | gsm.PRINT_HEX
+
+		if options.print_console.count('B'):
+			popts |= gsm.PRINT_BITS | gsm.PRINT_ALL_BITS
+
+		elif options.print_console.count('b'):
+			popts |= gsm.PRINT_BITS
+
+		print  "Print flags: 0x%8.8x\n" %(popts)
+		
+		self.burst.d_print_options = popts	
+
+
+####################
+	def setup_usrp(self):
+		options = self.options
+		
+		#set resonable defaults if no user prefs set
+		if options.realtime:
+			if options.fusb_block_size == 0:
+				options.fusb_block_size = gr.prefs().get_long('fusb', 'rt_block_size', 1024)
+			if options.fusb_nblocks == 0:
+				options.fusb_nblocks    = gr.prefs().get_long('fusb', 'rt_nblocks', 16)
+		else:
+			if options.fusb_block_size == 0:
+				options.fusb_block_size = gr.prefs().get_long('fusb', 'block_size', 4096)
+			if options.fusb_nblocks == 0:
+				options.fusb_nblocks    = gr.prefs().get_long('fusb', 'nblocks', 16)
+		
+		print >> sys.stderr, "fusb_block_size =", options.fusb_block_size
+		print >> sys.stderr, "fusb_nblocks    =", options.fusb_nblocks
+
+			
+		self.ursp = usrp.source_c(decim_rate=options.decim,fusb_block_size=options.fusb_block_size,fusb_nblocks=options.fusb_nblocks)
+			
+		if options.rx_subdev_spec is None:
+			options.rx_subdev_spec = pick_subdevice(self.ursp)
+		
+		self.ursp.set_mux(usrp.determine_rx_mux_value(self.ursp, options.rx_subdev_spec))
+
+		# determine the daughterboard subdevice
+		self.subdev = usrp.selected_subdev(self.ursp, options.rx_subdev_spec)
+		input_rate = self.ursp.adc_freq() / self.ursp.decim_rate()
+
+		# set initial values
+		if options.gain is None:
+			# if no gain was specified, use the mid-point in dB
+			g = self.subdev.gain_range()
+			options.gain = float(g[0]+g[1])/2
+
+		self.set_gain(options.gain)
+	
+		self.source = self.ursp
+
+####################
+	def setup_timing(self):
+		options = self.options
 		clock_rate = 64e6
+
 		if options.clock_offset:
 			clock_rate = 64e6 + options.clock_offset
 		elif options.channel:		
+			#calculate actual clock rate based on frequency offset (assumes shared clock for sampling and tuning) 
 			f = get_freq_from_arfcn(options.channel,options.region)
 			if f:
 				percent_offset = options.offset / get_freq_from_arfcn(options.channel,options.region)
@@ -157,39 +354,17 @@ class app_flow_graph(stdgui.gui_flow_graph):
 				percent_offset = 0.0
 				
 			clock_rate += clock_rate * percent_offset
-			print "% offset = ", percent_offset, "clock = ", clock_rate
+			print >> sys.stderr, "% offset = ", percent_offset, "clock = ", clock_rate
 			
-		#set the default input rate, we will check with the USRP if it is being used
-		input_rate = clock_rate / options.decim
-		gsm_symb_rate = 1625000.0 / 6.0
-		sps = input_rate/gsm_symb_rate
+		self.clock_rate = clock_rate
+		self.input_rate = clock_rate / options.decim
+		self.gsm_symb_rate = 1625000.0 / 6.0
+		self.sps = self.input_rate / self.gsm_symb_rate
+	
+####################
+	def setup_filter(self):
+		options = self.options
 
-		# Build the flowgraph
-		# Setup our input source
-		if options.inputfile:
-			self.using_usrp = False
-			print "Reading data from: " + options.inputfile
-			self.source = gr.file_source(gr.sizeof_gr_complex, options.inputfile, options.fileloop)
-		else:
-			self.using_usrp = True
-			self.u = usrp.source_c(decim_rate=options.decim)
-			if options.rx_subdev_spec is None:
-				options.rx_subdev_spec = pick_subdevice(self.u)
-			self.u.set_mux(usrp.determine_rx_mux_value(self.u, options.rx_subdev_spec))
-
-			# determine the daughterboard subdevice
-			self.subdev = usrp.selected_subdev(self.u, options.rx_subdev_spec)
-			input_rate = self.u.adc_freq() / self.u.decim_rate()
-
-			# set initial values
-			if options.gain is None:
-				# if no gain was specified, use the mid-point in dB
-				g = self.subdev.gain_range()
-				options.gain = float(g[0]+g[1])/2
-
-			self.set_gain(options.gain)
-
-		# configure the processing blocks
 		# configure channel filter
 		filter_cutoff	= 145e3		#135,417Hz is GSM bandwidth 
 		filter_t_width	= 10e3
@@ -201,79 +376,70 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		else:
 			offset = 0.0
 
-		filter_taps = gr.firdes.low_pass(1.0, input_rate, filter_cutoff, filter_t_width, gr.firdes.WIN_HAMMING)
-		self.filter = gr.freq_xlating_fir_filter_ccf(1, filter_taps, offset, input_rate)
+		filter_taps = gr.firdes.low_pass(1.0, self.input_rate, filter_cutoff, filter_t_width, gr.firdes.WIN_HAMMING)
+		self.filter = gr.freq_xlating_fir_filter_ccf(1, filter_taps, offset, self.input_rate)
 
-		# Connect the blocks
+		self.connect(self.source, self.filter)
+
+####################
+	def setup_f_flowgraph(self):
+		# configure demodulator
+		# adjust the phase gain for sampling rate
+		self.demod = gr.quadrature_demod_cf(self.sps);
+		
+		#configure clock recovery
+		gain_mu = 0.01
+		gain_omega = .25 * gain_mu * gain_mu		# critically damped
+		self.clocker = gr.clock_recovery_mm_ff(	self.sps, 
+												gain_omega,
+												0.5,			#mu
+												gain_mu,
+												0.3)			#omega_relative_limit, 
+
+		self.burst = gsm.burst_ff(self.burst_cb)
+		self.connect(self.filter, self.demod, self.clocker, self.burst)
+	
+####################
+	def setup_c_flowgraph(self):
+			#use the sink version if burst scope not selected
+			if self.scopes.count("b"):
+				self.burst = gsm.burst_cf(self.burst_cb,input_rate)
+			else:
+				self.burst = gsm.burst_sink_c(self.burst_cb,input_rate)
+			
+			self.connect(self.filter, self.burst)	
+
+####################
+	def setup_scopes(self):			
+		#Input FFT
 		if self.scopes.count("I"):
-			self.input_fft_scope = fftsink.fft_sink_c (self, panel, fft_size=1024, sample_rate=input_rate)
+			self.input_fft_scope = fftsink.fft_sink_c (self, self.panel, fft_size=1024, sample_rate=self.input_rate)
+			self.connect(self.source, self.input_fft_scope)
 
-		if options.inputfile:
-			self.connect(self.source, self.filter)
-			if self.scopes.count("I"):
-				self.connect(self.source, self.input_fft_scope)
-		else:
-			self.connect(self.u, self.filter)
-			if self.scopes.count("I"):
-				self.connect(self.u, self.input_fft_scope)
+		#Filter FFT
+		if self.scopes.count("F"):
+			self.filter_fft_scope = fftsink.fft_sink_c (self, self.panel, fft_size=1024, sample_rate=input_rate)
+			self.connect(self.filter, self.filter_fft_scope)
 
-		# Setup flow based on decoder selection
-		if options.decoder.count("c"):
-			self.burst = gsm.burst_cf(input_rate)
-			self.connect(self.filter, self.burst)
-
-		elif options.decoder.count("f"):
-			# configure demodulator
-			# adjust the phase gain for sampling rate
-			self.demod = gr.quadrature_demod_cf(sps);
-			
-			#configure clock recovery
-			gain_mu = 0.01
-			gain_omega = .25 * gain_mu * gain_mu		# critically damped
-			self.clocker = gr.clock_recovery_mm_ff(	sps, 
-													gain_omega,
-													0.5,			#mu
-													gain_mu,
-													0.3)			#omega_relative_limit, 
-
-			self.burst = gsm.burst_ff()
-			self.connect(self.filter, self.demod, self.clocker, self.burst)
-
+		#Burst Scope
+		if self.scopes.count("b"):
+			self.burst_scope = scopesink.scope_sink_f(self, self.panel, sample_rate=self.gsm_symb_rate,v_scale=1)
+			self.connect(self.v2s, self.burst_scope)
+							
+		#burst_f options
+		if self.options.decoder.count("f"):
 			if self.scopes.count("d"):
-				self.demod_scope = scopesink.scope_sink_f(self, panel, sample_rate=input_rate)
+				self.demod_scope = scopesink.scope_sink_f(self, self.panel, sample_rate=self.input_rate)
 				self.connect(self.demod, self.demod_scope)
 
 			if self.scopes.count("c"):
-				self.clocked_scope = scopesink.scope_sink_f(self, panel, sample_rate=gsm_symb_rate,v_scale=1)
+				self.clocked_scope = scopesink.scope_sink_f(self, self.panel, sample_rate=self.gsm_symb_rate,v_scale=1)
 				self.connect(self.clocker, self.clocked_scope)
 
-		elif options.decoder.count("F"):
-			#configure clock recovery
-			gain_mu = 0.01
-			gain_omega = .25 * gain_mu * gain_mu		# critically damped
-			self.clocker = gr.clock_recovery_mm_cc(	sps, 
-													gain_omega,
-													0.5,			#mu
-													gain_mu,
-													0.3)			#omega_relative_limit, 
-
-
-			# configure demodulator
-			self.demod = gr.quadrature_demod_cf(1);
-			
-			self.burst = gsm.burst_ff()
-			self.connect(self.filter, self.clocker, self.demod, self.burst)
-
-			if self.scopes.count("d"):
-				self.demod_scope = scopesink.scope_sink_f(self, panel, sample_rate=input_rate)
-				self.connect(self.demod, self.demod_scope)
-
-			if self.scopes.count("c"):
-				self.clocked_scope = scopesink.scope_sink_f(self, panel, sample_rate=gsm_symb_rate,v_scale=1)
-				self.connect(self.clocker, self.clocked_scope)
-
-
-		# setup decoder parameters
+####################
+	def configure_burst_decoder(self):
+		options = self.options
+		
 		# equalizer
 		eq_types = {'none': gsm.EQ_NONE, 'fixed-dfe': gsm.EQ_FIXED_DFE}
 		self.burst.d_equalizer_type = eq_types[options.equalizer]
@@ -292,101 +458,68 @@ class app_flow_graph(stdgui.gui_flow_graph):
 		
 		self.burst.d_clock_options = topts
 
-		#console print options
-		popts = 0
-		
-		if options.print_console.count('s'):
-			popts |= gsm.PRINT_STATE
 
-		if options.print_console.count('e'):
-			popts |= gsm.PRINT_EVERYTHING
-		
-		if options.print_console.count('a'):
-			popts |= gsm.PRINT_ALL_TYPES
-		
-		if options.print_console.count('k'):
-			popts |= gsm.PRINT_KNOWN
-		
-		if options.print_console.count('u'):
-			popts |= gsm.PRINT_UNKNOWN
-		
-		if options.print_console.count('0'):
-			popts |= gsm.PRINT_TS0
+####################
+	def setup_flowgraph(self):
 
-		if options.print_console.count('F'):
-			popts |= gsm.PRINT_FCCH
+		options = self.options
 		
-		if options.print_console.count('S'):
-			popts |= gsm.PRINT_SCH
-		
-		if options.print_console.count('N'):
-			popts |= gsm.PRINT_NORMAL
-		
-		if options.print_console.count('D'):
-			popts |= gsm.PRINT_DUMMY
-		
-		if options.print_console.count('d'):
-			popts |= gsm.PRINT_GSM_DECODE
-		
-		if options.print_console.count('C'):
-			popts |= gsm.PRINT_BITS | gsm.PRINT_CORR_BITS
+		# Attempt to enable realtime scheduling
+		if options.realtime:
+			r = gr.enable_realtime_scheduling()
+			if r == gr.RT_OK:
+				options.realtime = True
+				print >> sys.stderr, "Realtime scheduling ENABLED"
+			else:
+				options.realtime = False
+				print >> sys.stderr, "Realtime scheduling FAILED"
 
-		if options.print_console.count('x'):
-			popts |= gsm.PRINT_BITS | gsm.PRINT_HEX
+		self.setup_timing()
 		
-		if options.print_console.count('B'):
-			popts |= gsm.PRINT_BITS | gsm.PRINT_ALL_BITS
-		
-		elif options.print_console.count('b'):
-			popts |= gsm.PRINT_BITS
+		# Setup our input source
+		if options.inputfile:
+			self.using_usrp = False
+			print >> sys.stderr, "Reading data from: " + options.inputfile
+			self.source = gr.file_source(gr.sizeof_gr_complex, options.inputfile, options.fileloop)
+		else:
+			self.using_usrp = True
+			self.setup_usrp()
 
-		if options.print_console.count('d'):
-			popts |= gsm.PRINT_GSM_DECODE
-		
-		#TODO: should warn if PRINT_GSM_DECODE is combined with other flags (will corrupt output for gsmdecode)
-		
-		self.burst.d_print_options = popts	
-		
-		##########################
-		#set burst tuning callback
-		#self.tuner = gsm_tuner()
-		#self.burst.set_tuner_callback(self.tuner)
-		
-		# connect the primary path after source
-		self.v2s = gr.vector_to_stream(gr.sizeof_float,142)		#burst output is 142 (USEFUL_BITS)
-		self.connect(self.burst, self.v2s)
+		self.setup_filter()
 
-		# create and connect the scopes that apply to all decoders
-		if self.scopes.count("F"):
-			self.filter_fft_scope = fftsink.fft_sink_c (self, panel, fft_size=1024, sample_rate=input_rate)
-			self.connect(self.filter, self.filter_fft_scope)
+		#create a tuner callback
+		self.mean_offset = 0.0		#this is set by tuner callback
+		self.burst_cb = burst_callback(self)
 
-		#Connect output sinks
-		if self.scopes.count("b"):
-			self.burst_scope = scopesink.scope_sink_f(self, panel, sample_rate=gsm_symb_rate,v_scale=1)
-			self.connect(self.v2s, self.burst_scope)
-		elif not options.outputfile:
-			self.burst_sink = gr.null_sink(gr.sizeof_float)
-			self.connect(self.v2s, self.burst_sink)
-							
-		# setup & connect output file
+		# Setup flow based on decoder selection
+		if options.decoder.count("c"):
+			self.setup_c_flowgraph()
+		elif options.decoder.count("f"):
+			self.setup_f_flowgraph()
+
+		self.configure_burst_decoder()
+		
+		#Hookup a vector-stream converter if we want burst output
+		if self.scopes.count("b") or options.outputfile:
+			self.v2s = gr.vector_to_stream(gr.sizeof_float,142)		#burst output is 142 (USEFUL_BITS)
+			self.connect(self.burst, self.v2s)
+#		else:
+#			self.burst_sink = gr.null_sink(gr.sizeof_float)
+#			self.connect(self.v2s, self.burst_sink)
+
+
+		#Output file
 		if options.outputfile:
 			self.filesink = gr.file_sink(gr.sizeof_float, options.outputfile)
 			self.connect(self.v2s, self.filesink)
 
-		
-		self._build_gui(vbox)
-		
-		self.set_channel(self.channel)
+		self.setup_scopes()			
 
-		self.t1 = wx.Timer(self.frame)
-		self.t1.Start(5000,0)
-		self.frame.Bind(wx.EVT_TIMER, self.on_tick)
-
-
-	def _set_status_msg(self, msg):
+####################		
+	def set_status_msg(self, msg):
 		self.frame.GetStatusBar().SetStatusText(msg, 0)
 
+####################
 	def _build_gui(self, vbox):
 
 		if self.scopes.count("I"):
@@ -428,24 +561,34 @@ class app_flow_graph(stdgui.gui_flow_graph):
 												callback=self.set_channel)
 
 			vbox.Add(hbox, 0, wx.EXPAND)
+		
 
-
+####################
 	def set_freq(self, freq):
-
+		#TODO: for wideband processing, determine if the desired freq is within our current sample range.
+		#		If so, use the frequency translator to tune.  Tune the USRP otherwise.
+		#		Maybe have a flag to force tuning the USRP?
+		
 		if not self.using_usrp:
-			return False
+			#if reading from file just adjust for offset in the freq translator
+			if self.print_status:
+				print >> sys.stderr, "Setting filter center freq to offset: ", self.offset, "\n"
+			
+			self.filter.set_center_freq(self.offset) 
+			return True
 	
 		freq = freq - self.offset
 
-		r = self.u.tune(0, self.subdev, freq)
+		r = self.ursp.tune(0, self.subdev, freq)
 
 		if r:
-			self._set_status_msg('%f' % (freq/1e6))
+			self.status_msg = '%f' % (freq/1e6)
 			return True
 		else:
-			self._set_status_msg("Failed to set frequency (%f)" % (freq/1e6))
+			self.status_msg = "Failed to set frequency (%f)" % (freq/1e6)
 			return False
 
+####################
 	def set_gain(self, gain):
 
 		if not self.using_usrp:
@@ -453,49 +596,60 @@ class app_flow_graph(stdgui.gui_flow_graph):
 
 		self.subdev.set_gain(gain)
 
+####################
 	def set_channel(self, chan):
 
-		if not self.using_usrp:
-			return False
+		self.chan = chan
 		
 		freq = get_freq_from_arfcn(chan,self.region)
 
 		if freq:
 			self.set_freq(freq)
 		else:
-			self._set_status_msg("Invalid Channel")
+			self.status_msg = "Invalid Channel"
 
+####################
 	def print_stats(self):
+		out = sys.stderr
+		
 		n_total = self.burst.d_total_count
 		n_unknown = self.burst.d_unknown_count
 		n_known = n_total - n_unknown
 		
-		print "======== STATS ========="
-		print 'freq_offset:    ',self.burst.mean_freq_offset()
-		print 'sync_loss_count:',self.burst.d_sync_loss_count
-		print 'total_bursts:   ',n_total
-		print 'fcch_count:     ',self.burst.d_fcch_count
-		print 'part_sch_count: ',self.burst.d_part_sch_count
-		print 'sch_count:      ',self.burst.d_sch_count
-		print 'normal_count:   ',self.burst.d_normal_count
-		print 'dummy_count:    ',self.burst.d_dummy_count
-		print 'unknown_count:  ',self.burst.d_unknown_count
-		print 'known_count:    ',n_known
+		print >> out, "======== STATS ========="
+		print >> out, 'freq_offset:    ',self.offset
+		print >> out, 'mean_offset:    ',self.mean_offset
+		print >> out, 'sync_loss_count:',self.burst.d_sync_loss_count
+		print >> out, 'total_bursts:   ',n_total
+		print >> out, 'fcch_count:     ',self.burst.d_fcch_count
+		print >> out, 'part_sch_count: ',self.burst.d_part_sch_count
+		print >> out, 'sch_count:      ',self.burst.d_sch_count
+		print >> out, 'normal_count:   ',self.burst.d_normal_count
+		print >> out, 'dummy_count:    ',self.burst.d_dummy_count
+		print >> out, 'unknown_count:  ',self.burst.d_unknown_count
+		print >> out, 'known_count:    ',n_known
 		if n_total:
-			print '%known:         ', 100.0 * n_known / n_total
-		print ""		
+			print >> out, '%known:         ', 100.0 * n_known / n_total
+		print >> out, ""		
 				
+####################
 	def on_tick(self, evt):
-		#if option.autotune
-			#tune offset
 			
 		if self.print_status:
 			self.print_stats()
-			
-def main ():
+
+####################
+	def on_idle(self, event):
+		#We can't update this while in the tune functions since they can be invoked by callbaks and the GUI croaks...
+		#FIXME: This is icky.
+		self.set_status_msg(self.status_msg)
+		#print "Idle.\n";
+
+####################
+def main():
 	app = stdgui.stdapp(app_flow_graph, "GSM Scanner", nstatus=1)
 	app.MainLoop()
 
-
+####################
 if __name__ == '__main__':
-	main ()
+	main()
