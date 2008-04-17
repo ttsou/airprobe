@@ -37,7 +37,8 @@ static void l2_cc();
 static void l2_RRsystemInfo1();
 static void l2_MccMncLac();
 static void l2_RRsystemInfo2();
-//static void l2_RRsystemInfo2ter();
+static void l2_RRsystemInfo2bis();
+static void l2_RRsystemInfo2ter();
 static void l2_RRsystemInfo3C();
 static void l2_RRsystemInfo4C();
 static void l2_RRsystemInfo6();
@@ -111,6 +112,7 @@ static void ProgressIndicator();
 static void Cause();
 static void SmsProtocolDataValidity();
 static void BearerCap();
+static void Number(int len);
 static void BCDNumber();
 static void AuthenticationRequest();
 static void AuthenticationResponse();
@@ -123,6 +125,7 @@ static void LocationUpdateRequest();
 static void MultiSupportTwo();
 static void MeasurmentReport();
 static int CellAllocation(unsigned char format, char *str);
+static void ChannelMode();
 
 static const unsigned char *start;
 static const unsigned char *data;
@@ -806,7 +809,18 @@ l2_rrm()
 		break;
 	case 0x02:
 		OUTF("00000010 System Information Type 2bis\n");
+		data++;
 		l2_RRsystemInfo2bis();
+		break;
+	case 0x03:
+		OUTF("00000011 System Information Type 2ter\n");
+		data++;
+		l2_RRsystemInfo2ter();
+		break;
+	case 0x05:
+		OUTF("00000101 System Information Type 5bis\n");
+		data++;
+		l2_BcchAllocation();
 		break;
 	case 0x06:
 		OUTF("00000110 System Information Type 5ter\n");
@@ -1058,8 +1072,7 @@ l2_HoppingChannelC()
 static void
 l2_MobileAllocation()
 {
-	int c = 64, pos;
-	char *str = "Mobile allocation RF chann.";
+	int pos;
 	const unsigned char *thisend;
 	int len;
 
@@ -1554,17 +1567,20 @@ BitRowFill(unsigned char c, unsigned char mask)
 	return buf;
 }
 
+/*
+ * GSM 04.08-9.1.32
+ */
 static void
 l2_RRsystemInfo2()
 {
 	if (data >= end)
 		RETTRUNK();
 
+	/* Neighbour Cell Description. 16 octets */
 	l2_BcchAllocation();
 	if (data >= end)
 		RETTRUNK();
 
-STOP HERE: laut 04.08 ist hier ne liste von ARFCN's.
 	int c = 7;
 	while (c >= 0)
 	{
@@ -1583,42 +1599,28 @@ STOP HERE: laut 04.08 ist hier ne liste von ARFCN's.
 }
 
 static void
-l2_RRsystemInfo2()
+l2_RRsystemInfo2bis()
 {
 	if (data >= end)
 		RETTRUNK();
 
-	/* Extended BCCH Frequency List */
-STOP HERE: frequenz liste!
+	/* Extended BCCH Frequency List. 16 octets */
+	/* Neighbour Cell Description. 10.5.2.22 */
+	l2_BcchAllocation();
 
+	/* 3 octets */
 	l2_RachControlParameters();
 }
 
-
-#if 0
 static void
 l2_RRsystemInfo2ter()
 {
 	if (data >= end)
-		return;
-	if ((data[0] >> 7) == 0)
-		OUTF("%s Bitmap 0 format\n", BitRowFill(data[0], 0x8e));
-	else {
-		/* 0x8e = 10001110 */
-		if (((data[0] >> 1) & 0x07) == 0x04)
-			OUTF("1---100- 1024 range\nFIXME\n");
-		else if (((data[0] >> 1) & 0x07) == 0x05)
-			OUTF("1---101- 512 range\nFIXME\n");
-		else if (((data[0] >> 1) & 0x07) == 0x06)
-			OUTF("1---110- 128 range\nFIXME\n");
-		else if (((data[0] >> 1) & 0x07) == 0x07)
-			OUTF("1---111- variable Bitmap\nFIXME\n");
-		else
-			OUTF("1---xxx- UNKNOWN 0x%08x\n", data[0]);
-	}
-	OUTF("FIXME\n");
+		RETTRUNK();
+
+	/* Neighbour Cell Description 2 */
+	l2_BcchAllocation();
 }
-#endif
 
 
 /*
@@ -1721,6 +1723,7 @@ l2_RRsystemInfo6()
 	if (data >= end)
 		RETTRUNK();
 	OUTF("%s Network Colour Code: %u\n", BitRowFill(data[0], 0xff), data[0]);
+	data++;
 }
 
 static void
@@ -2403,10 +2406,10 @@ l2_sms()
 		OUTF("00010000 Type: CP-ERROR\n");
 	else if (data[0] == 1) {
 		OUTF("00000001 Type: CP-DATA\n");
-		data++;
 		cpData();
 	} else
 		OUTF("%s UNKNOWN\n", BitRowFill(data[0], 0xff));
+	data++;
 }
 
 static void
@@ -2756,18 +2759,7 @@ TPAddress(const char *str)
 	OUTF("%s\n", id_list_get(list_SMSCAddressType, (data[0] >> 4) & 0x07));
 	OUTF("%s\n", id_list_get(list_SMSCAddressNumberingPlan, data[0] & 0x0f));
 	data++;
-
-	OUTF("-------- Number(%u): ", len);
-	while (len > 0)
-	{
-		if ((data[0] >> 4) == 0x0f)
-			OUT("%X", data[0] & 0x0f);
-		else
-			OUT("%X%X", data[0] & 0x0f, data[0] >> 4);
-		len -= 2;
-		data++;
-	}
-	OUT("\n");
+	Number(len);
 }
 
 static void
@@ -2833,6 +2825,9 @@ l2_RRpagingresponse()
 	l2_MobId();
 }
 
+/*
+ * 04.08-9.1.2
+ */
 static void
 l2_RRassignCommand()
 {
@@ -2841,6 +2836,11 @@ l2_RRassignCommand()
 		RETTRUNK();
 	
 	OUTF("%s Training seq. code: %d\n", BitRowFill(data[0], 0xe0), data[0] >> 5);
+
+	/* Power Command 10.5.2.28 */
+	/* Frequency List 10.5.2.13 */
+	/* Cell Channel Description 10.5.2.1b */
+	/* Multislot allocation... */
 	if (((data[0] >> 2) & 0x07) == 0x00)
 		l2_SingleChannelAssCom();
 	else if (((data[0] >> 4) & 1) == 0x01)
@@ -2871,6 +2871,13 @@ ChannelDescriptionTwo()
 }
 
 static void
+PowerLevel()
+{
+	OUTF("%s Power Level: %u\n", BitRowFill(data[0], 0x1f), data[0] & 0x1f);
+	data++;
+}
+
+static void
 l2_SingleChannelAssCom()
 {
 	int freq = (data[0] & 0x03) << 8;
@@ -2882,22 +2889,50 @@ l2_SingleChannelAssCom()
 	OUTF("........ Absolute RF channel number: %u\n", freq);
 	if (++data >= end)
 		RETTRUNK();
-	OUTF("%s Power Level: %u\n", BitRowFill(data[0], 0x1f), data[0] & 0x1f);
-	if (++data >= end)
-		RETTRUNK();
+	PowerLevel();
 	if (data[0] != 0x63)
 		return;
 	if (++data >= end)
 		RETTRUNK();
+	ChannelMode();
+}
+
+static void
+FrequencyList()
+{
+	/* Should be 16 */
+	OUTF("%s Length: %d\n", BitRowFill(data[0], 0xff), data[0]);
+	data++;
+	CellAllocation(data[0], "Cell Allocation    : ARFCN");
+}
+
+static void
+ChannelMode()
+{
 	OUTF("%s\n", id_list_get(list_ChannelMode, data[0]));
+	data++;
 }
 
 static void
 l2_HoppingChannelAssCom()
 {
 	maio();
-	OUTF("FIXME\n");
+	PowerLevel();
+	while (data < end)
+	{
+		if (data[0] == 0x05)
+		{
+			data++;
+			FrequencyList();
+		} else if (data[0] == 0x63) {
+			data++;
+			ChannelMode();
+		} else {
+			OUTF("UNKNOWN. FIXME\n");
+			break;
+		}
 
+	}
 }
 
 static void
@@ -2950,6 +2985,12 @@ CCsetup()
 			OUTF("01011110 Called Party BCD Number\n");
 			data++;
 			BCDNumber();
+		} else if (data[0] == 0xa1) {
+			OUTF("10100001 CLIR supression\n");
+			data++;
+		} else if (data[0] == 0xa2) {
+			OUTF("10100010 CLIR invocation\n");
+			data++;
 		} else {
 			OUTF("%s FIXME\n", BitRowFill(data[0], 0xff));
 			break;
@@ -3012,6 +3053,7 @@ MultiSupportTwo()
 	data++;
 	OUTF("%s Associated Radio capability 1 Power Class: %d\n", BitRowFill(data[0], 0xf), data[0] & 0xf);
 	OUTF("%s Associated Radio capability 2 Power Class: %d\n", BitRowFill(data[0], 0xf0), data[0] >> 4);
+	data++;
 }
 
 static void
@@ -3791,14 +3833,35 @@ MeasurmentReport()
 }
 
 static void
+Number(int len)
+{
+	OUTF("-------- Number(%u): ", len);
+	while (len > 0)
+	{
+		if ((data[0] >> 4) == 0x0f)
+			OUT("%X", data[0] & 0x0f);
+		else
+			OUT("%X%X", data[0] & 0x0f, data[0] >> 4);
+		len -= 2;
+		data++;
+	}
+	OUT("\n");
+}
+
+static void
 BCDNumber()
 {
+	int len;
+
 	if (data >= end)
 		RETTRUNK();
 
+	len = data[0];
 	OUTF("%s Length: %u\n", BitRowFill(data[0], 0xff), data[0]);
 	data++;
-	OUTF("%s Type of number: %s\n", BitRowFill(data[0], 0x70), id_list_get(list_TypeNumber, data[0] & 0x70));
-	//OUTF("%s Number plan: %s\n", BitRowFill(data[0], 0xf), id_list_get(list_data[0] & 0xf);
+	OUTF("%s Type of number: %s\n", BitRowFill(data[0], 0x70), id_list_get(list_TypeNumber, (data[0] & 0x70) >> 4));
+	data++;
+	len--;
+	Number(len * 2);
 }
 
