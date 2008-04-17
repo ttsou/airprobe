@@ -8,9 +8,14 @@
 
 #include "gsm_constants.h"
 #include <gr_math.h>
-//#include <Python.h>		//for callback testing
 #include <gr_feval.h>
 #include "gsmstack.h"
+
+//Testing Modes
+//Tune test measures hopping latency by hopping between good and empty ARFCNs
+#undef TEST_TUNE_TIMING
+#define TEST_TUNE_GOOD_ARFCN	658
+#define TEST_TUNE_EMPTY_ARFCN	655
 
 
 //Console printing options
@@ -73,13 +78,18 @@ enum EQ_TYPE {
 	EQ_VITERBI
 };
 
+#define BURST_CB_SYNC_OFFSET	1
+#define BURST_CB_ADJ_OFFSET		2
+#define BURST_CB_TUNE			3
+
+
 class gsm_burst;
 
 class gsm_burst
 {
 protected:
 	
-	gsm_burst();  
+	gsm_burst(gr_feval_ll *t);  
 
 	//Burst Buffer: Storage for burst data
 	float			d_burst_buffer[BBUF_SIZE];
@@ -116,30 +126,33 @@ protected:
 	double			d_freq_off_sum;
 	double			d_freq_off_weight;
 
+	gr_feval_ll 	*p_tuner;
+	
 	//////// Methods
 	int				get_burst(void);
 	BURST_TYPE		get_fcch_burst(void);
 	BURST_TYPE		get_sch_burst(void);
 	BURST_TYPE		get_norm_burst(void);
 	
-	void	shift_burst(int);
-	void	calc_freq_offset(void); 
-	void	equalize(void);
-	float	correlate_pattern(const float *,const int,const int,const int);
-	void	diff_decode_burst(void);
+	virtual void	shift_burst(int);
+	void			calc_freq_offset(void); 
+	virtual void	equalize(void);
+	float			correlate_pattern(const float *,const int,const int,const int);
+	void			diff_decode_burst(void);
 
-	void	sync_reset(void);
+	void			sync_reset(void);
 
-	void	print_bits(const float *data,int length);
-	void	print_hex(const unsigned char *data,int length);
-	void	soft2hardbit(char *dst, const float *data, int len);
-	void	print_burst(void);
+	void			print_bits(const float *data,int length);
+	void			print_hex(const unsigned char *data,int length);
 
-	void	diff_encode(const float *in,float *out,int length,float lastbit = 1.0);	
-	void	diff_decode(const float *in,float *out,int length,float lastbit = 1.0);	
+//	void			soft2hardbit(char *dst, const float *data, int len);	//need this?
+	void			print_burst(void);
+
+	void			diff_encode(const float *in,float *out,int length,float lastbit = 1.0);	
+	void			diff_decode(const float *in,float *out,int length,float lastbit = 1.0);	
 
 public:
-	~gsm_burst ();	
+	virtual 		~gsm_burst ();	
 
 	////// General Stats
 	//TODO: Maybe there should be a burst_stats class?
@@ -157,12 +170,17 @@ public:
 	unsigned long	d_print_options;
 	EQ_TYPE			d_equalizer_type;
 	
-	int sync_state() { return d_sync_state;}
-	float last_freq_offset() {return d_freq_offset;}
-	double mean_freq_offset(void);
 	
 	//Methods
 	void full_reset(void);
+
+	int sync_state() { return d_sync_state;}
+
+	//Frequency
+	float last_freq_offset() {return d_freq_offset;}
+	double mean_freq_offset(void);
+
+	long next_arfcn;
 };
 
 

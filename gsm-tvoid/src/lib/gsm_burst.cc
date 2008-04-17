@@ -13,12 +13,15 @@
 #include "gsmstack.h"
 
 
-gsm_burst::gsm_burst () :
+gsm_burst::gsm_burst (gr_feval_ll *t) :
+		p_tuner(t),
 		d_clock_options(DEFAULT_CLK_OPTS),
 		d_print_options(0),
 		d_equalizer_type(EQ_FIXED_DFE)
 {
  
+//	fprintf(stderr,"gsm_burst: enter constructor (t=%8.8x)\n",(unsigned int)t);
+	  	
 //	M_PI = M_PI; //4.0 * atan(1.0); 
 
 	full_reset();
@@ -194,7 +197,17 @@ void gsm_burst::print_burst(void)
 	int print = 0;
 
 	//fprintf(stderr,"p=%8.8X ",	d_print_options);
-	
+
+	if ( PRINT_GSM_DECODE & d_print_options ) {
+
+		/*
+		 * Pass information to GSM stack. GSM stack will try to extract
+		 * information (fn, layer 2 messages, ...)
+		 */
+		diff_decode_burst();		
+		GS_process(&d_gs_ctx, d_ts, d_burst_type, d_decoded_burst);
+	}
+		
 	if ( PRINT_EVERYTHING == d_print_options )
 		print = 1;
 	else if ( (!d_ts) && (d_print_options & PRINT_TS0) )
@@ -221,18 +234,7 @@ void gsm_burst::print_burst(void)
 		
 		fprintf(stderr," ");
 	}
-	
 
-	if ( PRINT_GSM_DECODE == d_print_options ) {
-
-		/*
-		 * Pass information to GSM stack. GSM stack will try to extract
-		 * information (fn, layer 2 messages, ...)
-		 */
-		diff_decode_burst();		
-		GS_process(&d_gs_ctx, d_ts, d_burst_type, d_decoded_burst);
-	}
-	
 	if (print) {
 
 		fprintf(stderr,"%d/%d/%+d/%lu/%lu ",
@@ -275,7 +277,7 @@ void gsm_burst::print_burst(void)
 			break;		
 		}
 
-	fprintf(stderr,"\n");
+		fprintf(stderr,"\n");
 
 
 		//print the correlation pattern for visual inspection
@@ -348,14 +350,15 @@ void gsm_burst::shift_burst(int shift_bits)
 //of the mean phase  from pi/2.
 void gsm_burst::calc_freq_offset(void) 
 {
-	int start = d_burst_start + 10;
-	int end = d_burst_start + USEFUL_BITS - 10;
+	const int padding = 20;
+	int start = d_burst_start + padding;
+	int end = d_burst_start + USEFUL_BITS - padding;
 	
 	float sum = 0.0;
 	for (int j = start; j <= end; j++) {
 		sum += d_burst_buffer[j];
 	}
-	float mean = sum / ((float)USEFUL_BITS - 20.0);
+	float mean = sum / ((float)USEFUL_BITS - (2.0 * (float)padding) );
 	
 	float p_off = mean - (M_PI / 2);
 	d_freq_offset = p_off * 1625000.0 / (12.0 * M_PI);
@@ -466,7 +469,8 @@ float gsm_burst::correlate_pattern(const float *pattern,const int pat_size,const
 		corr = 0.0;
 		for (int i = 1; i < pat_size; i++) {	//Start a 1 to skip first bit due to diff encoding
 			//d_corr[j+distance] += d_burst_buffer[center+i+j] * pattern[i];
-			corr += SIGNUM(d_burst_buffer[center+i+j]) * pattern[i];  //binary corr/sliced
+			//corr += SIGNUM(d_burst_buffer[center+i+j]) * pattern[i];  //binary corr/sliced
+			corr += d_burst_buffer[center+i+j] * pattern[i];
 		}
 		corr /= pat_size - 1; //normalize, -1 for skipped first bit
 		if (corr > d_corr_max) {
@@ -609,8 +613,9 @@ int gsm_burst::get_burst(void)
 		case PARTIAL_SCH:
 			d_sync_state = WAIT_SCH;
 			break;
-		case SCH:
-			d_sync_state = SYNCHRONIZED;
+		//case SCH:
+		//let the burst type switch handle this so it knows if new or old sync
+		//	d_sync_state = SYNCHRONIZED;
 		break;
 		default:
 			break;
@@ -645,6 +650,18 @@ int gsm_burst::get_burst(void)
 		d_ts = 0;		//TODO: check this
 		break;
 	case SCH:
+#ifndef TEST_TUNE_TIMING
+		//TODO: it would be better to adjust tuning on first FCCH (for better SCH detection),
+		//		but tuning can run away with false FCCHs
+		//		Some logic to retune back to original offset on false FCCH might work
+		if (p_tuner) {
+			if (SYNCHRONIZED == d_sync_state)
+				p_tuner->calleval(BURST_CB_ADJ_OFFSET);
+			else
+				p_tuner->calleval(BURST_CB_SYNC_OFFSET);
+				
+		}
+#endif
 		d_burst_count++;
 		d_sch_count++;
 		d_last_sch = d_burst_count;
@@ -672,7 +689,6 @@ int gsm_burst::get_burst(void)
 		d_last_good = d_burst_count;
 	}
 
-
 	//Check for loss of sync
 	int bursts_since_good = d_burst_count - d_last_good;
 	if (bursts_since_good > MAX_SYNC_WAIT) {
@@ -685,6 +701,47 @@ int gsm_burst::get_burst(void)
 		
 		//print info
 		print_burst();
+
+		/////////////////////
+		//start tune testing
+#ifdef TEST_TUNE_TIMING
+
+		static int good_count = -1; //-1: wait sch, >=0: got sch, counting
+		static int wait_count = 0;
+			
+		if (UNKNOWN == d_burst_type) {
+			if (good_count >= 0) {
+				fprintf(stdout,"good_count: %d\n",good_count);
+	
+				if (p_tuner) {
+					next_arfcn = TEST_TUNE_GOOD_ARFCN;
+					p_tuner->calleval(BURST_CB_TUNE);
+				}
+			}
+			good_count = -1;	// start again at resync
+	
+		} else {
+	
+			if (good_count >= 0 ) {
+				good_count++;
+			}
+	
+			if (SCH == d_burst_type) {	
+				if ((good_count < 0) && (++wait_count > 20)) {	// get some good syncs before trying again
+					fprintf(stdout,"restarting good_count\n");
+					good_count = wait_count = 0;
+					//tune away
+					if (p_tuner) { 
+						next_arfcn = TEST_TUNE_EMPTY_ARFCN;
+						p_tuner->calleval(BURST_CB_TUNE);
+					}
+				}
+			}
+		}
+#endif
+		//end tune testing	
+		/////////////////////
+
 
 		//Adjust the buffer write position to align on MAX_CORR_DIST
 		if ( d_clock_options & CLK_CORR_TRACK )

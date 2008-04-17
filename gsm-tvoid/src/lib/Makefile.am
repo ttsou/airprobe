@@ -47,7 +47,8 @@ _gsm_la_SOURCES = 			\
 	gsm.cc				\
 	gsm_burst.cc			\
 	gsm_burst_ff.cc			\
-	gsm_burst_cf.cc
+	gsm_burst_cf.cc			\
+	gsm_burst_sink_c.cc
 	
 
 # magic flags
@@ -74,6 +75,7 @@ grinclude_HEADERS =			\
 	system.h			\
 	gsm_burst_ff.h			\
 	gsm_burst_cf.h			\
+	gsm_burst_sink_c.h		\
 	gsm_constants.h
 
 
