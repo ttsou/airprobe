@@ -419,6 +419,7 @@ static unsigned char *decode_sacch(GS_CTX *ctx, unsigned char *burst, unsigned i
 			DEBUGF("error: sacch: parity error (%d)\n", errors);
 			return NULL;
 		} else {
+			DEBUGF("Successfully corrected parity bits!\n");
 			memcpy(decoded_data, crc_result, sizeof crc_result);
 			errors = 0;
 		}

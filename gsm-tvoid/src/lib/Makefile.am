@@ -38,7 +38,7 @@ ourlib_LTLIBRARIES = _gsm.la
 
 # These are the source files that go into the shared library
 _gsm_la_SOURCES = 			\
-	fire_crc.			\
+	fire_crc.c			\
 	gsmstack.c			\
 	interleave.c			\
 	conv.c				\

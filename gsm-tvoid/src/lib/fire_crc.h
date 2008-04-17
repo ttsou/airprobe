@@ -24,6 +24,10 @@
 #ifndef INCLUDED_FIRE_CRC_H
 #define INCLUDED_FIRE_CRC_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct
 {
 	unsigned int crc_size;
@@ -35,31 +39,8 @@ typedef struct
 int FC_init(FC_CTX *ctx, unsigned int crc_size, unsigned int data_size);
 int FC_check_crc(FC_CTX *ctx, unsigned char *input_bits, unsigned char *control_data);
 
-#if 0
-/*!
- * \brief 
- * \ingroup 
- */
-
-class fire_crc 
-{
-protected:
- 
-  unsigned int d_crc_size;
-  unsigned int d_data_size;
-  unsigned int d_syn_start;
-  std::vector<int> d_syndrome_reg;
-
-public:
-
-  fire_crc (unsigned int crc_size, unsigned int data_size);
-  ~fire_crc (); 
-  int check_crc (const std::vector<int> &input_bits,
-	         std::vector<int> &control_bits);
-  int syndrome_shift (unsigned int bit);
-  int rem (const int x, const int y);
-  
-};
+#ifdef __cplusplus
+}
 #endif
 
 #endif

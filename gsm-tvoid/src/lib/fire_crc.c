@@ -21,8 +21,8 @@
  */
 
 #include "fire_crc.h"
-#include <math.h>
-#include <iostream>
+#include <stdio.h>
+#include <string.h>
 
 #define REM(x, y)	(x) % (y)
 
@@ -31,7 +31,9 @@ static int FC_syndrome_shift(FC_CTX *ctx, unsigned int bit);
 static int
 outit(int *data, int len)
 {
-	for (int i = 0; i < len; i++)
+	int i;
+
+	for (i = 0; i < len; i++)
 		printf("%d ", data[i]);
 	printf("\n");
 }
@@ -49,23 +51,21 @@ FC_init(FC_CTX *ctx, unsigned int crc_size, unsigned int data_size)
 int
 FC_check_crc(FC_CTX *ctx, unsigned char *input_bits, unsigned char *control_data)
 { 
-    int j,error_count = 0, error_index = 0, success_flag = 0, syn_index = 0;
+	int j,error_count = 0, error_index = 0, success_flag = 0, syn_index = 0;
+	unsigned int i;
 
-    ctx->syn_start = 0;
-    // reset the syndrome register
+	ctx->syn_start = 0;
+	// reset the syndrome register
 	memset(ctx->syndrome_reg, 0, sizeof ctx->syndrome_reg);
- //   d_syndrome_reg.clear();
-    //d_syndrome_reg.insert(d_syndrome_reg.begin(),40,0);
 
-    // shift in the data bits
-    //for (unsigned int i=0; i < 1; i++) {
-    for (unsigned int i=0; i < ctx->data_size; i++) {
+	// shift in the data bits
+    for (i=0; i < ctx->data_size; i++) {
         error_count = FC_syndrome_shift(ctx, input_bits[i]);
         control_data[i] = input_bits[i];
     }
 
     // shift in the crc bits
-    for (unsigned int i=0; i < ctx->crc_size; i++) {
+    for (i=0; i < ctx->crc_size; i++) {
         error_count = FC_syndrome_shift(ctx, 1-input_bits[i+ctx->data_size]);
     }
 
@@ -125,6 +125,7 @@ static int
 FC_syndrome_shift(FC_CTX *ctx, unsigned int bit)
 {
 	int error_count = 0;
+	unsigned int i;
 
 	if (ctx->syn_start == 0)
 		ctx->syn_start = 39;
@@ -133,8 +134,6 @@ FC_syndrome_shift(FC_CTX *ctx, unsigned int bit)
 	int temp_syndrome_reg[sizeof ctx->syndrome_reg];
 
 	memcpy(temp_syndrome_reg, ctx->syndrome_reg, sizeof temp_syndrome_reg);
-
-    //std::vector<int> temp_syndrome_reg = ctx->syndrome_reg;
 
     temp_syndrome_reg[REM(ctx->syn_start+3,40)] = 
                        ctx->syndrome_reg[REM(ctx->syn_start+3,40)] ^
@@ -170,7 +169,7 @@ FC_syndrome_shift(FC_CTX *ctx, unsigned int bit)
 
 	memcpy(ctx->syndrome_reg, temp_syndrome_reg, sizeof ctx->syndrome_reg);
 
-    for (unsigned int i = 0; i < 28; i++) {
+    for (i = 0; i < 28; i++) {
        error_count = error_count + ctx->syndrome_reg[REM(ctx->syn_start+i,40)];
     }
     return error_count;
