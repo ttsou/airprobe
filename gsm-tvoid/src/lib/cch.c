@@ -11,7 +11,7 @@
 #include <math.h>
 #include "burst_types.h"
 #include "cch.h"
-//#include "fire_crc.h"
+#include "fire_crc.h"
 
 /*
  * GSM SACCH -- Slow Associated Control Channel
@@ -385,6 +385,7 @@ static unsigned char *decode_sacch(GS_CTX *ctx, unsigned char *burst, unsigned i
 	int errors, len, data_size;
 	unsigned char conv_data[CONV_SIZE], iBLOCK[BLOCKS][iBLOCK_SIZE],
 	   hl, hn, decoded_data[PARITY_OUTPUT_SIZE];
+	FC_CTX fc_ctx;
 
 	data_size = sizeof ctx->msg;
 	if(datalen)
@@ -410,22 +411,18 @@ static unsigned char *decode_sacch(GS_CTX *ctx, unsigned char *burst, unsigned i
 	// If parity check error detected try to fix it.
 	if (parity_check(decoded_data))
 	{
-		return NULL;
-		/* FIXME: impelment fire crc in C */
-#if 0
-		fire_crc crc(40, 184);
-		// fprintf(stderr, "error: sacch: parity error (%d)\n", errors);
+		FC_init(&fc_ctx, 40, 184);
 		unsigned char crc_result[224];
-		if (crc.check_crc(decoded_data, crc_result) == 0)
+		if (FC_check_crc(&fc_ctx, decoded_data, crc_result) == 0)
 		{
 			errors = -1;
 			DEBUGF("error: sacch: parity error (%d)\n", errors);
 			return NULL;
 		} else {
+			DEBUGF("Successfully corrected parity bits!\n");
 			memcpy(decoded_data, crc_result, sizeof crc_result);
 			errors = 0;
 		}
-#endif
 	}
 
 	if((len = compress_bits(ctx->msg, data_size, decoded_data,

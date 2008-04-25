@@ -80,7 +80,7 @@ AC_CHECK_FUNCS([])
 dnl Check for Mingw support
 GR_PWIN32
 
-PKG_CHECK_MODULES(GNURADIO_CORE, gnuradio-core >= 2)
+PKG_CHECK_MODULES(GNURADIO_CORE, gnuradio-core >= 3.1.2)
 LIBS="$LIBS $GNURADIO_CORE_LIBS"
 
 dnl Define where to find boost includes
@@ -103,3 +103,8 @@ dnl run_tests is created from run_tests.in.  Make it executable.
 AC_CONFIG_COMMANDS([run_tests], [chmod +x src/python/run_tests])
 
 AC_OUTPUT
+echo "#######################################################"
+echo "Type 'make all'"
+echo "See src/python/go.sh for an example."
+echo "#######################################################"
+
