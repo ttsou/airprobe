@@ -1,0 +1,2669 @@
+*** wireshark-0.99.5/epan/dissectors/packet-gsm_a.c	2007-02-01 15:00:39.000000000 -0800
+--- wireshark-0.99.5-gssm/epan/dissectors/packet-gsm_a.c	2007-05-31 00:24:56.000000000 -0700
+***************
+*** 567,575 ****
+   /* [3]  10.5.2.8b	Channel Request Description 2 */
+  		/* Pos 20 */
+   	{ 0x00, "Cipher Mode Setting" },				/* [3]  10.5.2.9	*/
+! /* [3]  10.5.2.10	Cipher Response
+!  * [3]  10.5.2.11	Control Channel Description
+!  * [3]  10.5.2.11a	DTM Information Details */
+  	{ 0x00, "Dynamic ARFCN Mapping" },			/* [3]  10.5.2.11b	*/
+  	{ 0x00, "Frequency Channel Sequence" },		/* [3]  10.5.2.12	*/
+      { 0x00,	"Frequency List" },					/* 10.5.2.13		*/
+--- 567,576 ----
+   /* [3]  10.5.2.8b	Channel Request Description 2 */
+  		/* Pos 20 */
+   	{ 0x00, "Cipher Mode Setting" },				/* [3]  10.5.2.9	*/
+! /* [3]  10.5.2.10	Cipher Response */
+! 	{0x00, "Control Channel Description"},			/* [3]  10.5.2.11       Control Channel Description     */ // jl
+! /* [3]  10.5.2.11	Control Channel Description */
+! /* [3]  10.5.2.11a	DTM Information Details */
+  	{ 0x00, "Dynamic ARFCN Mapping" },			/* [3]  10.5.2.11b	*/
+  	{ 0x00, "Frequency Channel Sequence" },		/* [3]  10.5.2.12	*/
+      { 0x00,	"Frequency List" },					/* 10.5.2.13		*/
+***************
+*** 594,633 ****
+   	{ 0x00, "MultiRate configuration" },		/* [3] 10.5.2.21aa	*/
+  	/* Pos 30 */
+  	{ 0x00, "Multislot Allocation" },			/* [3] 10.5.2.21b	*/ 
+!  /*
+   * [3] 10.5.2.21c NC mode
+!  * [3] 10.5.2.22 Neighbour Cell Description
+   * [3] 10.5.2.22a Neighbour Cell Description 2
+   * [3] 10.5.2.22b (void)
+   * [3] 10.5.2.22c NT/N Rest Octets
+!  * [3] 10.5.2.23 P1 Rest Octets
+   * [3] 10.5.2.24 P2 Rest Octets
+   * [3] 10.5.2.25 P3 Rest Octets
+!  * [3] 10.5.2.25a Packet Channel Description
+!  * [3] 10.5.2.25b Dedicated mode or TBF
+   * [3] 10.5.2.25c RR Packet Uplink Assignment
+   * [3] 10.5.2.25d RR Packet Downlink Assignment
+!  * [3] 10.5.2.26 Page Mode
+   * [3] 10.5.2.26a (void)
+   * [3] 10.5.2.26b (void)
+   * [3] 10.5.2.26c (void)
+   * [3] 10.5.2.26d (void)
+-  * [3] 10.5.2.27 NCC Permitted
+   */
+  	{ 0x00, "Power Command" },					/* 10.5.2.28 */
+  	{ 0x00, "Power Command and access type" },	/* 10.5.2.28a */
+! /*
+!  * [3] 10.5.2.29 RACH Control Parameters
+!  * [3] 10.5.2.30 Request Reference
+!  */
+!     { 0x00,	"RR Cause" },						/* 10.5.2.31 */
+  	{ 0x00,	"Synchronization Indication" },		/* 10.5.2.39 */
+! /* [3] 10.5.2.32 SI 1 Rest Octets
+   * [3] 10.5.2.33 SI 2bis Rest Octets 
+   * [3] 10.5.2.33a SI 2ter Rest Octets
+   * [3] 10.5.2.33b SI 2quater Rest Octets
+!  * [3] 10.5.2.34 SI 3 Rest Octets
+!  * [3] 10.5.2.35 SI 4 Rest Octets
+   * [3] 10.5.2.35a SI 6 Rest Octets
+   * [3] 10.5.2.36 SI 7 Rest Octets
+   * [3] 10.5.2.37 SI 8 Rest Octets
+--- 595,643 ----
+   	{ 0x00, "MultiRate configuration" },		/* [3] 10.5.2.21aa	*/
+  	/* Pos 30 */
+  	{ 0x00, "Multislot Allocation" },			/* [3] 10.5.2.21b	*/ 
+! /*
+   * [3] 10.5.2.21c NC mode
+!  */
+! 	{0x00, "Neighbor Cell Description"},			/* [3]  10.5.2.22       Neighbour Cell Description      */ // jl
+! /*
+   * [3] 10.5.2.22a Neighbour Cell Description 2
+   * [3] 10.5.2.22b (void)
+   * [3] 10.5.2.22c NT/N Rest Octets
+!  */
+! 	{0x00, "P1 Rest Octets"},				/* [3]  10.5.2.23       P1 Rest Octets                  */ // jl
+! /*
+   * [3] 10.5.2.24 P2 Rest Octets
+   * [3] 10.5.2.25 P3 Rest Octets
+!  */
+! 	{0x00, "Packet Channel Description"},			/* [3]  10.5.2.25a      Packet Channel Description      */ // jl
+! 	{0x00, "Dedicated Mode or TBF" },			/* [3]  10.5.2.25b      Dedicated mode or TBF           */ // jl
+! /*
+   * [3] 10.5.2.25c RR Packet Uplink Assignment
+   * [3] 10.5.2.25d RR Packet Downlink Assignment
+!  */
+! 	{0x00, "Page Mode"},					/* [3]  10.5.2.26       Page Mode                       */ // jl
+! /*
+   * [3] 10.5.2.26a (void)
+   * [3] 10.5.2.26b (void)
+   * [3] 10.5.2.26c (void)
+   * [3] 10.5.2.26d (void)
+   */
++ 	{0x00, "NCC Permitted"},				/* [3]  10.5.2.27       NCC Permitted                   */ // jl
+  	{ 0x00, "Power Command" },					/* 10.5.2.28 */
+  	{ 0x00, "Power Command and access type" },	/* 10.5.2.28a */
+! 	{0x00, "RACH Control Parameters"},			/* [3]  10.5.2.29       RACH Control Parameters         */ // jl
+! 	{0x00, "Request Reference"},				/* [3]  10.5.2.30       Request Reference               */ // jl
+! 	{ 0x00,	"RR Cause" },						/* 10.5.2.31 */
+  	{ 0x00,	"Synchronization Indication" },		/* 10.5.2.39 */
+! 	{0x00, "SI 1 Rest Octets"},				/* [3]  10.5.2.32       SI 1 Rest Octets                */ // jl
+! /*
+   * [3] 10.5.2.33 SI 2bis Rest Octets 
+   * [3] 10.5.2.33a SI 2ter Rest Octets
+   * [3] 10.5.2.33b SI 2quater Rest Octets
+!  */
+! 	{0x00, "SI 3 Rest Octets"},				/* [3]  10.5.2.34       SI 3 Rest Octets                */ // jl
+! 	{0x00, "SI 4 Rest Octets"},				/* [3]  10.5.2.35       SI 4 Rest Octets                */ // jl
+! /*
+   * [3] 10.5.2.35a SI 6 Rest Octets
+   * [3] 10.5.2.36 SI 7 Rest Octets
+   * [3] 10.5.2.37 SI 8 Rest Octets
+***************
+*** 1057,1062 ****
+--- 1067,1093 ----
+  #define	DTAP_SS_IEI_MASK	0x3f
+  
+  /* Initialize the protocol and registered fields */
++ static int hf_gsm_a_rr_rach_cp_max_retrans = -1;		// jl
++ static int hf_gsm_a_rr_rach_cp_tx_integer = -1;			// jl
++ static int hf_gsm_a_rr_rach_cp_cell_bar_access = -1;		// jl
++ static int hf_gsm_a_rr_rach_cp_re = -1;				// jl
++ static int hf_gsm_a_rr_rach_cp_ec = -1;				// jl
++ static int hf_gsm_a_rr_si_1_rest_octets = -1;			// jl
++ 
++ static int hf_gsm_a_rr_neigh_cell_dsc_ext = -1;			// jl
++ static int hf_gsm_a_rr_neigh_cell_dsc_ba = -1;			// jl
++ 
++ static int hf_gsm_a_rr_cc_dsc_mscr = -1;			// jl
++ static int hf_gsm_a_rr_cc_dsc_att = -1;				// jl
++ static int hf_gsm_a_rr_cc_dsc_cbq3 = -1;			// jl
++ static int hf_gsm_a_rr_cc_dsc_ccch = -1;			// jl
++ 
++ static int hf_gsm_a_rr_co_bcch_dn_ind = -1;			// jl
++ static int hf_gsm_a_rr_co_bcch_pwrc = -1;			// jl
++ static int hf_gsm_a_rr_co_bcch_dtx = -1;			// jl
++ 
++ static int hf_gsm_a_rr_dm_or_tbf = -1;				// jl
++ 
+  static int proto_a_bssmap = -1;
+  static int proto_a_dtap = -1;
+  static int proto_a_rp = -1;
+***************
+*** 3211,3220 ****
+   * [3]  10.5.2.1e	Cell selection indicator after release of all TCH and SDCCH IE
+   */
+  	DE_RR_CELL_DSC,					/* 10.5.2.2   RR Cell Description				*/
+  /*
+-  * [3]  10.5.2.3	Cell Options (BCCH)	
+   * [3]  10.5.2.3a	Cell Options (SACCH)
+!  * [3]  10.5.2.4	Cell Selection Parameters
+   * [3]  10.5.2.4a	(void)
+   */
+  	DE_RR_CH_DSC,					/* [3]  10.5.2.5	Channel Description			*/
+--- 3242,3254 ----
+   * [3]  10.5.2.1e	Cell selection indicator after release of all TCH and SDCCH IE
+   */
+  	DE_RR_CELL_DSC,					/* 10.5.2.2   RR Cell Description				*/
++ 	DE_RR_CO_BCCH,					/* [3]  10.5.2.3	Cell Options (BCCH) */ // jl
++ 
+  /*
+   * [3]  10.5.2.3a	Cell Options (SACCH)
+!  */
+! 	DE_RR_CELL_SEL_PARAM,				/* [3]  10.5.2.4	Cell Selection Parameters */ // jl
+! /*
+   * [3]  10.5.2.4a	(void)
+   */
+  	DE_RR_CH_DSC,					/* [3]  10.5.2.5	Channel Description			*/
+***************
+*** 3230,3237 ****
+   * [3]  10.5.2.8b	Channel Request Description 2 */
+  	/* Pos 20 */
+  	DE_RR_CIP_MODE_SET,				/* [3]  10.5.2.9	Cipher Mode Setting			*/
+! /* [3]  10.5.2.10	Cipher Response
+!  * [3]  10.5.2.11	Control Channel Description
+   * [3]  10.5.2.11a	DTM Information Details */
+  	DE_RR_DYN_ARFCN_MAP,			/* [3]  10.5.2.11b	Dynamic ARFCN Mapping		*/
+  	DE_RR_FREQ_CH_SEQ,				/* [3]  10.5.2.12	Frequency Channel Sequence	*/
+--- 3264,3275 ----
+   * [3]  10.5.2.8b	Channel Request Description 2 */
+  	/* Pos 20 */
+  	DE_RR_CIP_MODE_SET,				/* [3]  10.5.2.9	Cipher Mode Setting			*/
+! /*
+!  * [3]  10.5.2.10	Cipher Response
+!  */
+! 	DE_RR_CC_DSC,					/* [3]	10.5.2.11	Control Channel Description */ // jl
+! 
+! /*
+   * [3]  10.5.2.11a	DTM Information Details */
+  	DE_RR_DYN_ARFCN_MAP,			/* [3]  10.5.2.11b	Dynamic ARFCN Mapping		*/
+  	DE_RR_FREQ_CH_SEQ,				/* [3]  10.5.2.12	Frequency Channel Sequence	*/
+***************
+*** 3245,3252 ****
+   */
+  
+  	DE_RR_HO_REF,					/* 10.5.2.15  Handover Reference				*/
+  /*
+-  * [3] 10.5.2.16 IA Rest Octets
+   * [3] 10.5.2.17 IAR Rest Octets
+   * [3] 10.5.2.18 IAX Rest Octets
+   * [3] 10.5.2.19 L2 Pseudo Length
+--- 3283,3290 ----
+   */
+  
+  	DE_RR_HO_REF,					/* 10.5.2.15  Handover Reference				*/
++ 	DE_RR_IA_REST_OCTETS,				/* [3]	10.5.2.16	IA Rest Octets */ // jl
+  /*
+   * [3] 10.5.2.17 IAR Rest Octets
+   * [3] 10.5.2.18 IAX Rest Octets
+   * [3] 10.5.2.19 L2 Pseudo Length
+***************
+*** 3261,3298 ****
+  
+  /*
+   * [3] 10.5.2.21c NC mode
+!  * [3] 10.5.2.22 Neighbour Cell Description
+   * [3] 10.5.2.22a Neighbour Cell Description 2
+   * [3] 10.5.2.22b (void)
+   * [3] 10.5.2.22c NT/N Rest Octets
+   * [3] 10.5.2.23 P1 Rest Octets
+   * [3] 10.5.2.24 P2 Rest Octets
+   * [3] 10.5.2.25 P3 Rest Octets
+!  * [3] 10.5.2.25a Packet Channel Description
+!  * [3] 10.5.2.25b Dedicated mode or TBF
+   * [3] 10.5.2.25c RR Packet Uplink Assignment
+   * [3] 10.5.2.25d RR Packet Downlink Assignment
+!  * [3] 10.5.2.26 Page Mode
+   * [3] 10.5.2.26a (void)
+   * [3] 10.5.2.26b (void)
+   * [3] 10.5.2.26c (void)
+   * [3] 10.5.2.26d (void)
+-  * [3] 10.5.2.27 NCC Permitted
+   */
+  	DE_RR_POW_CMD,					/* 10.5.2.28  Power Command						*/
+  	DE_RR_POW_CMD_AND_ACC_TYPE,		/* 10.5.2.28a Power Command and access type		*/
+! /*
+!  * [3] 10.5.2.29 RACH Control Parameters
+!  * [3] 10.5.2.30 Request Reference
+!  */
+!     DE_RR_CAUSE,					/* 10.5.2.31  RR Cause							*/
+  	DE_RR_SYNC_IND,					/* 10.5.2.39  Synchronization Indication		*/
+! /* [3] 10.5.2.32 SI 1 Rest Octets
+   * [3] 10.5.2.33 SI 2bis Rest Octets 
+   * [3] 10.5.2.33a SI 2ter Rest Octets
+   * [3] 10.5.2.33b SI 2quater Rest Octets
+!  * [3] 10.5.2.34 SI 3 Rest Octets
+!  * [3] 10.5.2.35 SI 4 Rest Octets
+   * [3] 10.5.2.35a SI 6 Rest Octets
+   * [3] 10.5.2.36 SI 7 Rest Octets
+   * [3] 10.5.2.37 SI 8 Rest Octets
+--- 3299,3346 ----
+  
+  /*
+   * [3] 10.5.2.21c NC mode
+!  */
+! 	DE_RR_NEIGH_CELL_DSC,				/* [3]	10.5.2.22	Neighbour Cell Description */ // jl
+! /*
+   * [3] 10.5.2.22a Neighbour Cell Description 2
+   * [3] 10.5.2.22b (void)
+   * [3] 10.5.2.22c NT/N Rest Octets
++  */
++ 	DE_RR_P1_REST_OCTETS,				/* [3]	10.5.2.23	P1 Rest Octets */ // jl
++ /*
+   * [3] 10.5.2.23 P1 Rest Octets
+   * [3] 10.5.2.24 P2 Rest Octets
+   * [3] 10.5.2.25 P3 Rest Octets
+!  */
+! 	DE_RR_PCD,					/* [3]	10.5.2.25a	Packet Channel Description */ // jl
+! 	DE_RR_DM_OR_TBF,				/* [3]	10.5.2.25b	Dedicated mode or TBF */ // jl
+! /*
+   * [3] 10.5.2.25c RR Packet Uplink Assignment
+   * [3] 10.5.2.25d RR Packet Downlink Assignment
+!  */
+! 	DE_RR_PAGE_MODE,				/* [3]	10.5.2.26	Page Mode */ // jl
+! /*
+   * [3] 10.5.2.26a (void)
+   * [3] 10.5.2.26b (void)
+   * [3] 10.5.2.26c (void)
+   * [3] 10.5.2.26d (void)
+   */
++ 	DE_RR_NCC_PERMITTED,				/* [3]	10.5.2.27	NCC Permitted */ // jl
+  	DE_RR_POW_CMD,					/* 10.5.2.28  Power Command						*/
+  	DE_RR_POW_CMD_AND_ACC_TYPE,		/* 10.5.2.28a Power Command and access type		*/
+! 	DE_RR_RACH_CP,					/* [3]	10.5.2.29	RACH Control Parameters */ // jl
+! 	DE_RR_REQ_REF,					/* [3]	10.5.2.30	Request Reference */ // jl
+! 	DE_RR_CAUSE,					/* 10.5.2.31  RR Cause							*/
+  	DE_RR_SYNC_IND,					/* 10.5.2.39  Synchronization Indication		*/
+! 	DE_RR_SI_1_REST_OCTETS,				/* [3]	10.5.2.32	SI 1 Rest Octets */ // jl
+! /*
+   * [3] 10.5.2.33 SI 2bis Rest Octets 
+   * [3] 10.5.2.33a SI 2ter Rest Octets
+   * [3] 10.5.2.33b SI 2quater Rest Octets
+!  */
+! 	DE_RR_SI_3_REST_OCTETS,				/* [3]	10.5.2.34	SI 3 Rest Octets */ // jl
+! 	DE_RR_SI_4_REST_OCTETS,				/* [3]	10.5.2.35	SI 4 Rest Octets */ // jl
+! /*
+   * [3] 10.5.2.35a SI 6 Rest Octets
+   * [3] 10.5.2.36 SI 7 Rest Octets
+   * [3] 10.5.2.37 SI 8 Rest Octets
+***************
+*** 3463,3480 ****
+  de_cell_id(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint len, gchar *add_string, int string_len)
+  {
+      guint32	curr_offset;
+  
+!     curr_offset = offset;
+  
+-     curr_offset +=
+  	/* 0x02 CI */
+! 	be_cell_id_aux(tvb, tree, offset, len, add_string, string_len, 0x02);
+  
+      /* no length check possible */
+  
+      return(curr_offset - offset);
+  }
+  
+  /*
+   * [3] 10.5.1.3
+   */
+--- 3511,3631 ----
+  de_cell_id(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint len, gchar *add_string, int string_len)
+  {
+      guint32	curr_offset;
++ 	proto_item *item;
++ 	proto_tree *subtree;
+  
+!      curr_offset = offset;
+! 
+! 	item = proto_tree_add_text(tree, tvb, curr_offset, 2, gsm_dtap_elem_strings[DE_CELL_ID].strptr);
+! 	subtree = proto_item_add_subtree(item, ett_gsm_dtap_elem[DE_CELL_ID]);
+  
+  	/* 0x02 CI */
+! 	curr_offset += be_cell_id_aux(tvb, subtree, offset, len, add_string, string_len, 0x02);
+  
+      /* no length check possible */
+  
+      return(curr_offset - offset);
+  }
+  
++ 
++ // jl -- got this list somewhere off the net...
++ typedef struct mcc_mnc_name_s {
++ 	char *mcc;
++ 	char *mnc;
++ 	char *name;
++ } mcc_mnc_name_t;
++ 
++ static mcc_mnc_name_t mcc_mnc_names[] = {
++ 	{"310", "110", "Wireless 2000 PCS"},
++ 	{"310", "020", "Union Telephone"},
++ 	{"310", "260", "T-Mobile"},
++ 	{"310", "030", "Centennial"},
++ 	{"310", "310", "T-Mobile"},
++ 	{"310", "040", "Concho Wireless"},
++ 	{"310", "460", "Simmetry"},
++ 	{"310", "070", "Highland Cellular"},
++ 	{"310", "080", "Corr Wireless"},
++ 	{"310", "090", "Edge Wireless"},
++ 	{"310", "100", "Plateau Wireless"},
++ 	{"310", "170", "T-Mobile (formerly Cingular Wireless CA/NV)"},
++ 	{"310", "180", "West Central"},
++ 	{"310", "190", "Alaska Wireless"},
++ 	{"310", "320", "Cellular One"},
++ 	{"310", "340", "WestLink"},
++ 	{"310", "390", "Yorkville"},
++ 	{"310", "410", "Cingular Wireless"},
++ 	{"310", "420", "Cincinnati Bell"},
++ 	{"310", "430", "Alaska DigiTel"},
++ 	{"310", "440", "Cellular One"},
++ 	{"310", "450", "Viaero Wireless"},
++ 	{"310", "460", "Simmetry (formerly OneLink PCS)"},
++ 	{"310", "490", "SunCom"},
++ 	{"310", "500", "Alltel (formerly PSC Wireless - GA/AL region only)"},
++ 	{"310", "530", "West VA Wireless"},
++ 	{"310", "540", "Oklahoma Western"},
++ 	{"310", "560", "Cellular One DCS"},
++ 	{"310", "590", "Western Wireless (now parto of Alltel)"},
++ 	{"310", "610", "Epic Touch"},
++ 	{"310", "620", "Coleman Telecomm"},
++ 	{"310", "630", "AmeriLink PCS"},
++ 	{"310", "640", "Einstein PCS"},
++ 	{"310", "680", "Cellular One DCS (Dobson.  Formerly NPI Wireless)"},
++ 	{"310", "690", "Immix Wireless"},
++ 	{"310", "740", "Telemetrix"},
++ 	{"310", "760", "Panhandle Telecomm"},
++ 	{"310", "770", "Iowa Wireless"},
++ 	{"310", "790", "PinPoint Wireless"},
++ 	{"310", "830", "Caprock Cellular"},
++ 	{"310", "870", "Kaplan"},
++ 	{"310", "880", "Advantage Cellular"},
++ 	{"310", "890", "RCC/Unicell"},
++ 	{"310", "900", "Texas Cellular"},
++ 	{"310", "910", "First Cellular"},
++ 	{"310", "940", "Digital Cellular"},
++ 	{"310", "950", "XIT Wireless"},
++ 	{"310", "980", "Cingular Wireless (not in commercial use)"},
++ 	{"310", "990", "Cingular Wireless (not in commercial use)"},
++ 	{"311", "000", "Mid-Tex Cellular"},
++ 	{"311", "030", "Indigo Wireless"},
++ 	{"311", "040", "Commnet Wireless"},
++ 	{"311", "050", "Wilkes Cellular"},
++ 	{"311", "070", "Easterbrooke"},
++ 	{"311", "080", "Pine Cellular"},
++ 	{"311", "090", "Siouxland PCS"},
++ 	{"311", "110", "High Plains Wireless"},
++ 	{"311", "130", "Cell One Amarillo"},
++ 	{"311", "140", "Sprocket (aka MBO Wireless)"},
++ 	{"311", "150", "Wilkes Cellular"},
++ 	{"311", "160", "Cellular One DCS (Dobson.  Formerly EMW)"},
++ 	{"311", "170", "PetroCom"},
++ 	{"311", "180", "Cingular Wireless (not in commercial use)"},
++ 	{"311", "190", "Cellular Properties Inc (aka CellOne East Central IL)"},
++ 	{"311", "210", "Farmers Cellular"},
++ 	{"311", "250", "USA i CAN"},
++ 	{"310", "110", "Wireless 2000 PCS (no longer in business)"},
++ 	{"310", "150", "Cingular Wireless (SE GA/SC/NC/E TN.  Consolidated with 310-410)"},
++ 	{"310", "160", "T-Mobile (consolidated with 310-260.  Formerly Omnipoint)"},
++ 	{"310", "200", "T-Mobile (consolidated with 310-260)"},
++ 	{"310", "210", "T-Mobile (consolidated with 310-260)"},
++ 	{"310", "220", "T-Mobile (consolidated with 310-260)"},
++ 	{"310", "230", "T-Mobile (consolidated with 310-260)"},
++ 	{"310", "240", "T-Mobile (consolidated with 310-260)"},
++ 	{"310", "250", "T-Mobile (consolidated with 310-260)"},
++ 	{"310", "260", "T-Mobile (consolidated with 310-260)"},
++ 	{"310", "270", "T-Mobile (consolidated with 310-260. Former Powertel)"},
++ 	{"310", "310", "T-Mobile (consolidated with 310-260. Former Aerial)"},
++ 	{"310", "350", "Carolina Phone (No longer in business)"},
++ 	{"310", "380", "Cingular Wireless (formerly AT&T Wireless)"},
++ 	{"310", "400", "Minnesota Southern (never actually used)"},
++ 	{"310", "580", "T-Mobile (consolidated with 310-260. Former PCS One)"},
++ 	{"310", "660", "T-Mobile (consolidated with 310-260. Former DigiPH)"},
++ 	{"310", "670", "Wireless 2000 PCS (No longer in business)"},
++ 	{"310", "780", "AirLink PCS (No longer in business)"},
++ 	{"310", "800", "T-Mobile (consolidated with 310-260)"},
++ 	{0, 0, 0}
++ };
++ 
++ 
+  /*
+   * [3] 10.5.1.3
+   */
+***************
+*** 3485,3493 ****
+      guint16	value;
+      guint32	curr_offset;
+      proto_tree	*subtree;
+!     proto_item	*item;
+      gchar	mcc[4];
+      gchar	mnc[4];
+  
+      len = len;
+      curr_offset = offset;
+--- 3636,3646 ----
+      guint16	value;
+      guint32	curr_offset;
+      proto_tree	*subtree;
+!     proto_item	*item, *item_name;
+      gchar	mcc[4];
+      gchar	mnc[4];
++ 	mcc_mnc_name_t *mmn = &mcc_mnc_names[0];
++ 
+  
+      len = len;
+      curr_offset = offset;
+***************
+*** 3506,3516 ****
+      mcc_mnc_aux(octs, mcc, mnc);
+  
+  
+!     proto_tree_add_text(subtree,
+  	tvb, curr_offset, 3,
+  	"Mobile Country Code (MCC): %s, Mobile Network Code (MNC): %s",
+  	mcc,
+  	mnc);
+  
+      curr_offset += 3;
+  
+--- 3659,3676 ----
+      mcc_mnc_aux(octs, mcc, mnc);
+  
+  
+!     item_name = proto_tree_add_text(subtree,
+  	tvb, curr_offset, 3,
+  	"Mobile Country Code (MCC): %s, Mobile Network Code (MNC): %s",
+  	mcc,
+  	mnc);
++ 	while(mmn->name) {
++ 		if((!strncmp(mcc, mmn->mcc, 3)) && (!strncmp(mnc, mmn->mnc, 3))) {
++ 			proto_item_append_text(item_name, " -- %s", mmn->name);
++ 			break;
++ 		}
++ 		mmn++;
++ 	}
+  
+      curr_offset += 3;
+  
+***************
+*** 4051,4071 ****
+      guint8  oct,bit,byte;
+  	guint16 arfcn;
+  	proto_item	*item;
+! 
+  
+      len = len;
+      curr_offset = offset;
+  
+      oct = tvb_get_guint8(tvb, curr_offset);
+  
+  	/* FORMAT-ID, Format Identifier (part of octet 3)*/
+! 	proto_tree_add_item(tree, hf_gsm_a_rr_format_id, tvb, curr_offset, 1, FALSE);
+  	/* Cell Channel Description */ 
+  
+  	if ((oct & 0xc0) == 0x00)
+  	{
+  		/* bit map 0 */
+! 		item = proto_tree_add_text(tree,tvb, curr_offset, 16,"list of ARFCN for hopping = ");
+  		bit = 4;
+  		arfcn = 125;
+  		for (byte = 0;byte <= 15;byte++)
+--- 4211,4237 ----
+      guint8  oct,bit,byte;
+  	guint16 arfcn;
+  	proto_item	*item;
+! 	proto_tree *subtree;
+  
+      len = len;
+      curr_offset = offset;
+  
++ 	item = proto_tree_add_text(tree, tvb, curr_offset, 16, gsm_dtap_elem_strings[DE_RR_CELL_CH_DSC].strptr);
++ 	subtree = proto_item_add_subtree(item, ett_gsm_dtap_elem[DE_RR_CELL_CH_DSC]);
++ 
+      oct = tvb_get_guint8(tvb, curr_offset);
+  
++ 	// mask out "spare" bits which can be used for other channel lists -- jl
++ 	oct = oct & 0xcf;
++ 
+  	/* FORMAT-ID, Format Identifier (part of octet 3)*/
+! 	proto_tree_add_item(subtree, hf_gsm_a_rr_format_id, tvb, curr_offset, 1, FALSE);
+  	/* Cell Channel Description */ 
+  
+  	if ((oct & 0xc0) == 0x00)
+  	{
+  		/* bit map 0 */
+! 		item = proto_tree_add_text(subtree,tvb, curr_offset, 16,"list of ARFCN for hopping = ");
+  		bit = 4;
+  		arfcn = 125;
+  		for (byte = 0;byte <= 15;byte++)
+***************
+*** 4086,4117 ****
+      else if ((oct & 0xf8) == 0x80)
+  	{ 
+  		/* 1024 range */
+! 		proto_tree_add_text(tree,tvb, curr_offset, 16,"Cell Channel Description (1024 range) (Not decoded)");
+  		curr_offset = curr_offset + 16;
+  	}
+  	else if ((oct & 0xfe) == 0x88)
+  	{
+  		/* 512 range */
+! 		proto_tree_add_text(tree,tvb, curr_offset, 16,"Cell Channel Description (512 range) (Not decoded)");
+  		curr_offset = curr_offset + 16;
+  	}
+  	else if ((oct & 0xfe) == 0x8a)
+  	{
+  		/* 256 range */
+! 		proto_tree_add_text(tree,tvb, curr_offset, 16,"Cell Channel Description (256 range) (Not decoded)");
+  		curr_offset = curr_offset + 16;
+  	}
+  	else if ((oct & 0xfe) == 0x8c)
+  	{
+  		/* 128 range */
+! 		proto_tree_add_text(tree,tvb, curr_offset, 16,"Cell Channel Description (128 range) (Not decoded)");
+  		curr_offset = curr_offset + 16;
+  	}
+  	else if ((oct & 0xfe) == 0x8e)
+  	{
+  		/* variable bit map */
+  		arfcn = ((oct & 0x01) << 9) | (tvb_get_guint8(tvb, curr_offset+1) << 1) | ((tvb_get_guint8(tvb, curr_offset + 2) & 0x80) >> 7);
+! 		item = proto_tree_add_text(tree,tvb, curr_offset, 16,"list of ARFCN for hopping = %d",arfcn);
+  		curr_offset = curr_offset + 2;
+  		bit = 7;
+  		for (byte = 0;byte <= 13;byte++)
+--- 4252,4283 ----
+      else if ((oct & 0xf8) == 0x80)
+  	{ 
+  		/* 1024 range */
+! 		proto_tree_add_text(subtree,tvb, curr_offset, 16,"Cell Channel Description (1024 range) (Not decoded)");
+  		curr_offset = curr_offset + 16;
+  	}
+  	else if ((oct & 0xfe) == 0x88)
+  	{
+  		/* 512 range */
+! 		proto_tree_add_text(subtree,tvb, curr_offset, 16,"Cell Channel Description (512 range) (Not decoded)");
+  		curr_offset = curr_offset + 16;
+  	}
+  	else if ((oct & 0xfe) == 0x8a)
+  	{
+  		/* 256 range */
+! 		proto_tree_add_text(subtree,tvb, curr_offset, 16,"Cell Channel Description (256 range) (Not decoded)");
+  		curr_offset = curr_offset + 16;
+  	}
+  	else if ((oct & 0xfe) == 0x8c)
+  	{
+  		/* 128 range */
+! 		proto_tree_add_text(subtree,tvb, curr_offset, 16,"Cell Channel Description (128 range) (Not decoded)");
+  		curr_offset = curr_offset + 16;
+  	}
+  	else if ((oct & 0xfe) == 0x8e)
+  	{
+  		/* variable bit map */
+  		arfcn = ((oct & 0x01) << 9) | (tvb_get_guint8(tvb, curr_offset+1) << 1) | ((tvb_get_guint8(tvb, curr_offset + 2) & 0x80) >> 7);
+! 		item = proto_tree_add_text(subtree,tvb, curr_offset, 16,"list of ARFCN for hopping = %d",arfcn);
+  		curr_offset = curr_offset + 2;
+  		bit = 7;
+  		for (byte = 0;byte <= 13;byte++)
+***************
+*** 4172,4181 ****
+  
+      return(curr_offset - offset);
+  }
+! /*
+   * [3] 10.5.2.3 Cell Options (BCCH) 
+   * [3] 10.5.2.3a Cell Options (SACCH) 
+   * [3] 10.5.2.4 Cell Selection Parameters
+   * [3] 10.5.2.4a MAC Mode and Channel Coding Requested 
+   * [3] 10.5.2.5 Channel Description
+   */
+--- 4338,4545 ----
+  
+      return(curr_offset - offset);
+  }
+! 
+! 
+! /* // jl
+   * [3] 10.5.2.3 Cell Options (BCCH) 
++  *
++  *	DN-IND, Dynamic ARFCN mapping indicator (octet 2) Note 4
++  *		87654321
++  *		0.......	Dynamic ARFCN mapping is not used by the PLMN
++  *		1.......	Dynamic ARFCN mapping is used by the PLMN
++  *
++  *	PWRC Power control indicator (octet 2) Note 1
++  *		87654321
++  *		.0......	PWRC is not set
++  *		.1......	PWRC is set
++  *
++  *	DTX, DTX indicator (octet 2) Note 3
++  *		  65
++  *		..00....	The MSs may use uplink discontinuous transmission
++  *		..01....	The MSs shall use uplink discontinuous transmission
++  *		..10....	The MS shall not use uplink discontinuous transmission
++  *
++  *	RADIO-LINK_TIMEOUT (octet 2) Note 2
++  *		    4321
++  *		....0000	4
++  *		....0001	8
++  *		....0010	12
++  *
++  *		....1110	60
++  *		....1111	64
++  *
++  *	NOTE 1: The precise meaning of the PWRC parameter can be found in 3GPP TS 45.008.
++  *	NOTE 2: The precise meaning of RADIO-LINK-TIMEOUT parameter can	be found in 3GPP TS 45.008.
++  *	NOTE 3: The DTX indicator field is not related to the use of downlink discontinuous transmission.
++  *	NOTE 4: Dynamic ARFCN mapping is specified in 3GPP TS 45.005.
++  */
++ static const value_string gsm_a_rr_co_bcch_dn_ind_vals[] = {
++ 	{0, "Dynamic ARFCN mapping is not used by the PLMN"},
++ 	{1, "Dynamic ARFCN mapping is used by the PLMN"},
++ 	{0, 0}
++ };
++ 
++ static const value_string gsm_a_rr_co_bcch_pwrc_vals[] = {
++ 	{0, "PWRC is not set"},
++ 	{1, "PWRC is set"},
++ 	{0, 0}
++ };
++ 
++ static const value_string gsm_a_rr_co_bcch_dtx_vals[] = {
++ 	{0, "The MSs may use uplink discontinuous transmission"},
++ 	{1, "The MSs shall use uplink discontinuous transmission"},
++ 	{2, "The MSs shall not use uplink discontinuous transmission"},
++ 	{0, 0}
++ };
++ 
++ 
++ static guint8 de_rr_co_bcch(tvbuff_t *tvb, proto_tree *tree,
++    guint32 offset, guint len, gchar *add_string _U_, int string_len _U_) {
++ 
++ 	guint32 curr_offset;
++ 	guint8 oct;
++ 	int rl_timeout;
++ 	proto_tree *subtree;
++ 	proto_item *item;
++ 
++ 	len = len;
++ 	curr_offset = offset;
++ 
++ 	item = proto_tree_add_text(tree, tvb, curr_offset, 1, gsm_dtap_elem_strings[DE_RR_CO_BCCH].strptr);
++ 	subtree = proto_item_add_subtree(item, ett_gsm_dtap_elem[DE_RR_CO_BCCH]);
++ 	proto_tree_add_item(subtree, hf_gsm_a_rr_co_bcch_dn_ind, tvb, curr_offset, 1, FALSE);
++ 	proto_tree_add_item(subtree, hf_gsm_a_rr_co_bcch_pwrc, tvb, curr_offset, 1, FALSE);
++ 	proto_tree_add_item(subtree, hf_gsm_a_rr_co_bcch_dtx, tvb, curr_offset, 1, FALSE);
++ 
++ 	oct = tvb_get_guint8(tvb, curr_offset);
++ 	rl_timeout = ((oct & 0xf) + 1) * 4;
++ 	proto_tree_add_text(subtree, tvb, curr_offset, 1, "radio-link timeout %d", rl_timeout);
++ 
++ 	curr_offset++;
++ 
++ 	return curr_offset - offset;
++ }
++ 
++ 
++ /*
+   * [3] 10.5.2.3a Cell Options (SACCH) 
++  */
++ 
++ /* // jl
+   * [3] 10.5.2.4 Cell Selection Parameters
++  *
++  * CELL-RESELECT-HYSTERESIS (octet 2)
++  * The usage of this information is defined in 3GPP TS 45.008
++  *
++  *	8 7 6
++  *	0 0 0	0 dB RXLEV hysteresis for LA re-selection
++  *	0 0 1	2 dB RXLEV hysteresis for LA re-selection
++  *	0 1 0	4 dB RXLEV hysteresis for LA re-selection
++  *	0 1 1	6 dB RXLEV hysteresis for LA re-selection
++  *	1 0 0	8 dB RXLEV hysteresis for LA re-selection
++  *	1 0 1	10 dB RXLEV hysteresis for LA re-selection
++  *	1 1 0	12 dB RXLEV hysteresis for LA re-selection
++  *	1 1 1	14 dB RXLEV hysteresis for LA re-selection
++  *
++  * MS-TXPWR-MAX-CCH (octet 2)
++  * 	Bits 5 - 1:
++  *	The MS-TXPWR-MAX-CCH field is coded as the binary representation
++  *	of the "power control level" in 3GPP TS 45.005 corresponding to
++  *	the maximum TX power level an MS may use when accessing on a
++  *	Control Channel CCH.  This value shall be used by the Mobile
++  *	Station according to 3GPP TS 45.008.
++  *
++  *		Range: 0 to 31.
++  *
++  * ACS, ADDITIONAL RESELECT PARAM IND (octet 3)
++  *	Bit 8: In System Information type 3 message:
++  *	0	System information type 16 and 17 are not broadcast on the BCCH.
++  *	1	System information type 16 and 17 are broadcast on the
++  *		BCCH. A mobile station which does not support System
++  *		information type 16 and 17 may consider this bit as "0".
++  *
++  *	In System Information type 4 message:
++  *	0	The SI 4 rest octets, if present, and SI 7 and SI 8 rest octets, if
++  *		so indicated in the SI 4 rest octets shall be used to derive the value
++  *		of PI and possibly C2 parameters and/or other parameters
++  *	1	The value of PI and possibly C2 parameters and/or other parameters
++  *		in a System information type 7 or type 8 message shall be used
++  *
++  * NECI: HALF RATE SUPPORT (octet 3)
++  *	Bit 7:
++  *	0	New establishment causes are not supported
++  *	1	New establishment causes are supported
++  *
++  * RXLEV-ACCESS-MIN (octet 3)
++  * 	Bits 6 - 1:
++  *	The RXLEV-ACCESS-MIN field is coded as the binary representation
++  *	of the minimum received signal level at the MS for which it is
++  *	permitted to access the system.
++  *
++  *		Range: 0 to 63. (See 3GPP TS 45.008).
++  */
++ static guint8 de_rr_cell_sel_param(tvbuff_t *tvb, proto_tree *tree,
++    guint32 offset, guint len, gchar *add_string _U_, int string_len _U_) {
++ 
++ 	guint32 curr_offset;
++ 	guint8 oct;
++ 	proto_tree *subtree;
++ 	proto_item *item;
++ 	int crh, mtmc, acs, hrs, ram;
++ 
++ 	len = len;
++ 	curr_offset = offset;
++ 
++ 	item = proto_tree_add_text(tree, tvb, curr_offset, 2, gsm_dtap_elem_strings[DE_RR_CELL_SEL_PARAM].strptr);
++ 	subtree = proto_item_add_subtree(item, ett_gsm_dtap_elem[DE_RR_CELL_SEL_PARAM]);
++ 
++ 	oct = tvb_get_guint8(tvb, curr_offset);
++ 
++ 	// CELL-RESELECT-HYSTERESIS
++ 	crh = ((oct & 0xe0) >> 5) * 2;
++ 	proto_tree_add_text(subtree, tvb, curr_offset, 1, "Cell Reselect Hysteresis: %d dB RXLEV hysteresis for LA re-selection", crh);
++ 
++ 	// MS-TXPWR-MAX-CCH (octet 2)
++ 	mtmc = (oct & 0x1f);
++ 	proto_tree_add_text(subtree, tvb, curr_offset, 1, "Maximum TX power level an MS may use when accessing on a Control Channel CCH: %d", mtmc);
++ 
++ 	curr_offset++;
++ 	oct = tvb_get_guint8(tvb, curr_offset);
++ 
++ 	// ACS, System Information Type 3
++ 	acs = (oct & 0x80) >> 7;
++ 	item = proto_tree_add_text(subtree, tvb, curr_offset, 1, "In System Information Type 3: ");
++ 	if(!acs)
++ 		proto_item_append_text(item, "System Information Types 16 and 17 are not broadcast on the BCCH");
++ 	else
++ 		proto_item_append_text(item, "System Information Types 16 and 17 are broadcast on the BCCH");
++ 
++ 	item = proto_tree_add_text(subtree, tvb, curr_offset, 1, "In System Information Type 4: ");
++ 	if(!acs)
++ 		proto_item_append_text(item, "The SI 4, SI 7, and SI 8 rest octets shall be used to derive the value of PI and possibly C2 parameters");
++ 	else
++ 		proto_item_append_text(item, "The value of PI and possibly C2 parameters in a System Information Type 7 or 8 message shall be used");
++ 
++ 	// NECI: HALF RATE SUPPORT (octet 3)
++  	hrs = (oct & 0x40) >> 6;
++ 	item = proto_tree_add_text(subtree, tvb, curr_offset, 1, "Half Rate Support: ");
++ 	if(!hrs)
++ 		proto_item_append_text(item, "New establishment causes are not supported");
++ 	else
++ 		proto_item_append_text(item, "New establishment causes are supported");
++ 
++ 	// RXLEV-ACCESS-MIN (octet 3)
++ 	ram = oct & 0x3f;
++ 	proto_tree_add_text(subtree, tvb, curr_offset, 1, "RXLEV-ACCESS-MIN: Minimum received signal level at the MS for which it is permitted to access "
++ 	   "the system: %d", ram);
++ 
++ 	curr_offset++;
++ 
++ 	return curr_offset - offset;
++ }
++ 
++ 
++ /*
+   * [3] 10.5.2.4a MAC Mode and Channel Coding Requested 
+   * [3] 10.5.2.5 Channel Description
+   */
+***************
+*** 4207,4212 ****
+--- 4571,4578 ----
+      }
+      else 
+      {
++ 	    subchannel = 0;
++ 	    str = "";
+      	if ((oct8 & 0xf0) == 0x10) 
+      	{
+      		str = "TCH/H + ACCHs, Subchannel";
+***************
+*** 4309,4314 ****
+--- 4675,4682 ----
+  	}
+      else 
+      {
++ 		subchannel = 0;
++ 		str = "";
+      	if ((oct8 & 0xf0) == 0x10) 
+      	{
+      		str = "TCH/H + ACCHs, Subchannel";
+***************
+*** 4517,4534 ****
+  guint8
+  de_rr_chnl_needed(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint len, gchar *add_string _U_, int string_len _U_)
+  {
+!     guint32	curr_offset;
+  
+!     len = len;
+!     curr_offset = offset;
+! 	
+! 	proto_tree_add_item(tree, hf_gsm_a_rr_chnl_needed_ch1, tvb, curr_offset, 1, FALSE);
+! 	proto_tree_add_item(tree, hf_gsm_a_rr_chnl_needed_ch2, tvb, curr_offset, 1, FALSE);
+  
+  	curr_offset = curr_offset + 1;
+  
+!     return(curr_offset - offset);
+  }
+  /*
+   * [3] 10.5.2.8a Channel Request Description
+   * [3] 10.5.2.8b Channel Request Description 2
+--- 4885,4910 ----
+  guint8
+  de_rr_chnl_needed(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint len, gchar *add_string _U_, int string_len _U_)
+  {
+! 	proto_tree *subtree;
+! 	proto_item *item;
+! 	guint32    curr_offset;
+  
+! 	len = len;
+! 	curr_offset = offset;
+! 
+! 	item = proto_tree_add_text(tree, tvb, curr_offset, 1, gsm_dtap_elem_strings[DE_RR_CHNL_NEEDED].strptr);
+! 	subtree = proto_item_add_subtree(item, ett_gsm_dtap_elem[DE_RR_CHNL_NEEDED]);
+! 	proto_tree_add_item(subtree, hf_gsm_a_rr_chnl_needed_ch1, tvb, curr_offset, 1, FALSE);
+! 	proto_tree_add_item(subtree, hf_gsm_a_rr_chnl_needed_ch2, tvb, curr_offset, 1, FALSE);
+! 
+! 	// we're assuming that this is the second half octet, so go
+! 	// ahead and increase curr_offset.
+  
+  	curr_offset = curr_offset + 1;
+  
+! 	return(curr_offset - offset);
+  }
++ 
+  /*
+   * [3] 10.5.2.8a Channel Request Description
+   * [3] 10.5.2.8b Channel Request Description 2
+***************
+*** 4573,4579 ****
+  }
+  /*
+   * [3] 10.5.2.10 Cipher Response
+!  * [3] 10.5.2.11 Control Channel Description
+   * [3] 10.5.2.11a DTM Information Details
+   */
+  /* 
+--- 4949,5079 ----
+  }
+  /*
+   * [3] 10.5.2.10 Cipher Response
+!  */
+! 
+! 
+! /*
+!  * [3]	10.5.2.11	Control Channel Description // jl
+!  */
+! 
+! static const true_false_string gsm_a_rr_cc_dsc_mscr_tfs = {
+! 	"MSC is Release 1999 onwards.",
+! 	"MSC is Release 1998 or older."
+! };
+! 
+! static const true_false_string gsm_a_rr_cc_dsc_att_tfs = {
+! 	"MSs in the cell shall apply IMSI attach and detach procedure.",
+! 	"MSs in the cell are not allowed to apply IMSI attach and detach "
+! 	   "procedure."
+! };
+! 
+! static const value_string gsm_a_rr_cc_dsc_cbq3_vals[] = {
+! 	{0, "Iu mode not supported."},
+! 	{1, "Iu mode capable MSs barred."},
+! 	{2, "Iu mode supported, cell not barred."},
+! 	{3, "Iu mode supported, cell not barred.  The network shall not use "
+! 	   "this value."},
+! 	{0, 0}
+! };
+! 
+! static const value_string gsm_a_rr_cc_dsc_ccch_vals[] = {
+! 	{0, "1 basic physical channel used for CCCH, not combined with "
+! 	   "SDCCHs"},
+! 	{1, "1 basic physical channel used for CCCH, combined with SDCCHs"},
+! 	{2, "2 basic physical channels used for CCCH, not combined with "
+! 	   "SDCCHs"},
+! 	{3, "reserved"},
+! 	{4, "3 basic physical channels used for CCCH, not combined with "
+! 	   "SDCCHs"},
+! 	{5, "reserved"},
+! 	{6, "4 basic physical channels used for CCCH, not combined with "
+! 	   "SDCCHs"},
+! 	{7, "reserved"},
+! 	{0, 0}
+! };
+! 
+! static guint8 de_rr_cc_dsc(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint len, gchar *add_string _U_, int string_len _U_) {
+! 
+! 	guint32 curr_offset;
+! 	guint8 oct;
+! 	guint curr_len;
+! 	proto_tree *subtree;
+! 	proto_item *item;
+! 	int bsagblksres, ccchconf, bspamfrms, psch;
+! 	float t3212;
+! 
+! 	curr_offset = offset;
+! 	curr_len = len;
+! 
+! 	item = proto_tree_add_text(tree, tvb, curr_offset, 3,
+! 	   gsm_dtap_elem_strings[DE_RR_CC_DSC].strptr);
+! 	subtree = proto_item_add_subtree(item, ett_gsm_dtap_elem[DE_RR_CC_DSC]);
+! 
+! 	proto_tree_add_item(subtree, hf_gsm_a_rr_cc_dsc_mscr, tvb, curr_offset,
+! 	   1, FALSE);
+! 	proto_tree_add_item(subtree, hf_gsm_a_rr_cc_dsc_att, tvb, curr_offset,
+! 	   1, FALSE);
+! 
+! 	oct = tvb_get_guint8(tvb, curr_offset);
+! 
+! 	// BS-AG-BLKS-RES
+! 	bsagblksres = (oct & 0x38) >> 3;
+! 
+! 	// CCCH-CONF
+! 	ccchconf = (oct & 7);
+! 
+! 	item = proto_tree_add_text(subtree, tvb, curr_offset, 1,
+! 	   "BS-AG-BLKS-RES: ");
+! 
+! 	if((ccchconf == 1) && (bsagblksres > 2))
+! 		proto_item_append_text(item, "reserved");
+! 	else
+! 		proto_item_append_text(item, "%d", bsagblksres);
+! 
+! 	proto_tree_add_item(subtree, hf_gsm_a_rr_cc_dsc_ccch, tvb, curr_offset,
+! 	   1, FALSE);
+! 
+! 	curr_offset++; curr_len--;
+! 	proto_tree_add_item(subtree, hf_gsm_a_rr_cc_dsc_cbq3, tvb, curr_offset,
+! 	   1, FALSE);
+! 
+! 	oct = tvb_get_guint8(tvb, curr_offset);
+! 
+! 	// BS-PA-MFRMS
+! 	bspamfrms = (oct & 0x7) + 2;
+! 	proto_tree_add_text(subtree, tvb, curr_offset, 1, "BS-PA-MFRMS: %d "
+! 	   "multiframes period for transmission of PAGING REQUEST messages "
+! 	   "to the same paging subgroup", bspamfrms);
+! 
+! 	curr_offset++; curr_len--;
+! 	oct = tvb_get_guint8(tvb, curr_offset);
+! 
+! 	// T3212
+! 	t3212 = (float)oct / 10.0;
+! 	item = proto_tree_add_text(subtree, tvb, curr_offset, 1, "T3212 "
+! 	   "timeout value: ");
+! 	if(oct)
+! 		proto_item_append_text(item, "%.1f hours (%d minutes)",
+! 		   t3212, (int)oct * 6);
+! 	else
+! 		proto_item_append_text(item, "infinite (periodic updating "
+! 		   "shall not be used within the cell)");
+! 
+! 	item = proto_tree_add_text(subtree, tvb, curr_offset - 2, 2,
+! 	   "The number of different paging subchannels on the CCCH is ");
+! 	if(ccchconf == 1)
+! 		psch = MAX(1, (3 - bsagblksres)) * bspamfrms;
+! 	else
+! 		psch = (9 - bsagblksres) * bspamfrms;
+! 	proto_item_append_text(item, "%d", psch);
+! 
+! 	curr_offset++; curr_len--;
+! 
+! 	return curr_offset - offset;
+! }
+! 
+! 
+! /*
+   * [3] 10.5.2.11a DTM Information Details
+   */
+  /* 
+***************
+*** 4755,4762 ****
+--- 5255,5288 ----
+  
+      return(curr_offset - offset);
+  }
++ 
++ 
+  /*
+   * [3] 10.5.2.16 IA Rest Octets
++  *
++  * XXX not done
++  */
++ static guint8 de_rr_ia_rest_octets(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint len, gchar *add_string _U_, int string_len _U_)
++ {
++ 	guint32 curr_offset;
++ 	guint curr_len;
++ 	// proto_tree *subtree;
++ 	proto_item *item;
++ 
++ 	curr_offset = offset;
++ 	curr_len = len;
++ 
++ 	item = proto_tree_add_text(tree, tvb, curr_offset, curr_len, gsm_dtap_elem_strings[DE_RR_IA_REST_OCTETS].strptr);
++ 	// subtree = proto_item_add_subtree(item, ett_gsm_dtap_elem[DE_RR_IA_REST_OCTETS]);
++ 
++ 	// len is -1 for mandatory, so can't increase by this.
++ 	// curr_offset += curr_len;
++ 
++ 	return curr_offset - offset;
++ }
++ 
++ 
++ /*
+   * [3] 10.5.2.17 IAR Rest Octets
+   * [3] 10.5.2.18 IAX Rest Octets
+   * [3] 10.5.2.19 L2 Pseudo Length
+***************
+*** 4900,4925 ****
+      return(curr_offset - offset);
+  
+  }
+  /*
+   * [3] 10.5.2.21c NC mode
+!  * [3] 10.5.2.22 Neighbour Cell Description
+   * [3] 10.5.2.22a Neighbour Cell Description 2
+   * [3] 10.5.2.22b (void)
+   * [3] 10.5.2.22c NT/N Rest Octets
+   * [3] 10.5.2.23 P1 Rest Octets
+   * [3] 10.5.2.24 P2 Rest Octets
+   * [3] 10.5.2.25 P3 Rest Octets
+   * [3] 10.5.2.25a Packet Channel Description
+   * [3] 10.5.2.25b Dedicated mode or TBF
+   * [3] 10.5.2.25c RR Packet Uplink Assignment
+   * [3] 10.5.2.25d RR Packet Downlink Assignment
+   * [3] 10.5.2.26 Page Mode
+   * [3] 10.5.2.26a (void)
+   * [3] 10.5.2.26b (void)
+   * [3] 10.5.2.26c (void)
+   * [3] 10.5.2.26d (void)
+-  * [3] 10.5.2.27 NCC Permitted
+   */
+  /*
+   * [3] 10.5.2.28 Power Command
+   *
+--- 5426,5786 ----
+      return(curr_offset - offset);
+  
+  }
++ 
++ 
+  /*
+   * [3] 10.5.2.21c NC mode
+!  */
+! 
+! 
+! /*
+!  * [3] 10.5.2.22	Neighbour Cell Description // jl
+!  *
+!  *	The purpose of the Neighbour Cell Description information
+!  *	element is to provide the absolute radio frequency channel
+!  *	numbers of the BCCH carriers to be monitored by the mobile
+!  *	stations in the cell.
+!  *
+!  *	The Neighbour Cell Description information element is coded as
+!  *	the Cell Channel Description information element, as specified
+!  *	in sub-clause 10.5.2.1b, with the exception of bits 5 and 6 of
+!  *	octet 2.  Figure 10.5.2.22.1 and table 10.5.2.22.1: contains the
+!  *	difference of specifications.
+!  */
+! 
+! static const true_false_string gsm_a_rr_neigh_cell_dsc_ext_tfs = {
+! 	"The information element carries only a part of the BA",
+! 	"The information element carries the complete BA"
+! };
+! 
+! static const true_false_string gsm_a_rr_neigh_cell_dsc_ba_tfs = {
+! 	"Base Allocation for SACCH",
+! 	"Base Allocation for BCCH"
+! };
+! 
+! static guint8 de_rr_neigh_cell_dsc(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint len, gchar *add_string _U_, int string_len _U_)
+! {
+! 	guint32 curr_offset;
+! 	guint curr_len;
+!     proto_tree	*subtree;
+!     proto_item	*item;
+! 
+!     curr_offset = offset;
+! 	curr_len = len;
+! 
+! 	item = proto_tree_add_text(tree, tvb, curr_offset, 16,
+! 	   gsm_dtap_elem_strings[DE_RR_NEIGH_CELL_DSC].strptr);
+! 	subtree = proto_item_add_subtree(item,
+! 	   ett_gsm_dtap_elem[DE_RR_NEIGH_CELL_DSC]);
+! 
+! 	proto_tree_add_item(subtree, hf_gsm_a_rr_neigh_cell_dsc_ext, tvb,
+! 	   curr_offset, 1, FALSE);
+! 	proto_tree_add_item(subtree, hf_gsm_a_rr_neigh_cell_dsc_ba, tvb,
+! 	   curr_offset, 1, FALSE);
+! 
+! 	return de_rr_cell_ch_dsc(tvb, tree, curr_offset, curr_len, add_string,
+! 	   string_len);
+! }
+! 
+! 	
+! /*
+   * [3] 10.5.2.22a Neighbour Cell Description 2
+   * [3] 10.5.2.22b (void)
+   * [3] 10.5.2.22c NT/N Rest Octets
++  */
++ 
++ 
++ /* // jl
+   * [3] 10.5.2.23 P1 Rest Octets
++  *
++  * XXX not done
++  */
++ static guint8 de_rr_p1_rest_octets(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint len, gchar *add_string _U_, int string_len _U_)
++ {
++     guint32	curr_offset;
++ 	guint curr_len;
++ 	// proto_tree *subtree;
++ 	proto_item *item;
++ 
++     curr_offset = offset;
++ 	curr_len = len;
++ 
++ 	item = proto_tree_add_text(tree, tvb, curr_offset, curr_len, gsm_dtap_elem_strings[DE_RR_P1_REST_OCTETS].strptr);
++ 	// subtree = proto_item_add_subtree(item, ett_gsm_dtap_elem[DE_RR_P1_REST_OCTETS]);
++ 
++ 	// mandatory elements get len == -1, so we can't increase this
++ 	// curr_offset += curr_len;
++ 	return curr_offset - offset;
++ }
++ 
++ 
++ /*
+   * [3] 10.5.2.24 P2 Rest Octets
+   * [3] 10.5.2.25 P3 Rest Octets
++  */
++ 
++ 
++ /* // jl
+   * [3] 10.5.2.25a Packet Channel Description
++  *
++  * < Packet Channel Description > ::=
++  *	< Channel type : bit (5) >
++  *	< TN : bit (3) >
++  *	< TSC : bit (3) >
++  *	{ 0
++  *		{ 0
++  *			< spare bit >
++  *			< ARFCN : bit (10) > -- non-hopping RF channel configuraion
++  *		| 1
++  *			< spare bit >
++  *			< MAIO : bit (6) > -- indirect encoding of hopping RF channel configuration
++  *			< MA_NUMBER_IND : bit >
++  *			{ 0
++  *				< spare bits : bit (2) >
++  *			| 1
++  *				< CHANGE_MARK_1 : bit (2) >
++  *			}
++  *		}
++  *	| 1
++  *		< MAIO : bit (6) > -- direct encoding of hopping RF channel configuration
++  *		< HSN : bit (6) >
++  *	};
++  *
++  *	5 + 3 + 3 + 1 + 12 = 24
++  */
++ static guint8 de_rr_pcd(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint len, char *add_string _U_, int string_len _U_) {
++ 
++ 	guint32 curr_offset;
++ 	guint curr_len;
++ 	proto_tree *subtree;
++ 	proto_item *item;
++ 	int val, v;
++ 
++ 	curr_offset = offset;
++ 	curr_len = len;
++ 
++ 	item = proto_tree_add_text(tree, tvb, curr_offset, 3, gsm_dtap_elem_strings[DE_RR_PCD].strptr);
++ 	subtree = proto_item_add_subtree(item, ett_gsm_dtap_elem[DE_RR_PCD]);
++ 
++ 	val = tvb_get_ntoh24(tvb, curr_offset);
++ 
++ 	// channel type
++ 	other_decode_bitfield_value(a_bigbuf, val, 0x1f0000, 24);
++ 	proto_tree_add_text(subtree, tvb, curr_offset, 1, "%s :  Channel Type: %x", a_bigbuf, (val >> 16) & 0x1f);
++ 
++ 	// TN
++ 	other_decode_bitfield_value(a_bigbuf, val, 0xe00000, 24);
++ 	proto_tree_add_text(subtree, tvb, curr_offset, 1, "%s :  Timeslot Number: %d", a_bigbuf, ((val >> 16) & 0xe0) >> 5);
++ 
++ 	curr_offset++;
++ 	curr_len--;
++ 
++ 	// TSC
++ 	other_decode_bitfield_value(a_bigbuf, val, 0x700, 24);
++ 	proto_tree_add_text(subtree, tvb, curr_offset, 1, "%s :  Training Sequence Code: %d", a_bigbuf, (val >> 8) & 0x7);
++ 
++ 	if(!(val & 0x800)) {
++ 		if(!(val & 0x1000)) {
++ 			other_decode_bitfield_value(a_bigbuf, val, 0xc0ff, 24);
++ 			v = ((val & 0xc000) >> 6) | (val & 0xff);
++ 			proto_tree_add_text(subtree, tvb, curr_offset, 2, "%s :  RF Channel Number: %d", a_bigbuf, v);
++ 
++ 			curr_offset += 2;
++ 			curr_len -= 2;
++ 		} else {
++ 			other_decode_bitfield_value(a_bigbuf, val, 0xc00f, 24);
++ 			v = ((val & 0xc000) >> 10) | (val & 0x0f);
++ 			proto_tree_add_text(subtree, tvb, curr_offset, 2, "%s :  Mobile Allocation Index Offset: %d", a_bigbuf, v);
++ 
++ 			curr_offset++;
++ 			curr_len--;
++ 
++ 			other_decode_bitfield_value(a_bigbuf, val, 0x10, 24);
++ 			proto_tree_add_text(subtree, tvb, curr_offset, 1, "%s :  MA_NUMBER = %d", a_bigbuf, (val & 0x10)? 15 : 14);
++ 
++ 			if(val & 0x20) {
++ 				other_decode_bitfield_value(a_bigbuf, val, 0xc0, 24);
++ 				proto_tree_add_text(subtree, tvb, curr_offset, 1, "%s : CHANGE_MARK_1 = %d", a_bigbuf, (val & 0xc0) >> 6);
++ 
++ 				curr_offset++;
++ 				curr_len--;
++ 			}
++ 		}
++ 	} else {
++ 		other_decode_bitfield_value(a_bigbuf, val, 0xf003, 24);
++ 		v = ((val & 0xf000) >> 10) | (val & 0x3);
++ 		proto_tree_add_text(subtree, tvb, curr_offset, 2, "%s : Mobile Allocation Index Offset: %d", a_bigbuf, v);
++ 
++ 		curr_offset++;
++ 		curr_len--;
++ 
++ 		other_decode_bitfield_value(a_bigbuf, val, 0xfc, 24);
++ 		proto_tree_add_text(subtree, tvb, curr_offset, 1, "%s : Hopping Sequence Number: %d", a_bigbuf, (val & 0xfc) >> 2);
++ 
++ 		curr_offset++;
++ 		curr_len--;
++ 	}
++ 
++ 	return curr_offset - offset;
++ }
++ 
++ 
++ /* // jl
++  *
+   * [3] 10.5.2.25b Dedicated mode or TBF
++  */
++ static const value_string gsm_a_rr_dm_or_tbf_vals[] = {
++ 	{0, "This message assigns a dedicated resource"},
++ 	{2, "Not Used (error)"},
++ 	{4, "Not Used (error)"},
++ 	{6, "Not Used (error)"},
++ 	{1, "This message assigns an uplink TBF or is the second message of two in a two-message assignment of an uplink or downlink TBF"},
++ 	{3, "This message assigns a downlink TBF to the mobile station identified in the IA Rest Octets IE"},
++ 	{5, "This message is the first message of two in a two-message assignment of an uplink TBF"},
++ 	{7, "This message is the first message of two in a two-message assignment of a downlink TBF to the mobile station identified in the IA Rest Octets IE"},
++ 	{0, 0}
++ };
++ 
++ static int ia_dedicated_mode_resource = 0;
++ static int ia_tbf = 0;
++ 
++ static guint8 de_rr_dm_or_tbf(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint len, gchar *add_string _U_, int string_len _U_) {
++ 
++ 	guint32 curr_offset;
++ 	guint curr_len;
++ 	proto_tree *subtree;
++ 	proto_item *item;
++ 	guint8 oct;
++ 
++ 	curr_offset = offset;
++ 	curr_len = len;
++ 
++ 	item = proto_tree_add_text(tree, tvb, curr_offset, 1, gsm_dtap_elem_strings[DE_RR_DM_OR_TBF].strptr);
++ 	subtree = proto_item_add_subtree(item, ett_gsm_dtap_elem[DE_RR_DM_OR_TBF]);
++ 
++ 	proto_tree_add_item(subtree, hf_gsm_a_rr_dm_or_tbf, tvb, curr_offset, 1, FALSE);
++ 	oct = tvb_get_guint8(tvb, curr_offset);
++ 	if(!(oct & 0x10))
++ 		ia_dedicated_mode_resource = 1;
++ 	else
++ 		ia_tbf = 1;
++ 
++ 	// XXX assuming 2nd half of the octet, increasing curr_offset
++ 	curr_offset++;
++ 	curr_len--;
++ 
++ 	return curr_offset - offset;
++ }
++ 
++ 
++ /*
+   * [3] 10.5.2.25c RR Packet Uplink Assignment
+   * [3] 10.5.2.25d RR Packet Downlink Assignment
++  */
++ 
++ /* // jl
+   * [3] 10.5.2.26 Page Mode
++  *
++  *	PM (octet 1)
++  *	2 1
++  *	0 0	Normal paging.
++  *	0 1	Extended paging.
++  *	1 0	Paging reorganization.
++  *	1 1	Same as before.
++  *
++  * NOTE: The value "same as before" has been defined instead of
++  * "reserved" to allow the use of this coding with another meaning in an
++  * upwards compatible way in later phases of the GSM system.
++  */
++ static guint8 de_rr_page_mode(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint len, gchar *add_string _U_, int string_len _U_) {
++ 
++ 	guint32 curr_offset;
++ 	guint curr_len;
++ 	proto_tree *subtree;
++ 	proto_item *item;
++ 	guint8 oct;
++ 	int pm;
++ 
++ 	curr_offset = offset;
++ 	curr_len = len;
++ 
++ 	item = proto_tree_add_text(tree, tvb, curr_offset, 1, gsm_dtap_elem_strings[DE_RR_PAGE_MODE].strptr);
++ 	subtree = proto_item_add_subtree(item, ett_gsm_dtap_elem[DE_RR_PAGE_MODE]);
++ 
++ 	/*
++ 	 * XXX
++ 	 *
++ 	 * The page mode IE is a half octet.  We're assuming that it
++ 	 * comes in the bottom half octet.  (That is, we assume that it
++ 	 * is the first message at the start of an octet boundary.)
++ 	 */
++ 	oct = tvb_get_guint8(tvb, curr_offset);
++ 	pm = (oct & 3);
++ 	item = proto_tree_add_text(subtree, tvb, curr_offset, 1, "Page Mode: ");
++ 	switch(pm) {
++ 		case 0:
++ 			proto_item_append_text(item, "Normal paging");
++ 			break;
++ 		case 1:
++ 			proto_item_append_text(item, "Extended paging");
++ 			break;
++ 		case 2:
++ 			proto_item_append_text(item, "Paging reorganization");
++ 			break;
++ 		case 3:
++ 			proto_item_append_text(item, "Same as before");
++ 			break;
++ 	}
++ 
++ 	// we didn't really grab the whole octet, so curr_offset
++ 	// is not increased.
++ 
++ 	return curr_offset - offset;
++ }
++ 
++ 
++ /*
+   * [3] 10.5.2.26a (void)
+   * [3] 10.5.2.26b (void)
+   * [3] 10.5.2.26c (void)
+   * [3] 10.5.2.26d (void)
+   */
++ 
++ 
++ /* // jl
++  * [3] 10.5.2.27 NCC Permitted
++  *
++  *	The NCC permitted field is coded as a bit map, i.e.  bit N is
++  *	coded with a "0" if the BCCH carrier with NCC = N - 1 is not
++  *	permitted for monitoring and with a "1" if the BCCH carrier with
++  *	NCC = N - 1 is permitted for monitoring; N = 1, 2, .., 8.
++  */
++ static guint8 de_rr_ncc_permitted(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint len, gchar *add_string _U_, int string_len _U_)
++ {
++ 	guint32 curr_offset;
++ 	guint curr_len;
++ 	proto_tree *subtree;
++ 	proto_item *item;
++ 	guint8 oct;
++ 	int bit;
++ 
++ 	curr_offset = offset;
++ 	curr_len = len;
++ 
++ 	item = proto_tree_add_text(tree, tvb, curr_offset, 1, gsm_dtap_elem_strings[DE_RR_NCC_PERMITTED].strptr);
++ 	subtree = proto_item_add_subtree(item, ett_gsm_dtap_elem[DE_RR_NCC_PERMITTED]);
++ 
++ 	item = proto_tree_add_text(subtree, tvb, curr_offset, 1, "Allowed NCC on BCCH carriers:");
++ 	oct = tvb_get_guint8(tvb, curr_offset++);
++ 
++ 	for(bit = 0; bit < 8; bit++)
++ 		if(oct & (1 << bit))
++ 			proto_item_append_text(item, " %d", bit);
++ 
++ 	return curr_offset - offset;
++ }
++ 
++ 
+  /*
+   * [3] 10.5.2.28 Power Command
+   *
+***************
+*** 4978,5049 ****
+      proto_item	*item;
+      guint32	curr_offset;
+  
+!     len = len;
+!     curr_offset = offset;
+  
+! 	item =
+! 	proto_tree_add_text(tree,
+! 	    tvb, curr_offset, 1,
+! 	    gsm_dtap_elem_strings[DE_RR_POW_CMD].strptr);
+  
+!     subtree = proto_item_add_subtree(item, ett_gsm_dtap_elem[DE_RR_POW_CMD]);
+  
+!     proto_tree_add_item(subtree, hf_gsm_a_b8spare, tvb, curr_offset, 1, FALSE);
+! 	/*EPC mode */	
+!     proto_tree_add_item(subtree, hf_gsm_a_rr_pow_cmd_epc, tvb, curr_offset, 1, FALSE);
+! 	/*FPC_EPC*/
+!     proto_tree_add_item(subtree, hf_gsm_a_rr_pow_cmd_fpcepc, tvb, curr_offset, 1, FALSE);
+! 	/*POWER LEVEL*/
+!     proto_tree_add_item(subtree, hf_gsm_a_rr_pow_cmd_powlev, tvb, curr_offset, 1, FALSE);
+! 	
+! 	curr_offset = curr_offset + 1;
+  
+!     return(curr_offset - offset);
+  }
+  
+  /*
+!  * [3] 10.5.2.28a Power Command and access type
+   */
+! static guint8
+! de_rr_pow_cmd_and_acc_type(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint len, gchar *add_string _U_, int string_len _U_)
+! {
+!     proto_tree	*subtree;
+!     proto_item	*item;
+!     guint32	curr_offset;
+  
+!     len = len;
+!     curr_offset = offset;
+  
+! 	item =
+! 	proto_tree_add_text(tree,
+! 	    tvb, curr_offset, 1,
+! 	    gsm_dtap_elem_strings[DE_RR_POW_CMD_AND_ACC_TYPE].strptr);
+  
+!     subtree = proto_item_add_subtree(item, ett_gsm_dtap_elem[DE_RR_POW_CMD_AND_ACC_TYPE]);
+  
+! 	/*ATC */	
+!     proto_tree_add_item(subtree, hf_gsm_a_rr_pow_cmd_atc, tvb, curr_offset, 1, FALSE);
+! 	/*EPC mode */	
+!     proto_tree_add_item(subtree, hf_gsm_a_rr_pow_cmd_epc, tvb, curr_offset, 1, FALSE);
+! 	/*FPC_EPC*/
+!     proto_tree_add_item(subtree, hf_gsm_a_rr_pow_cmd_fpcepc, tvb, curr_offset, 1, FALSE);
+! 	/*POWER LEVEL*/
+!     proto_tree_add_item(subtree, hf_gsm_a_rr_pow_cmd_powlev, tvb, curr_offset, 1, FALSE);
+! 	
+! 	curr_offset = curr_offset + 1;
+  
+!     return(curr_offset - offset);
+  }
+! /*
+!  * [3] 10.5.2.29 RACH Control Parameters
+!  * [3] 10.5.2.30 Request Reference
+!  */
+  
+  /*
+   * [3] 10.5.2.31
+   */
+! guint8
+! de_rr_cause(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint len, gchar *add_string _U_, int string_len _U_)
+  {
+      guint32	curr_offset;
+  
+--- 5839,6099 ----
+      proto_item	*item;
+      guint32	curr_offset;
+  
+!     len = len;
+!     curr_offset = offset;
+! 
+! 	item =
+! 	proto_tree_add_text(tree,
+! 	    tvb, curr_offset, 1,
+! 	    gsm_dtap_elem_strings[DE_RR_POW_CMD].strptr);
+! 
+!     subtree = proto_item_add_subtree(item, ett_gsm_dtap_elem[DE_RR_POW_CMD]);
+! 
+!     proto_tree_add_item(subtree, hf_gsm_a_b8spare, tvb, curr_offset, 1, FALSE);
+! 	/*EPC mode */	
+!     proto_tree_add_item(subtree, hf_gsm_a_rr_pow_cmd_epc, tvb, curr_offset, 1, FALSE);
+! 	/*FPC_EPC*/
+!     proto_tree_add_item(subtree, hf_gsm_a_rr_pow_cmd_fpcepc, tvb, curr_offset, 1, FALSE);
+! 	/*POWER LEVEL*/
+!     proto_tree_add_item(subtree, hf_gsm_a_rr_pow_cmd_powlev, tvb, curr_offset, 1, FALSE);
+! 	
+! 	curr_offset = curr_offset + 1;
+! 
+!     return(curr_offset - offset);
+! }
+! 
+! /*
+!  * [3] 10.5.2.28a Power Command and access type
+!  */
+! static guint8
+! de_rr_pow_cmd_and_acc_type(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint len, gchar *add_string _U_, int string_len _U_)
+! {
+!     proto_tree	*subtree;
+!     proto_item	*item;
+!     guint32	curr_offset;
+! 
+!     len = len;
+!     curr_offset = offset;
+! 
+! 	item =
+! 	proto_tree_add_text(tree,
+! 	    tvb, curr_offset, 1,
+! 	    gsm_dtap_elem_strings[DE_RR_POW_CMD_AND_ACC_TYPE].strptr);
+! 
+!     subtree = proto_item_add_subtree(item, ett_gsm_dtap_elem[DE_RR_POW_CMD_AND_ACC_TYPE]);
+! 
+! 	/*ATC */	
+!     proto_tree_add_item(subtree, hf_gsm_a_rr_pow_cmd_atc, tvb, curr_offset, 1, FALSE);
+! 	/*EPC mode */	
+!     proto_tree_add_item(subtree, hf_gsm_a_rr_pow_cmd_epc, tvb, curr_offset, 1, FALSE);
+! 	/*FPC_EPC*/
+!     proto_tree_add_item(subtree, hf_gsm_a_rr_pow_cmd_fpcepc, tvb, curr_offset, 1, FALSE);
+! 	/*POWER LEVEL*/
+!     proto_tree_add_item(subtree, hf_gsm_a_rr_pow_cmd_powlev, tvb, curr_offset, 1, FALSE);
+! 	
+! 	curr_offset = curr_offset + 1;
+! 
+!     return(curr_offset - offset);
+! }
+! 
+! 
+! /*
+!  * [3] 10.5.2.29 RACH Control Parameters
+!  *
+!  *	Max retrans, Maximum number of retransmissions (octet 2)
+!  *
+!  *	Bits
+!  *		8 7
+!  *		0 0		Maximum 1 retransmission
+!  *		0 1		Maximum 2 retransmissions
+!  *		1 0		Maximum 4 retransmissions
+!  *		1 1		Maximum 7 retransmissions
+!  */
+! static const value_string gsm_a_rr_rach_cp_max_retrans_vals[] = {
+! 	{0, "Maximum 1 retransmission"},
+! 	{1, "Maximum 2 retransmissions"},
+! 	{2, "Maximum 4 retransmissions"},
+! 	{3, "Maximum 7 retransmissions"},
+! 	{0, 0},
+! };
+! 
+! 
+! /*
+!  * Tx-integer, Number of slots to spread transmission (octet 2)
+!  *
+!  *	Bits
+!  *		6 5 4 3
+!  *		0 0 0 0		3 slots used to spread transmission
+!  *		0 0 0 1		4 slots used to spread transmission
+!  *		0 0 1 0		5 slots used to spread transmission
+!  *		0 0 1 1		6 slots used to spread transmission
+!  *		0 1 0 0		7 slots used to spread transmission
+!  *		0 1 0 1		8 slots used to spread transmission
+!  *		0 1 1 0		9 slots used to spread transmission
+!  *		0 1 1 1		10 slots used to spread transmission
+!  *		1 0 0 0		11 slots used to spread transmission
+!  *		1 0 0 1		12 slots used to spread transmission
+!  *		1 0 1 0		14 slots used to spread transmission
+!  *		1 0 1 1		16 slots used to spread transmission
+!  *		1 1 0 0		20 slots used to spread transmission
+!  *		1 1 0 1		25 slots used to spread transmission
+!  *		1 1 1 0		32 slots used to spread transmission
+!  *		1 1 1 1		50 slots used to spread transmission
+!  */
+! static const value_string gsm_a_rr_rach_cp_tx_integer_vals[] = {
+! 	{0, "3 slots used to spread transmission"},
+! 	{1, "4 slots used to spread transmission"},
+! 	{2, "5 slots used to spread transmission"},
+! 	{3, "6 slots used to spread transmission"},
+! 	{4, "7 slots used to spread transmission"},
+! 	{5, "8 slots used to spread transmission"},
+! 	{6, "9 slots used to spread transmission"},
+! 	{7, "10 slots used to spread transmission"},
+! 	{8, "11 slots used to spread transmission"},
+! 	{9, "12 slots used to spread transmission"},
+! 	{10, "14 slots used to spread transmission"},
+! 	{11, "16 slots used to spread transmission"},
+! 	{12, "20 slots used to spread transmission"},
+! 	{13, "25 slots used to spread transmission"},
+! 	{14, "32 slots used to spread transmission"},
+! 	{15, "50 slots used to spread transmission"},
+! 	{0, 0},
+! };
+! 
+! /*
+!  * CELL_BAR_ACCESS, Cell Barred for Access (octet 2)
+!  *
+!  *	Bit 2
+!  *		0		The cell is not barred, see 3GPP TS 23.022
+!  *		1		The cell is barred, see 3GPP TS 23.022
+!  */
+! static const true_false_string gsm_a_rr_rach_cp_cell_bar_access_tfs = {
+! 	"The cell is barred, see 3GPP TS 23.022",
+! 	"The cell is not barred, see 3GPP TS 23.022"
+! };
+! 
+! static const value_string gsm_a_rr_rach_cp_cell_bar_access_vals[] = {
+! 	{0, "The cell is not barred"},
+! 	{1, "The cell is barred"},
+! 	{0, 0},
+! };
+! 
+! /*
+!  * RE, Call reestablishment allowed (octet 2)
+!  *
+!  *	Bit 1
+!  *		0		Call Reestablishment allowed in the cell
+!  *		1		Call Reestablishment not allowed in the cell
+!  */
+! static const true_false_string gsm_a_rr_rach_cp_re_tfs = {
+! 	"Call Reestablishment not allowed in the cell",
+! 	"Call Reestablishment allowed in the cell"
+! };
+! 
+! static const value_string gsm_a_rr_rach_cp_re_vals[] = {
+! 	{0, "Call Reestablishment is allowed in the cell"},
+! 	{1, "Call Reestablishment is not allowed in the cell"},
+! 	{0, 0},
+! };
+! 
+! /*
+!  * EC Emergency Call allowed (octet 3 bit 3)
+!  *
+!  *	Bit 3
+!  *		0		Emergency call allowed in the cell to all MSs
+!  *		1		Emergency call not allowed in the cell except for the MSs that belong to one of the classes between 11 to 15.
+!  */
+! static const true_false_string gsm_a_rr_rach_cp_ec_tfs = {
+! 	"Emergency call not allowed in the cell except for the MSs that belong to one of the classes between 11 to 15.",
+! 	"Emergency call allowed in the cell to all MSs"
+! };
+! 
+! static const value_string gsm_a_rr_rach_cp_ec_vals[] = {
+! 	{0, "Emergency call allowed in the cell to all MSs"},
+! 	{1, "Emergency call not allowed in the cell except for the MSs that belong to one of the classes between 11 and 15"},
+! 	{0, 0},
+! };
+! 
+! /*	AC CN, Access Control Class N (octet 3 (except bit 3) and octet 4)
+!  *
+!  *	For a mobile station with AC C = N access is not barred if the AC CN bit is coded with a "0"; N = 0, 1, .. 9,11, .., 15.
+!  */
+! 
+! static guint8 de_rr_rach_cp(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint len, gchar *add_string _U_, int string_len _U_) {
+  
+! 	proto_tree *subtree;
+! 	proto_item *item;
+! 	guint16 accn;
+! 	guint32 curr_offset;
+! 	guint curr_len;
+! 	guint bit;
+  
+! 	curr_len = len;
+! 	curr_offset = offset;
+  
+! 	item = proto_tree_add_text(tree, tvb, curr_offset, 3, gsm_dtap_elem_strings[DE_RR_RACH_CP].strptr);
+! 	subtree = proto_item_add_subtree(item, ett_gsm_dtap_elem[DE_RR_RACH_CP]);
+  
+! 	proto_tree_add_item(subtree, hf_gsm_a_rr_rach_cp_max_retrans, tvb, curr_offset, 1, FALSE);
+! 	proto_tree_add_item(subtree, hf_gsm_a_rr_rach_cp_tx_integer, tvb, curr_offset, 1, FALSE);
+! 	proto_tree_add_item(subtree, hf_gsm_a_rr_rach_cp_cell_bar_access, tvb, curr_offset, 1, FALSE);
+! 	proto_tree_add_item(subtree, hf_gsm_a_rr_rach_cp_re, tvb, curr_offset, 1, FALSE);
+! 	proto_tree_add_item(subtree, hf_gsm_a_rr_rach_cp_ec, tvb, curr_offset + 1, 1, FALSE);
+! 
+! 	curr_offset++;
+! 	accn = tvb_get_ntohs(tvb, curr_offset);
+! 	item = proto_tree_add_text(subtree, tvb, curr_offset, 2, "Access Classes not barred:");
+! 	bit = 16;
+! 	while(bit-- > 0)
+! 		if(bit != 10)
+! 			if((accn & (1 << bit)) == 0)
+! 				proto_item_append_text(item, " %d", bit);
+! 
+! 	curr_offset += 2;
+! 	return curr_offset - offset;
+  }
+  
++ 
+  /*
+!  * [3] 10.5.2.30 Request Reference
+   */
+! static guint8 de_rr_req_ref(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint len, gchar *add_string _U_, int string_len _U_) {
+  
+! 	proto_tree *subtree;
+! 	proto_item *item;
+! 	guint32 curr_offset;
+! 	guint curr_len;
+! 	int v, t1p, t2, t3;
+  
+! 	curr_len = len;
+! 	curr_offset = offset;
+  
+! 	item = proto_tree_add_text(tree, tvb, curr_offset, 3, gsm_dtap_elem_strings[DE_RR_REQ_REF].strptr);
+! 	subtree = proto_item_add_subtree(item, ett_gsm_dtap_elem[DE_RR_REQ_REF]);
+  
+! 	v = tvb_get_guint8(tvb, curr_offset);
+! 	proto_tree_add_text(subtree, tvb, curr_offset, 1, "Random Access Information: %x", v);
+  
+! 	curr_offset++;
+! 	curr_len--;
+! 
+! 	v = tvb_get_ntohs(tvb, curr_offset);
+! 	t1p = (v & 0xf800) >> 11;
+! 	t3 = ((v & 0x700) >> 5) | ((v & 0xe0) >> 5);
+! 	t2 = v & 0x1f;
+! 	proto_tree_add_text(subtree, tvb, curr_offset, 2, "FN modulo 42432: %d", 51 * ((t3 - t2) % 26) + t3 + 51 * 26 * t1p);
+! 
+! 	curr_offset += 2;
+! 	curr_len -= 2;
+! 
+! 	return curr_offset - offset;
+  }
+! 
+  
+  /*
+   * [3] 10.5.2.31
+   */
+! guint8 de_rr_cause(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint len, gchar *add_string _U_, int string_len _U_)
+  {
+      guint32	curr_offset;
+  
+***************
+*** 5056,5068 ****
+  
+      return(curr_offset - offset);
+  }
+  /*
+-  * [3] 10.5.2.32 SI 1 Rest Octets
+   * [3] 10.5.2.33 SI 2bis Rest Octets 
+   * [3] 10.5.2.33a SI 2ter Rest Octets
+   * [3] 10.5.2.33b SI 2quater Rest Octets
+   * [3] 10.5.2.34 SI 3 Rest Octets
+   * [3] 10.5.2.35 SI 4 Rest Octets
+   * [3] 10.5.2.35a SI 6 Rest Octets
+   * [3] 10.5.2.36 SI 7 Rest Octets
+   * [3] 10.5.2.37 SI 8 Rest Octets
+--- 6106,6288 ----
+  
+      return(curr_offset - offset);
+  }
++ 
++ 
++ /*
++  * [4] 10.5.2.32 SI 1 Rest Octets
++  *
++  * NCH Position (5 bits) | Band Indicator | Spare
++  *
++  *	NCH Position on the CCCH
++  *
++  *		The values in the NCH Position field indicates the block
++  *		number of the CCCH block which is used for the first NCH
++  *		block and the number of blocks used for the NCH. (The
++  *		block numbering corresponds to table 5 in clause 7 of
++  *		3GPP TS 45.002) The absence of the NCH position field
++  *		indicates that there is no NCH in the cell/on the
++  *		carrying CCCH slot The following coding applies if 1 or
++  *		more basic physical channels are used for CCCH, not
++  *		combined with SDCCHs.
++  *
++  *		Value	# blocks	# of 1 block
++  *		00000	1		0
++  *		00001	1		1
++  *		00010	1		2
++  *		00011	1		3
++  *		00100	1		4
++  *		00101	1		5
++  *		00110	1		6
++  *		00111	2		0
++  *		01000	2		1
++  *		01001	2		2
++  *		01010	2		3
++  *		01011	2		4
++  *		01100	2		5
++  *		01101	3		0
++  *		01110	3		1
++  *		01111	3		2
++  *		10000	3		3
++  *		10001	3		4
++  *		10010	4		0
++  *		10011	4		1
++  *		10100	4		2
++  *		10101	4		3
++  *		10110	5		0
++  *		10111	5		1
++  *		11000	5		2
++  *		11001	6		0
++  *		11010	6		1
++  *		11011	7		0
++  *
++  *		Other values are reserved for future use. A mobile
++  *		station receiving a reserved value shall behave as if
++  *		the NCH position was not present
++  *
++  *	Band Indicator
++  *		
++  *		0	ARFCN indicates 1800 band
++  *		1	ARFCN indicates 1900 band
++  */
++ static const value_string gsm_a_rr_si_1_rest_octets_vals[] = {
++ 	{0x0, "NCH position on the CCCH: 1 block starting at block 0"},
++ 	{0x1, "NCH position on the CCCH: 1 block starting at block 1"},
++ 	{0x2, "NCH position on the CCCH: 1 block starting at block 2"},
++ 	{0x3, "NCH position on the CCCH: 1 block starting at block 3"},
++ 	{0x4, "NCH position on the CCCH: 1 block starting at block 4"},
++ 	{0x5, "NCH position on the CCCH: 1 block starting at block 5"},
++ 	{0x6, "NCH position on the CCCH: 1 block starting at block 6"},
++ 	{0x7, "NCH position on the CCCH: 2 blocks starting at block 0"},
++ 	{0x8, "NCH position on the CCCH: 2 blocks starting at block 1"},
++ 	{0x9, "NCH position on the CCCH: 2 blocks starting at block 2"},
++ 	{0xa, "NCH position on the CCCH: 2 blocks starting at block 3"},
++ 	{0xb, "NCH position on the CCCH: 2 blocks starting at block 4"},
++ 	{0xc, "NCH position on the CCCH: 2 blocks starting at block 5"},
++ 	{0xd, "NCH position on the CCCH: 3 blocks starting at block 0"},
++ 	{0xe, "NCH position on the CCCH: 3 blocks starting at block 1"},
++ 	{0xf, "NCH position on the CCCH: 3 blocks starting at block 2"},
++ 	{0x10, "NCH position on the CCCH: 3 blocks starting at block 3"},
++ 	{0x11, "NCH position on the CCCH: 3 blocks starting at block 4"},
++ 	{0x12, "NCH position on the CCCH: 4 blocks starting at block 0"},
++ 	{0x13, "NCH position on the CCCH: 4 blocks starting at block 1"},
++ 	{0x14, "NCH position on the CCCH: 4 blocks starting at block 2"},
++ 	{0x15, "NCH position on the CCCH: 4 blocks starting at block 3"},
++ 	{0x16, "NCH position on the CCCH: 5 blocks starting at block 0"},
++ 	{0x17, "NCH position on the CCCH: 5 blocks starting at block 1"},
++ 	{0x18, "NCH position on the CCCH: 5 blocks starting at block 2"},
++ 	{0x19, "NCH position on the CCCH: 6 blocks starting at block 0"},
++ 	{0x1a, "NCH position on the CCCH: 6 blocks starting at block 1"},
++ 	{0x1b, "NCH position on the CCCH: 7 blocks starting at block 0"},
++ 	{0, 0},
++ };
++ 
++ static guint8 de_rr_si_1_rest_octets(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint len, gchar *add_string _U_, int string_len _U_)
++ {
++ 	proto_tree *subtree;
++ 	proto_item *item;
++ 	guint32 curr_offset;
++ 	guint curr_len;
++ 	guint8 oct;
++ 
++ 	curr_len = len;
++ 	curr_offset = offset;
++ 
++ 	item = proto_tree_add_text(tree, tvb, curr_offset, 1, gsm_dtap_elem_strings[DE_RR_SI_1_REST_OCTETS].strptr);
++ 	subtree = proto_item_add_subtree(item, ett_gsm_dtap_elem[DE_RR_SI_1_REST_OCTETS]);
++ 	proto_tree_add_item(subtree, hf_gsm_a_rr_si_1_rest_octets, tvb, curr_offset, 1, FALSE);
++ 	
++ 	// ??? oct = tvb_get_guint8(tvb, curr_offset) & 0x4;
++ 	oct = tvb_get_guint8(tvb, curr_offset) & 0x20;
++ 
++ 	item = proto_tree_add_text(subtree, tvb, curr_offset, 1, "ARFCN: ");
++ 	if(!oct)
++ 		proto_item_append_text(item, "1800 band");
++ 	else
++ 		proto_item_append_text(item, "1900 band");
++ 
++ 	curr_offset++;
++ 
++ 	return curr_offset - offset;
++ }
++ 
++ 
+  /*
+   * [3] 10.5.2.33 SI 2bis Rest Octets 
+   * [3] 10.5.2.33a SI 2ter Rest Octets
+   * [3] 10.5.2.33b SI 2quater Rest Octets
++  */
++ 
++ /* // jl
+   * [3] 10.5.2.34 SI 3 Rest Octets
++  *
++  * XXX not done
++  */
++ static guint8 de_rr_si_3_rest_octets(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint len, gchar *add_string _U_, int string_len _U_)
++ {
++ 	proto_item *item;
++ 	// proto_tree *subtree;
++ 	guint32 curr_offset;
++ 	guint curr_len;
++ 
++ 	curr_len = len;
++ 	curr_offset = offset;
++ 
++ 	item = proto_tree_add_text(tree, tvb, curr_offset, 4, gsm_dtap_elem_strings[DE_RR_SI_3_REST_OCTETS].strptr);
++ 	// subtree = proto_item_add_subtree(item, ett_gsm_dtap_elem[DE_RR_SI_3_REST_OCTETS]);
++ 
++ 	curr_offset += 4;
++ 
++ 	return curr_offset - offset;
++ }
++ 
++ 
++ /* // jl
+   * [3] 10.5.2.35 SI 4 Rest Octets
++  *
++  * XXX not done
++  */
++ static guint8 de_rr_si_4_rest_octets(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint len, gchar *add_string _U_, int string_len _U_)
++ {
++ 	// proto_tree *subtree;
++ 	proto_item *item;
++ 	guint32 curr_offset;
++ 	guint curr_len;
++ 
++ 	curr_len = len;
++ 	curr_offset = offset;
++ 
++ 	item = proto_tree_add_text(tree, tvb, curr_offset, curr_len, gsm_dtap_elem_strings[DE_RR_SI_4_REST_OCTETS].strptr);
++ 	// subtree = proto_item_add_subtree(item, ett_gsm_dtap_elem[DE_RR_SI_4_REST_OCTETS]);
++ 
++ 	// len is -1 on mandatory elements, so we can't increase by
++ 	// this.
++ 	//curr_offset += curr_len;
++ 
++ 	return curr_offset - offset;
++ }
++ 
++ 
++ /*
+   * [3] 10.5.2.35a SI 6 Rest Octets
+   * [3] 10.5.2.36 SI 7 Rest Octets
+   * [3] 10.5.2.37 SI 8 Rest Octets
+***************
+*** 12736,12745 ****
+   * [3]  10.5.2.1e	Cell selection indicator after release of all TCH and SDCCH IE
+   */
+  	de_rr_cell_dsc,					/* 10.5.2.2   RR Cell Description				*/
+  /*
+-  * [3]  10.5.2.3	Cell Options (BCCH)	
+   * [3]  10.5.2.3a	Cell Options (SACCH)
+!  * [3]  10.5.2.4	Cell Selection Parameters
+   * [3]  10.5.2.4a	(void)
+   */
+  	de_rr_ch_dsc,					/* [3]  10.5.2.5	Channel Description			*/
+--- 13956,13967 ----
+   * [3]  10.5.2.1e	Cell selection indicator after release of all TCH and SDCCH IE
+   */
+  	de_rr_cell_dsc,					/* 10.5.2.2   RR Cell Description				*/
++ 	de_rr_co_bcch,					/* [3]  10.5.2.3	Cell Options (BCCH)		*/
+  /*
+   * [3]  10.5.2.3a	Cell Options (SACCH)
+!  */
+! 	de_rr_cell_sel_param,				/* [3]  10.5.2.4	Cell Selection Parameters	*/
+! /*
+   * [3]  10.5.2.4a	(void)
+   */
+  	de_rr_ch_dsc,					/* [3]  10.5.2.5	Channel Description			*/
+***************
+*** 12757,12765 ****
+   * [3]  10.5.2.8b	Channel Request Description 2 */
+  	/* Pos 20 */
+  	de_rr_cip_mode_set,					/* [3]  10.5.2.9	Cipher Mode Setting		*/
+! /* [3]  10.5.2.10	Cipher Response
+!  * [3]  10.5.2.11	Control Channel Description
+!  * [3]  10.5.2.11a	DTM Information Details */
+  	de_rr_dyn_arfcn_map,				/* [3]  10.5.2.11b	Dynamic ARFCN Mapping		*/
+  	de_rr_freq_ch_seq,					/* [3]  10.5.2.12	Frequency Channel Sequence	*/
+  	de_rr_freq_list,					/* [3]  10.5.2.13	Frequency List				*/
+--- 13979,13987 ----
+   * [3]  10.5.2.8b	Channel Request Description 2 */
+  	/* Pos 20 */
+  	de_rr_cip_mode_set,					/* [3]  10.5.2.9	Cipher Mode Setting		*/
+! /* [3]  10.5.2.10	Cipher Response */
+! 	de_rr_cc_dsc,						/* [3]  10.5.2.11	Control Channel Description	*/
+! /* [3]  10.5.2.11a	DTM Information Details */
+  	de_rr_dyn_arfcn_map,				/* [3]  10.5.2.11b	Dynamic ARFCN Mapping		*/
+  	de_rr_freq_ch_seq,					/* [3]  10.5.2.12	Frequency Channel Sequence	*/
+  	de_rr_freq_list,					/* [3]  10.5.2.13	Frequency List				*/
+***************
+*** 12771,12778 ****
+   * [3]  10.5.2.14e	Enhanced DTM CS Release Indication
+   */
+  	de_rr_ho_ref,					/* 10.5.2.15  Handover Reference				*/
+  /*
+-  * [3] 10.5.2.16 IA Rest Octets
+   * [3] 10.5.2.17 IAR Rest Octets
+   * [3] 10.5.2.18 IAX Rest Octets
+   * [3] 10.5.2.19 L2 Pseudo Length
+--- 13993,14000 ----
+   * [3]  10.5.2.14e	Enhanced DTM CS Release Indication
+   */
+  	de_rr_ho_ref,					/* 10.5.2.15  Handover Reference				*/
++ 	de_rr_ia_rest_octets,				/* [3]	10.5.2.16	IA Rest Octets			*/
+  /*
+   * [3] 10.5.2.17 IAR Rest Octets
+   * [3] 10.5.2.18 IAX Rest Octets
+   * [3] 10.5.2.19 L2 Pseudo Length
+***************
+*** 12786,12823 ****
+  	de_rr_mult_all,					/* [3] 10.5.2.21b Multislot Allocation			*/
+  /*
+   * [3] 10.5.2.21c NC mode
+!  * [3] 10.5.2.22 Neighbour Cell Description
+   * [3] 10.5.2.22a Neighbour Cell Description 2
+   * [3] 10.5.2.22b (void)
+   * [3] 10.5.2.22c NT/N Rest Octets
+!  * [3] 10.5.2.23 P1 Rest Octets
+   * [3] 10.5.2.24 P2 Rest Octets
+   * [3] 10.5.2.25 P3 Rest Octets
+!  * [3] 10.5.2.25a Packet Channel Description
+!  * [3] 10.5.2.25b Dedicated mode or TBF
+   * [3] 10.5.2.25c RR Packet Uplink Assignment
+   * [3] 10.5.2.25d RR Packet Downlink Assignment
+!  * [3] 10.5.2.26 Page Mode
+   * [3] 10.5.2.26a (void)
+   * [3] 10.5.2.26b (void)
+   * [3] 10.5.2.26c (void)
+   * [3] 10.5.2.26d (void)
+-  * [3] 10.5.2.27 NCC Permitted
+-  */
+- 	de_rr_pow_cmd,					/* 10.5.2.28  Power Command						*/
+- 	de_rr_pow_cmd_and_acc_type,		/* 10.5.2.28a Power Command and access type		*/
+- /*
+-  * [3] 10.5.2.29 RACH Control Parameters
+-  * [3] 10.5.2.30 Request Reference
+   */
+!     de_rr_cause,					/* 10.5.2.31  RR Cause							*/
+! 	de_rr_sync_ind,					/* 10.5.2.39  Synchronization Indication		*/
+  /* [3] 10.5.2.32 SI 1 Rest Octets
+   * [3] 10.5.2.33 SI 2bis Rest Octets 
+   * [3] 10.5.2.33a SI 2ter Rest Octets
+   * [3] 10.5.2.33b SI 2quater Rest Octets
+!  * [3] 10.5.2.34 SI 3 Rest Octets
+!  * [3] 10.5.2.35 SI 4 Rest Octets
+   * [3] 10.5.2.35a SI 6 Rest Octets
+   * [3] 10.5.2.36 SI 7 Rest Octets
+   * [3] 10.5.2.37 SI 8 Rest Octets
+--- 14008,14054 ----
+  	de_rr_mult_all,					/* [3] 10.5.2.21b Multislot Allocation			*/
+  /*
+   * [3] 10.5.2.21c NC mode
+!  */
+! 	de_rr_neigh_cell_dsc,				/* [3]	10.5.2.22	Neighbour Cell Description	*/ // jl
+! /*
+   * [3] 10.5.2.22a Neighbour Cell Description 2
+   * [3] 10.5.2.22b (void)
+   * [3] 10.5.2.22c NT/N Rest Octets
+!  */
+! 	de_rr_p1_rest_octets,				/* [3]	10.5.2.23	P1 Rest Octets			*/ // jl
+! /*
+   * [3] 10.5.2.24 P2 Rest Octets
+   * [3] 10.5.2.25 P3 Rest Octets
+!  */
+! 	de_rr_pcd,					/* [3]	10.5.2.25a	Packet Channel Description	*/
+! 	de_rr_dm_or_tbf,				/* [3]	10.5.2.25b	Dedicated mode or TBF		*/
+! /*
+   * [3] 10.5.2.25c RR Packet Uplink Assignment
+   * [3] 10.5.2.25d RR Packet Downlink Assignment
+!  */
+! 	de_rr_page_mode,				/* [3]	10.5.2.26	Page Mode			*/ // jl
+! /*
+   * [3] 10.5.2.26a (void)
+   * [3] 10.5.2.26b (void)
+   * [3] 10.5.2.26c (void)
+   * [3] 10.5.2.26d (void)
+   */
+! 	de_rr_ncc_permitted,				/* [3]	10.5.2.27	NCC Permitted			*/
+! 	de_rr_pow_cmd,					/* [3]	10.5.2.28	Power Command			*/
+! 	de_rr_pow_cmd_and_acc_type,			/* [3]	10.5.2.28a	Power Command and access type	*/
+! 	de_rr_rach_cp,					/* [3]	10.5.2.29	RACH Control Parameters		*/ // jl
+! 	de_rr_req_ref,					/* [3]	10.5.2.30	Request Reference		*/
+! 	de_rr_cause,					/* [3]	10.5.2.31	RR Cause			*/
+! 	de_rr_sync_ind,					/* [3]	10.5.2.39	Synchronization Indication	*/
+! 	de_rr_si_1_rest_octets,				/* [3]	10.5.2.32	SI 1 Rest Octets		*/
+  /* [3] 10.5.2.32 SI 1 Rest Octets
+   * [3] 10.5.2.33 SI 2bis Rest Octets 
+   * [3] 10.5.2.33a SI 2ter Rest Octets
+   * [3] 10.5.2.33b SI 2quater Rest Octets
+!  */
+! 	de_rr_si_3_rest_octets,				/* [3]	10.5.2.34	SI 3 Rest Octets		*/
+! 	de_rr_si_4_rest_octets,				/* [3]	10.5.2.35	SI 4 Rest Octets		*/
+! /*
+   * [3] 10.5.2.35a SI 6 Rest Octets
+   * [3] 10.5.2.36 SI 7 Rest Octets
+   * [3] 10.5.2.37 SI 8 Rest Octets
+***************
+*** 15275,15280 ****
+--- 16506,16556 ----
+  
+      EXTRANEOUS_DATA_CHECK(curr_len, 0);
+  }
++ 
++ 
++ /* // jl
++  *
++  * 44.018 9.1.18	Immediate Assignment
++  *
++  * 	10.5.2.26	Page Mode			M V .5
++  * 	10.5.2.25b	Dedicated Mode or TBF		M V .5
++  * 	10.5.2.5	Channel Description		C V 3
++  * 	10.5.2.25a	Packet Channel Description	C V 3
++  * 	10.5.2.30	Request Reference		M V 3
++  * 	10.5.2.40	Timing Advance			M V 1
++  * 	10.5.2.21	Mobile Allocation		M LV 1-9
++  * 	10.5.2.38	Starting Time			O TV 3 (0x7c)
++  * 	10.5.2.16	IA Rest Octets			M V 0-11
++  */
++ 
++ void dtap_rr_immediate_assignment(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint len) {
++ 
++ 	guint32 curr_offset;
++ 	guint32 consumed;
++ 	guint curr_len;
++ 
++ 	curr_offset = offset;
++ 	curr_len = len;
++ 
++ 	ELEM_MAND_V(BSSAP_PDU_TYPE_DTAP, DE_RR_PAGE_MODE);
++ 	ELEM_MAND_V(BSSAP_PDU_TYPE_DTAP, DE_RR_DM_OR_TBF);
++ 	if(ia_dedicated_mode_resource) {
++ 		ELEM_MAND_V(BSSAP_PDU_TYPE_DTAP, DE_RR_CELL_CH_DSC);
++ 		ia_dedicated_mode_resource = 0;
++ 	} else if(ia_tbf) {
++ 		ELEM_MAND_V(BSSAP_PDU_TYPE_DTAP, DE_RR_PCD);
++ 		ia_tbf = 0;
++ 	}
++ 	ELEM_MAND_V(BSSAP_PDU_TYPE_DTAP, DE_RR_REQ_REF);
++ 	ELEM_MAND_V(BSSAP_PDU_TYPE_DTAP, DE_RR_TIMING_ADV);
++ 	ELEM_MAND_LV(BSSAP_PDU_TYPE_DTAP, DE_RR_MOB_ALL, " - Immediate Assignment Mobile Allocation");
++ 	ELEM_OPT_TV(0x7c, BSSAP_PDU_TYPE_DTAP, DE_RR_STARTING_TIME, " - Immediate Assignment Starting Time");
++ 	ELEM_MAND_V(BSSAP_PDU_TYPE_DTAP, DE_RR_IA_REST_OCTETS);
++ 
++ 	// EXTRANEOUS_DATA_CHECK(curr_len, 0);
++ }
++ 
++ 
+  /* 3GPP TS 24.008 version 4.7.0 Release 4
+   * [3] 9.1.15
+   */
+***************
+*** 15404,15409 ****
+--- 16680,16715 ----
+  	EXTRANEOUS_DATA_CHECK(len, curr_offset - offset);
+  
+  }
++ 
++ 
++ /* // jl
++  * 44.018 9.1.22	Paging Request Type 1
++  *
++  * 	10.5.2.26	Page Mode			M V .5
++  * 	10.5.2.8	Channels Needed			M V .5
++  * 	10.5.1.4	Mobile Identity 1		M LV 2 - 9
++  * 	10.5.1.4	Mobile Identity 2		O TLV 3 - 10 (0x17)
++  * 	10.5.2.23	P1 Rest Octets			M V 0-17
++  */
++ static void dtap_rr_paging_req_1(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint len) {
++ 
++ 	guint32 curr_offset;
++ 	guint32 consumed;
++ 	guint curr_len;
++ 
++ 	curr_offset = offset;
++ 	curr_len = len;
++ 
++ 	ELEM_MAND_V(BSSAP_PDU_TYPE_DTAP, DE_RR_PAGE_MODE);
++ 	ELEM_MAND_V(BSSAP_PDU_TYPE_DTAP, DE_RR_CHNL_NEEDED);
++ 	ELEM_MAND_LV(BSSAP_PDU_TYPE_DTAP, DE_MID, " 1");
++ 	ELEM_OPT_TLV(0x17, BSSAP_PDU_TYPE_DTAP, DE_MID, " 2");
++ 	ELEM_MAND_V(BSSAP_PDU_TYPE_DTAP, DE_RR_P1_REST_OCTETS);
++ 
++ 	// EXTRANEOUS_DATA_CHECK(curr_len, 0);
++ }
++ 
++ 
+  /*
+   * [4] 9.1.25
+   */
+***************
+*** 15498,15503 ****
+--- 16804,16930 ----
+      EXTRANEOUS_DATA_CHECK(curr_len, 0);
+  }
+  
++ 
++ /*
++  * 44.018 9.1.31 System Information Type 1
++  *
++  *	10.5.2.19	L2 pseudo length			M V 1
++  *	10.2		RR Protocol Discriminator		M V .5
++  *	10.3.1		Skip Indicator				M V .5
++  *	10.4		System Information Type 1 Message Type	M V 1
++  *	10.5.2.1b	Cell Channel Description		M V 16
++  *	10.5.2.29	RACH Control Parameters			M V 3
++  *	10.5.2.32	SI 1 Rest Octects			M V 1
++  */
++ static void dtap_rr_system_information_1(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint len) {
++ 
++ 	guint32 curr_offset;
++ 	guint32 consumed;
++ 	guint curr_len;
++ 
++ 	curr_offset = offset;
++ 	curr_len = len;
++ 
++ 	ELEM_MAND_V(BSSAP_PDU_TYPE_DTAP, DE_RR_CELL_CH_DSC);
++ 	ELEM_MAND_V(BSSAP_PDU_TYPE_DTAP, DE_RR_RACH_CP);
++ 	ELEM_MAND_V(BSSAP_PDU_TYPE_DTAP, DE_RR_SI_1_REST_OCTETS);
++ 
++ 	EXTRANEOUS_DATA_CHECK(curr_len, 0);
++ }
++ 
++ 
++ /*
++  * 44.018 9.1.32 System Information Type 2
++  *
++  * 	
++  * 	10.5.2.19	L2 pseudo length			M V 1
++  * 	10.2		RR Protocol Discriminator		M V .5
++  * 	10.3.1		Skip Indicator				M V .5
++  * 	10.4		System Information Type 1 Message Type	M V 1
++  * 	10.5.2.22	BCCH Frequency List Neighbor Cell Desc	M V 16
++  * 	10.5.2.27	NCC Permitted				M V 1
++  * 	10.5.2.29	RACH Control Parameters			M V 3
++  */
++ static void dtap_rr_system_information_2(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint len) {
++ 
++ 	guint32 curr_offset;
++ 	guint32 consumed;
++ 	guint curr_len;
++ 
++ 	curr_offset = offset;
++ 	curr_len = len;
++ 
++ 	ELEM_MAND_V(BSSAP_PDU_TYPE_DTAP, DE_RR_NEIGH_CELL_DSC);
++ 	ELEM_MAND_V(BSSAP_PDU_TYPE_DTAP, DE_RR_NCC_PERMITTED);
++ 	ELEM_MAND_V(BSSAP_PDU_TYPE_DTAP, DE_RR_RACH_CP);
++ 
++ 	EXTRANEOUS_DATA_CHECK(curr_len, 0);
++ }
++ 
++ 
++ /*
++  * 44.018 9.1.35 System Information Type 3
++  *
++  * 	10.5.1.1	Cell Identity				M V 2
++  * 	10.5.1.3	Location Area Identification		M V 5
++  * 	10.5.2.11	Control Channel Description		M V 3
++  * 	10.5.2.3	Cell Options BCCH			M V 1
++  * 	10.5.2.4	Cell Selection Parameters		M V 2
++  * 	10.5.2.29	RACH Control Parameters			M V 3
++  * 	10.5.2.34	SI 3 Rest Octets			M V 4
++  */
++ static void dtap_rr_system_information_3(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint len) {
++ 
++ 	guint32 curr_offset;
++ 	guint32 consumed;
++ 	guint curr_len;
++ 
++ 	curr_offset = offset;
++ 	curr_len = len;
++ 
++ 	ELEM_MAND_V(BSSAP_PDU_TYPE_DTAP, DE_CELL_ID);
++ 	ELEM_MAND_V(BSSAP_PDU_TYPE_DTAP, DE_LAI);
++ 	ELEM_MAND_V(BSSAP_PDU_TYPE_DTAP, DE_RR_CC_DSC);
++ 	ELEM_MAND_V(BSSAP_PDU_TYPE_DTAP, DE_RR_CO_BCCH);
++ 	ELEM_MAND_V(BSSAP_PDU_TYPE_DTAP, DE_RR_CELL_SEL_PARAM);
++ 	ELEM_MAND_V(BSSAP_PDU_TYPE_DTAP, DE_RR_RACH_CP);
++ 	ELEM_MAND_V(BSSAP_PDU_TYPE_DTAP, DE_RR_SI_3_REST_OCTETS);
++ 
++ 	EXTRANEOUS_DATA_CHECK(curr_len, 0);
++ }
++ 
++ 
++ /*
++  * 44.018 9.1.36 System Information Type 4
++  *
++  * 	10.5.1.3	Location Area Identification		M V 5
++  * 	10.5.2.4	Cell Selection Parameters		M V 2
++  * 	10.5.2.29	RACH Control Parameters			M V 3
++  * 	10.5.2.5	CBCH Channel Description		O TV 4 (64)
++  * 	10.5.2.21	CBCH Mobile Allocation			C TLV 3-6 (72)
++  * 	10.5.2.35	SI 4 Rest Octets			M V 0-10
++  */
++ static void dtap_rr_system_information_4(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint len) {
++ 
++ 	guint32 curr_offset;
++ 	guint32 consumed;
++ 	guint curr_len;
++ 
++ 	curr_offset = offset;
++ 	curr_len = len;
++ 
++ 	ELEM_MAND_V(BSSAP_PDU_TYPE_DTAP, DE_LAI);
++ 	ELEM_MAND_V(BSSAP_PDU_TYPE_DTAP, DE_RR_CELL_SEL_PARAM);
++ 	ELEM_MAND_V(BSSAP_PDU_TYPE_DTAP, DE_RR_RACH_CP);
++ 	ELEM_OPT_TV(0x64, BSSAP_PDU_TYPE_DTAP, DE_RR_CH_DSC, "CBCH Channel Description");
++ 	// next is actually conditional
++ 	ELEM_OPT_TLV(0x72, BSSAP_PDU_TYPE_DTAP, DE_RR_MOB_ALL, "CBCH Mobile Allocation");
++ 	ELEM_MAND_V(BSSAP_PDU_TYPE_DTAP, DE_RR_SI_4_REST_OCTETS);
++ 
++ 	// EXTRANEOUS_DATA_CHECK(curr_len, 0);
++ }
++ 
++ 
+  /*
+   * [4] 9.3.1
+   */
+***************
+*** 17738,17744 ****
+  static void (*dtap_msg_rr_fcn[])(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint len) = {
+      NULL,	/* RR Initialisation Request */
+      NULL,	/* Additional Assignment */
+!     NULL,	/* Immediate Assignment */
+      NULL,	/* Immediate Assignment Extended */
+      NULL,	/* Immediate Assignment Reject */
+  
+--- 19165,19171 ----
+  static void (*dtap_msg_rr_fcn[])(tvbuff_t *tvb, proto_tree *tree, guint32 offset, guint len) = {
+      NULL,	/* RR Initialisation Request */
+      NULL,	/* Additional Assignment */
+! 	dtap_rr_immediate_assignment,	/* Immediate Assignment */
+      NULL,	/* Immediate Assignment Extended */
+      NULL,	/* Immediate Assignment Reject */
+  
+***************
+*** 17771,17777 ****
+      NULL,	/* Partial Release */
+      NULL,	/* Partial Release Complete */
+  
+!     NULL,	/* Paging Request Type 1 */
+      NULL,	/* Paging Request Type 2 */
+      NULL,	/* Paging Request Type 3 */
+      dtap_rr_paging_resp,	/* Paging Response */
+--- 19198,19204 ----
+      NULL,	/* Partial Release */
+      NULL,	/* Partial Release Complete */
+  
+! 	dtap_rr_paging_req_1,		/* Paging Request Type 1 */
+      NULL,	/* Paging Request Type 2 */
+      NULL,	/* Paging Request Type 3 */
+      dtap_rr_paging_resp,	/* Paging Response */
+***************
+*** 17788,17797 ****
+      NULL,	/* Inter System to cdma2000 Handover Command */
+  
+      NULL,	/* System Information Type 8 */
+!     NULL,	/* System Information Type 1 */
+!     NULL,	/* System Information Type 2 */
+!     NULL,	/* System Information Type 3 */
+!     NULL,	/* System Information Type 4 */
+      NULL,	/* System Information Type 5 */
+      NULL,	/* System Information Type 6 */
+      NULL,	/* System Information Type 7 */
+--- 19215,19224 ----
+      NULL,	/* Inter System to cdma2000 Handover Command */
+  
+      NULL,	/* System Information Type 8 */
+! 	dtap_rr_system_information_1,	/* System Information Type 1 */ // jl
+! 	dtap_rr_system_information_2,	/* System Information Type 2 */ // jl
+! 	dtap_rr_system_information_3,	/* System Information Type 3 */ // jl
+! 	dtap_rr_system_information_4,	/* System Information Type 4 */ // jl
+      NULL,	/* System Information Type 5 */
+      NULL,	/* System Information Type 6 */
+      NULL,	/* System Information Type 7 */
+***************
+*** 18203,18212 ****
+--- 19630,19649 ----
+  	return;
+      }
+  
++ 	/*
++ 	 * XXX assuming GNU Radio input
++ 	 */
++ 	if(check_col(pinfo->cinfo, COL_PROTOCOL))
++ 		col_set_str(pinfo->cinfo, COL_PROTOCOL, "GSM");
++ 	if(check_col(pinfo->cinfo, COL_INFO))
++ 		col_clear(pinfo->cinfo, COL_INFO);
++ 
++ 	/* XXX orig
+      if (check_col(pinfo->cinfo, COL_INFO))
+      {
+  	col_append_str(pinfo->cinfo, COL_INFO, "(DTAP) ");
+      }
++ 	*/
+  
+      /*
+       * set tap record pointer
+***************
+*** 18460,18465 ****
+--- 19897,20061 ----
+  
+      static hf_register_info hf[] =
+      {
++ 		// jl
++ 		{
++ 			&hf_gsm_a_rr_rach_cp_max_retrans,
++ 			{
++ 				"Maximum number of retransmissions",
++ 				   "gsm_a.rr.rach_cp.max_retrans", FT_UINT8,
++ 				   BASE_HEX,
++ 				   VALS(gsm_a_rr_rach_cp_max_retrans_vals),
++ 				   0xc0, "Maximum number of retransmissions",
++ 				   HFILL
++ 			}
++ 		},
++ 		// jl
++ 		{
++ 			&hf_gsm_a_rr_rach_cp_tx_integer,
++ 			{
++ 				"Number of slots to spread transmissions",
++ 				   "gsm_a.rr.rach_cp.tx_integer", FT_UINT8,
++ 				   BASE_HEX,
++ 				   VALS(gsm_a_rr_rach_cp_tx_integer_vals),
++ 				   0x3c, "Tx-integer, Number of slots to "
++ 				   "spread tranmissions", HFILL
++ 			}
++ 		},
++ 		// jl
++ 		{
++ 			&hf_gsm_a_rr_rach_cp_cell_bar_access,
++ 			{
++ 				"Cell Barred for Access",
++ 				   "gsm_a.rr.rach_cp.cell_bar_access",
++ 				   FT_UINT8, 1,
++ 				   VALS(
++ 				   &gsm_a_rr_rach_cp_cell_bar_access_vals),
++ 				   0x2,
++ 				   "CELL_BAR_ACCESS, Cell Barred for Access",
++ 				   HFILL
++ 			}
++ 		},
++ 		// jl
++ 		{
++ 			&hf_gsm_a_rr_rach_cp_re,
++ 			{
++ 				"Call reestablishment allowed",
++ 				   "gsm_a.rr.rach_cp.re", FT_UINT8, 1,
++ 				   VALS(&gsm_a_rr_rach_cp_re_vals), 0x1,
++ 				   "RE, Call reestablishment allowed", HFILL
++ 			}
++ 		},
++ 		// jl
++ 		{
++ 			&hf_gsm_a_rr_si_1_rest_octets,
++ 			{
++ 				"SI 1 Rest Octets",
++ 				   "gsm_a.rr.si_1.rest_octets", FT_UINT8,
++ 				   BASE_HEX,
++ 				   VALS(gsm_a_rr_si_1_rest_octets_vals), 0x1f,
++ 				   "SI 1 Rest Octets", HFILL
++ 			}
++ 		},
++ 		// jl
++ 		{
++ 			&hf_gsm_a_rr_neigh_cell_dsc_ext,
++ 			{
++ 				"Extension Indication",
++ 				   "gsm_a.rr.neigh_cell_dsc.ext", FT_BOOLEAN,
++ 				   1, TFS(&gsm_a_rr_neigh_cell_dsc_ext_tfs),
++ 				   0x20, "Extension Indication", HFILL
++ 			}
++ 		},
++ 		// jl
++ 		{
++ 			&hf_gsm_a_rr_neigh_cell_dsc_ba,
++ 			{
++ 				"BACCH allocation sequence number indication",
++ 				   "gsm_a.rr.neigh_cell_dsc.ba", FT_BOOLEAN, 1,
++ 				   TFS(&gsm_a_rr_neigh_cell_dsc_ba_tfs), 0x10,
++ 				   "BACCH allocation sequence number "
++ 				   "indication", HFILL
++ 			}
++ 		},
++ 		// jl
++ 		{
++ 			&hf_gsm_a_rr_cc_dsc_mscr,
++ 			{
++ 				"MSC Release", "gsm_a.rr.cc_dsc.mscr",
++ 				   FT_BOOLEAN, 1,
++ 				   TFS(&gsm_a_rr_cc_dsc_mscr_tfs), 0x80,
++ 				   "MSC Release", HFILL
++ 			}
++ 		},
++ 		// jl
++ 		{
++ 			&hf_gsm_a_rr_cc_dsc_att,
++ 			{
++ 				"Attach-detach allowed", "gsm_a.rr.cc_dsc.att",
++ 				   FT_BOOLEAN, 1,
++ 				   TFS(&gsm_a_rr_cc_dsc_att_tfs), 0x40,
++ 				   "Attach-detach allowed", HFILL
++ 			}
++ 		},
++ 		// jl
++ 		{
++ 			&hf_gsm_a_rr_cc_dsc_cbq3,
++ 			{
++ 				"Cell Bar Qualify 3", "gsm_a.rr.cc_dsc.cbq3",
++ 				   FT_UINT8, BASE_HEX,
++ 				   VALS(gsm_a_rr_cc_dsc_cbq3_vals), 0x60,
++ 				   "Cell Bar Qualify 3", HFILL
++ 			}
++ 		},
++ 		// jl
++ 		{
++ 			&hf_gsm_a_rr_cc_dsc_ccch,
++ 			{
++ 				"CCCH Configuration", "gsm_a.rr.cc_dsc.ccch",
++ 				   FT_UINT8, BASE_HEX,
++ 				   VALS(gsm_a_rr_cc_dsc_ccch_vals), 0x7,
++ 				   "CCCH Configuration", HFILL
++ 			}
++ 		},
++ 		// jl
++ 		{
++ 			&hf_gsm_a_rr_co_bcch_dn_ind,
++ 			{
++ 				"DN-IND Dynamic ARFCN mapping indicator", "gsm_a.rr.co_bcch.dn_ind",
++ 				   FT_UINT8, BASE_HEX, VALS(gsm_a_rr_co_bcch_dn_ind_vals), 0x80,
++ 				   "Dynamic ARFCN mapping indicator", HFILL
++ 			}
++ 		},
++ 		// jl
++ 		{
++ 			&hf_gsm_a_rr_co_bcch_pwrc,
++ 			{
++ 				"PWRC Power Control indicator", "gsm_a.rr.co_bcch.pwrc",
++ 				   FT_UINT8, BASE_HEX, VALS(gsm_a_rr_co_bcch_pwrc_vals), 0x40,
++ 				   "Power Control indicator", HFILL
++ 			}
++ 		},
++ 		// jl
++ 		{
++ 			&hf_gsm_a_rr_co_bcch_dtx,
++ 			{
++ 				"DTX indicator", "gsm_a.rr.co_bcch.dtx",
++ 				   FT_UINT8, BASE_HEX, VALS(gsm_a_rr_co_bcch_dtx_vals), 0x30,
++ 				   "DTX indicator", HFILL
++ 			}
++ 		},
++ 		// jl
++ 		{
++ 			&hf_gsm_a_rr_dm_or_tbf,
++ 			{
++ 				"Dedicated Mode or Temporary Block Flow", "gsm_a.rr.dm_or_tbf",
++ 				   FT_UINT8, BASE_HEX, VALS(gsm_a_rr_dm_or_tbf_vals), 0x70,	// assuming this is the 2nd IE in octet
++ 				   "Dedicated Mode or TBF", HFILL
++ 			}
++ 		},
++ 
++ 		// ----------------------------------
++ 
+  	{ &hf_gsm_a_bssmap_msg_type,
+  	    { "BSSMAP Message Type",	"gsm_a.bssmap_msgtype",
+  	    FT_UINT8, BASE_HEX, VALS(gsm_a_bssmap_msg_strings), 0x0,
+***************
+*** 18875,18880 ****
+--- 20471,20488 ----
+  		FT_UINT8,BASE_DEC,  VALS(gsm_a_gmm_cn_spec_drs_cycle_len_coef_strings), 0xf0,          
+  		"CN Specific DRX cycle length coefficient", HFILL }
+  	},
++ 
++ 	// jl
++ 		{
++ 			&hf_gsm_a_rr_rach_cp_ec,
++ 			{
++ 				"Emergency Call allowed", "gsm_a.rr.rach_cp_ec",
++ 				   FT_BOOLEAN, 1, TFS(&gsm_a_rr_rach_cp_ec_tfs), 0x4,
++ 				   "EC, Emergency Call allowed", HFILL
++ 			}
++ 		},
++ 	//
++ 
+  	{ &hf_gsm_a_rr_RR_cause,
+  		{ "RR cause value","gsm_a.rr.RRcause",
+  		FT_UINT8,BASE_DEC,  VALS(gsm_a_rr_RR_cause_vals), 0x0,          
+***************
+*** 19338,19343 ****
+--- 20946,20955 ----
+      dissector_add("bssap.pdu_type",  BSSAP_PDU_TYPE_DTAP, dtap_handle);
+      dissector_add("ranap.nas_pdu",  BSSAP_PDU_TYPE_DTAP, dtap_handle);
+      dissector_add("llcgprs.sapi", 1 , dtap_handle);
++ 
++ 	// GNU Radio
++ 	dissector_add("ethertype", 0xfed5, dtap_handle);
++ 
+      data_handle = find_dissector("data");
+  }
+  

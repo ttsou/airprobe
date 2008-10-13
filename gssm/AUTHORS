@@ -1,0 +1,4 @@
+Josh Lackey <jl@thre.at>
+
+The functions mm_demod() and quad_demod() are dervied from the corresponding
+functions in the GNU Radio project.

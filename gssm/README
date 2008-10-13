@@ -1,0 +1,247 @@
+gssm -- Groupe Special (Software) Mobile
+
+ or
+
+gssm -- The Global Software System for Mobile communications
+
+---
+
+SUMMARY
+
+This package monitors GSM base station control channels.  It uses the USRP
+and various daughterboards to capture live data, GNU Radio and custom
+modules to demodulate and decode the GSM packets, and Wireshark to display
+the data.
+
+Get it here: http://thre.at/gsm.
+
+Talk about it here: gsm-subscribe@lists.segfault.net.
+
+More here: http://wiki.thc.org/gsm.
+
+---
+
+WHAT
+
+This package monitors GSM base station control channels.  It uses the USRP
+and various daughterboards to capture live data, GNU Radio and custom
+modules to demodulate and decode the GSM packets, and Wireshark to display
+the data.
+
+This version of gssm decodes most of the control channels.  The control
+channels contain the information necessary for a mobile to communicate with
+a base station.  The control channels which gssm currently decodes are:
+
+	FCCH	The frequency correction channel.
+	SCH	The synchronization channel.
+	BCCH	The broadcast control channel.
+	PCH	The paging channel.  Downlink only, used to page mobiles.
+	AGCH	The access grant channel.  Downlink only, used to allocate
+		an SDCCH or directly a TCH.
+	SACCH	Slow associated control channel.
+	SDCCH	Stand-alone dedicated control channel.
+
+gssm displays the decoded data using Wireshark.  Not only does this give us a
+very nice graphical front end to examine the dissected packets, but Wireshark
+already has quite a bit of code to dissect GSM data.  Unfortunately, the
+current implementation of Wireshark does not dissect packets unique to the
+wireless interface.  Up to now, there was no reason to include code to dissect
+these packets.  I include a patch for wireshark-0.99.5 which adds (partial) Um
+packet dissection capability and a new custom ethertype to interface with the
+USRP.
+
+While gssm has basic functionality now, it really is alpha-quality software
+and there are a number of enhancements which must be made before it becomes
+truly useful.
+
+	1. The Mueller and Muller clock recovery method doesn't always
+	handle the quarter-bits present in a GSM burst.  A more reliable
+	method must be implemented.  Until then, this software will suffer
+	from a large number of receive errors even with a high
+	signal-to-noise ratio.
+
+	2. Wireshark dissects most GSM packets except those specific to
+	the Um interface, the wireless interface between the mobile and
+	the BTS, the Base Transciever Station.
+
+		a. I've only implemented a small portion of the Um
+		interface.  Much more work must be done to complete this.
+
+		b. Only the Bbis frame type is implemented.  When packets
+		arrive in Wireshark which are "malformed" or with strange
+		protocol descriptors, it is because they were sent using
+		some other frame type.
+
+		c. The interface between gssm and Wireshark is extremely
+		hacky, to say the least.  It would be nice to eventually
+		standardize a GNU Radio interface for Wireshark.  I also want
+		to clean up my Um interface and submit that there as well.
+
+	3. You need to find your local GSM tower by hand.  Once you've
+	found it, you need to edit the python script and enter the
+	information by hand.  It would be very nice if this information was
+	automatically generated.
+
+	4. The code is designed to support all frequency bands but I
+	haven't implemented anything but U.S. support.
+
+	5. This code is receive-only and currently can only monitor tower
+	to mobile transmissions.
+
+	6. Lots more.
+
+---
+
+WHERE
+
+This code is being adopted by the GSM Scanner Project and will be used as
+the base for further improvements.  Questions and suggestions can certainly
+be sent to me, but they also should be directed to the mailing list --
+gsm-subscribe@lists.segfault.net.  Also, check out the wiki at
+http://wiki.thc.org/gsm.
+
+The current version of the code can be found here: http://thre.at/gsm.
+Updates and bug-fixes will be found at the GSM Scanner Project,
+http://wiki.thc.org/gsm.
+
+---
+
+HOW
+
+First, you must install the gssm package.
+
+1.	First install GNU Radio.  Any relatively recent GNU Radio build
+	should work.  I've been testing on revision 5220.
+
+2.	Now build gssm.  It should be as simple to install as:
+
+		jl@hackphoo ~ $ cd ~/src/gssm
+		jl@hackphoo ~/src/gssm $ ./bootstrap && ./configure && make && sudo make install
+		[...]
+		jl@hackphoo ~/src/gssm $ 
+
+3.	Get the latest version of Wireshark and apply the patch in the
+	patch directory and then build Wireshark as usual.  Note that the
+	current version of this patch is for wireshark-0.99.5 and may not
+	apply cleanly to newer versions.
+
+		jl@hackphoo ~ $ cd ~/src/wireshark-0.99.5
+		jl@hackphoo ~/src/wireshark-0.99.5 $ patch -p1 < ~/src/gssm/patch/wireshark-0.99.5-gssm.patch
+		patching file epan/dissectors/packet-gsm_a.c
+		jl@hackphoo ~/src/wireshark-0.99.5 $ ./configure && make && sudo make install
+		[...]
+		jl@hackphoo ~/src/wireshark-0.99.5 $
+
+4.	gssm uses a TUN interface to send packets to Wireshark.  You must
+	have the tun.ko kernel module loaded.
+
+		jl@hackphoo:~$ lsmod | grep tun
+		tun                    12032  0 
+		jl@hackphoo:~$ 
+
+	If the tun.ko kernel module is not loaded, you can try and load it
+	by hand.
+
+		jl@hackphoo:~$ lsmod | grep tun
+		jl@hackphoo:~$ sudo modprobe tun
+		jl@hackphoo:~$ lsmod | grep tun
+		tun                    12032  0 
+		jl@hackphoo:~$ 
+
+	If that doesn't work and you get a "FATAL: Module tun not found",
+	you are most likely going to have to rebuild your kernel and make
+	sure that you enable support for the TUN device.
+
+	It appears that Ubuntu 7.04 supports the TUN device by default.
+
+5.	It is possible to configure the TUN device so that any user, or
+	users in a certain group, can create and delete interfaces.
+	Unfortunately, it appears that no matter who creates the
+	interfaces only root can mark these interfaces up.
+	
+	Rather than require gssm to run as root, we instead use another
+	simpler program to create the interface and mark it up.  This
+	program, mktun, was installed with gssm.
+
+		jl@hackphoo:~$ /usr/local/bin/mktun --help
+		note: you must be root (except perhaps to delete the interface)
+		usage: mktun [--help | -h] | [--delete | -d] <interface_name>
+		jl@hackphoo:~$ sudo /usr/local/bin/mktun gsm
+		jl@hackphoo:~$ ifconfig
+		[...]
+		
+		gsm       Link encap:Ethernet  HWaddr 22:07:3F:7F:6A:EC  
+		          inet6 addr: fe80::2007:3fff:fe7f:6aec/64 Scope:Link
+		          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+		          RX packets:33324 errors:0 dropped:0 overruns:0 frame:0
+		          TX packets:0 errors:0 dropped:6 overruns:0 carrier:0
+		          collisions:0 txqueuelen:500 
+		          RX bytes:1199664 (1.1 MiB)  TX bytes:0 (0.0 b)
+		
+		[...]
+		jl@hackphoo:~$ 
+
+	You can always delete the interface when you want to get rid of it.
+
+		jl@hackphoo:~$ sudo /usr/local/bin/mktun -d gsm
+		jl@hackphoo:~$ ifconfig | grep gsm
+		jl@hackphoo:~$ 
+
+Now, demod some traffic.
+
+1.	Since this program doesn't scan the GSM frequency ranges for you, you
+	must locate your closest tower by hand.  There are instructions on how
+	to do this at http://wiki.thc.org/gsm.
+
+	Essentially, use usrp_fft.py in the GSM frequency ranges
+	(http://en.wikipedia.org/wiki/GSM_frequency_ranges) and look for a peak
+	roughly 300kHz wide.  The main channel on a base station, channel 0,
+	does not use frequency hopping so the peak of the signal you are
+	looking for should be constant.
+
+	The M&M clock recovery occasionally fails to synchronize with bursts
+	and so you need a fairly strong signal to get good results with the
+	current code.  Look for signals that are at least 20dB above the noise
+	floor.  (!)
+
+2.	The USRP daughterboards have a frequency offset error which differs
+	from board to board.  Normally this error ranges from 4kHz to 32kHz.
+	The current code will demodulate data with offsets up to 32kHz but will
+	perform much better if you compensate for the offset.
+
+	The GSM Scanner Project has a matlab script which will locate your
+	offset.  This doesn't help if you don't own matlab.  Currently, the
+	easiest alternative method is as follows.
+	
+		a. Use usrp_fft.py and set the decimation rate to 112.  When
+		the frequency correction burst is transmitted it forms a peak
+		in the signal 62.5kHz above the center of the channel.
+
+		b. Locate the 62.5kHz peak and eyeball the offset.  You should
+		be able to estimate the offset within 10kHz or so.
+
+3.	Enter in the frequency and the offset above into the script
+	gssm-v0.1/src/python/gssm_usrp.py.
+
+4.	Start Wireshark and monitor the gsm interface.
+
+5.	Start the gssm_usrp.py script.
+
+	You should see a bunch of errors start flying by.  This is expected
+	even when we aren't receiving bad data because of the fairly brain-dead
+	way the code determines if channels have data.  Any data displayed in
+	Wireshark has been successfully Viterbi decoded and has survived a FIRE
+	parity check and is therefore, with extremely high-probability, valid.
+	So, don't worry about all the errors.  There aren't really that many
+	and it doesn't affect the valid data anyway.
+
+	If it is displayed incorrectly in Wireshark it is because I haven't
+	implemented frame types besides Bbis.
+
+	You can expand most of the packets you see and you can use the
+	Wireshark filter functionality on quite a few of the GSM information
+	elements.
+
+6.	Notice obvious errors.  Write code to fix the errors.  Send us patches.
+
+
