@@ -27,7 +27,7 @@ class gssm_graph(gr.flow_graph):
 		gr.flow_graph.__init__(self)
 
 		src = gr.file_source(gr.sizeof_gr_complex, fname)
-		gs = gssm.sink()
+		gs = gssm.sink(sps)
 		self.connect(src, gs)
 
 def main():

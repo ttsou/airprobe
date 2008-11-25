@@ -47,7 +47,7 @@ class gssm_flow_graph(gr.flow_graph):
 		   gr.firdes.WIN_HAMMING)
 		xf = gr.fir_filter_ccf(1, xt)
 
-		g = gssm.sink()
+		g = gssm.sink(sps)
 
 		self.connect(u, xf, g)
 
