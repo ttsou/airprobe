@@ -7,6 +7,7 @@
 #include <gr_io_signature.h>
 #include <gr_math.h>
 #include <stdio.h>
+#include <string.h>
 #include <gri_mmse_fir_interpolator_cc.h>
 
 gsm_burst_sink_c_sptr gsm_make_burst_sink_c (gr_feval_ll *t,float sample_rate)
