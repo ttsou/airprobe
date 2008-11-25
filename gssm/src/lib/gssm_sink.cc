@@ -8,6 +8,7 @@
 
 #include <exception>
 #include <stdexcept>
+#include <string.h>
 
 #include <gr_io_signature.h>
 #include <gr_buffer.h>
