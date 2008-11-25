@@ -17,11 +17,11 @@ for extdir in ['../lib','../lib/.libs']:
 	if extdir not in sys.path:
 		sys.path.append(extdir)
 
-from gnuradio import gr, gru, blks
+from gnuradio import gr, gru, blks2
 from gnuradio import usrp
 from gnuradio import eng_notation
 from gnuradio.eng_option import eng_option
-from gnuradio.wxgui import stdgui, fftsink, waterfallsink, scopesink, form, slider
+from gnuradio.wxgui import stdgui2, fftsink2, waterfallsink2, scopesink2, form, slider
 from optparse import OptionParser
 from math import pi
 import wx
@@ -161,10 +161,10 @@ def get_arfcn_from_freq(freq,region):
 	return arfcn
 
 ####################
-class app_flow_graph(stdgui.gui_flow_graph):
+class app_flow_graph(stdgui2.std_top_block):
 
 	def __init__(self, frame, panel, vbox, argv):
-		stdgui.gui_flow_graph.__init__(self)
+		stdgui2.std_top_block.__init__(self, frame, panel, vbox, argv)
 
 		self.frame = frame
 		self.panel = panel
@@ -460,31 +460,31 @@ class app_flow_graph(stdgui.gui_flow_graph):
 	def setup_scopes(self):			
 		#Input FFT
 		if self.scopes.count("I"):
-			self.input_fft_scope = fftsink.fft_sink_c (self, self.panel, fft_size=1024, sample_rate=self.input_rate)
+			self.input_fft_scope = fftsink2.fft_sink_c (self.panel, fft_size=1024, sample_rate=self.input_rate)
 			self.connect(self.source, self.input_fft_scope)
 
 		#Filter FFT
 		if self.scopes.count("F"):
-			self.filter_fft_scope = fftsink.fft_sink_c (self, self.panel, fft_size=1024, sample_rate=self.input_rate)
+			self.filter_fft_scope = fftsink2.fft_sink_c (self.panel, fft_size=1024, sample_rate=self.input_rate)
 			self.connect(self.filter, self.filter_fft_scope)
 
 		#Burst Scope
 		if self.scopes.count("b"):
-			self.burst_scope = scopesink.scope_sink_f(self, self.panel, sample_rate=self.gsm_symb_rate,v_scale=1)
+			self.burst_scope = scopesink2.scope_sink_f(self.panel, sample_rate=self.gsm_symb_rate,v_scale=1)
 			self.connect(self.v2s, self.burst_scope)
 							
 		#burst_f options
 		if self.options.decoder.count("f"):
 			if self.scopes.count("d"):
-				self.demod_scope = scopesink.scope_sink_f(self, self.panel, sample_rate=self.input_rate)
+				self.demod_scope = scopesink2.scope_sink_f(self.panel, sample_rate=self.input_rate)
 				self.connect(self.demod, self.demod_scope)
 
 			if self.scopes.count("c"):
 				#f_flowgraph
-				self.clocked_scope = scopesink.scope_sink_f(self, self.panel, sample_rate=self.gsm_symb_rate,v_scale=1)
+				self.clocked_scope = scopesink2.scope_sink_f(self.panel, sample_rate=self.gsm_symb_rate,v_scale=1)
 				self.connect(self.clocker, self.clocked_scope)
 				#for testing: f_flowgraph2
-				#self.clocked_scope = scopesink.scope_sink_c(self, self.panel, sample_rate=self.gsm_symb_rate,v_scale=1)
+				#self.clocked_scope = scopesink2.scope_sink_c(self.panel, sample_rate=self.gsm_symb_rate,v_scale=1)
 				#self.connect(self.clocker, self.clocked_scope)
 				#self.connect((self.clocker,1),(self.clocked_scope,1))
 
@@ -723,7 +723,7 @@ class app_flow_graph(stdgui.gui_flow_graph):
 
 ####################
 def main():
-	app = stdgui.stdapp(app_flow_graph, "GSM Scanner", nstatus=1)
+	app = stdgui2.stdapp(app_flow_graph, "GSM Scanner", nstatus=1)
 	app.MainLoop()
 
 ####################

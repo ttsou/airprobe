@@ -2,8 +2,8 @@
 
 # $Id: gssm_usrp.py,v 1.2 2007-07-07 16:31:44 jl Exp $
 
-from gnuradio import gr, usrp, db_dbs_rx, blks
-from gnuradio.blksimpl import gmsk
+from gnuradio import gr, usrp, db_dbs_rx, blks2
+from gnuradio.blks2impl import gmsk
 from usrpm import usrp_dbid
 import gssm
 import sys
@@ -21,9 +21,9 @@ c0		= 875.4e6
 # experimental constant
 default_usrp_offset = 12e3
 
-class gssm_flow_graph(gr.flow_graph):
+class gssm_flow_graph(gr.top_block):
 	def __init__(self, usrp_offset):
-		gr.flow_graph.__init__(self)
+		gr.top_block.__init__(self)
 
 		u = usrp.source_c(decim_rate = decim)
 		s = usrp.pick_subdev(u, (usrp_dbid.DBS_RX,))

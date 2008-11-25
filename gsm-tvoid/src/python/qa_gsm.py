@@ -8,7 +8,7 @@ import gsm
 class qa_gsm (gr_unittest.TestCase):
 
     def setUp (self):
-        self.fg = gr.flow_graph ()
+        self.fg = gr.top_block ()
 
     def tearDown (self):
         self.fg = None
