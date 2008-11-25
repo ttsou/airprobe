@@ -1,0 +1,12 @@
+#! /bin/bash
+
+source resources/tools/chk_bootstrap_prg.sh
+
+cd gsm
+./bootstrap
+cd ..
+
+aclocal -I config
+automake --foreign --add-missing
+autoconf
+

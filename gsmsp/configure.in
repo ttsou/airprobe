@@ -1,0 +1,13 @@
+
+AC_INIT(INSTALL)
+
+VER=`cat ${srcdir}/VERSION`
+AC_MSG_RESULT(Begining autoconfiguration process for gsmsp-$VER...)
+
+AC_CONFIG_AUX_DIR(config)
+AM_INIT_AUTOMAKE(gsmsp, $VER)
+
+AC_CONFIG_SUBDIRS(gsm)
+
+AC_OUTPUT(Makefile python/Makefile resources/Makefile resources/data/Makefile resources/tools/Makefile)
+

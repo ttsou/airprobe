@@ -1,0 +1,59 @@
+
+
+A gnu radio implementation to receive and decode GSM packets.
+
+Install
+=======
+
+./configure
+make
+# The release comes with a example capture file. Test if it works:
+./run.sh
+
+Analyzing GSM data
+==================
+
+The release does not support live captures (yet).
+
+ 1. Search for a base station in your area. See "BTS searching by Robert"
+    or use the Nokia Field Tester (NetMonitor) to find the channel number
+    of you operator and calculate the frequency from it.
+
+ 2. From the gnu-radio installation use usr_rx_cfile.py to capture data:
+    Example of capturing 10seconds of gsm data on 940.8Mhz:
+
+    # samples=`expr 64000000 / 118 '*' 10`
+    # ./usrp_rx_cfile.py -d 118 -f 940.8M -N $samples 940.8Mhz_118.cfile
+
+ 3. Make the file available to gsmsp:
+    # cd ~/gsmsp
+    # ln -sf /wherever/the/cfile/is/940.8Mhz_118.cfile signal.data
+    # ./run.sh 
+
+Requirements
+============
+
+ * gnu radio (tested with 3.0.2 and 3.0.3)
+ * python (tested with 2.4.4)
+ * python-numeric (tested with 23.7)
+
+Supported Platforms
+===================
+
+ * gentoo linux
+ * cygwin
+
+Limitations
+===========
+
+ * receiving only
+ * only BTS -> MS traffic. 
+ * no channel hopping
+
+Your sincerly,
+
+THE GSM SCANNER PROJECT
+http://wiki.thc.org/gsm
+
+
+
