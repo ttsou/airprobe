@@ -6,6 +6,7 @@
 extern "C" {
 #endif
 
+#include <linux/if_ether.h>
 #include "interleave.h"
 
 typedef struct
@@ -19,6 +20,9 @@ typedef struct
 	/* FIXME: later do this per each ts per each arfcn */
 	unsigned char burst[4 * 58 * 2];
 	int burst_count;
+
+	int tun_fd;
+	unsigned char ether_addr[ETH_ALEN];
 } GS_CTX;
 
 int GS_new(GS_CTX *ctx);

@@ -46,6 +46,9 @@ GS_new(GS_CTX *ctx)
 	interleave_init(&ctx->interleave_ctx, 456, 114);
 	ctx->fn = -1;
 	ctx->bsic = -1;
+	ctx->tun_fd = mktun("gsm", ctx->ether_addr);
+	if (ctx->tun_fd < 0)
+		return -1;
 
 	return 0;
 }
@@ -107,6 +110,7 @@ GS_process(GS_CTX *ctx, int ts, int type, const unsigned char *src)
 		//DEBUGF("OK TS %d, len %d\n", ts, len);
 
 		out_gsmdecode(0, 0, ts, ctx->fn - 4, data, len);
+		write_interface(ctx->tun_fd, data+1, len-1, ctx->ether_addr);
 #if 0
 		if (ctx->fn % 51 != 0) && ( (((ctx->fn % 51 + 5) % 10 == 0) || (((ctx->fn % 51) + 1) % 10 ==0) ) )
 			ready = 1;
