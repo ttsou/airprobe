@@ -127,6 +127,38 @@ def get_freq_from_arfcn(chan,region):
 
 	return freq * 1e6
 
+def get_arfcn_from_freq(freq,region):
+	freq = freq / 1e6
+	# GSM 450
+	if freq <= 450.6 + 0.2*(293 - 259) + 10:
+		arfcn = ((freq - (450.6 + 10)) / 0.2) + 259
+	# GSM 480
+	elif freq <= 479 + 0.2*(340 - 306) + 10:
+		arfcn = ((freq - (479 + 10)) / 0.2) + 306
+	# GSM 850
+	elif freq <= 824.2 + 0.2*(251 - 128) + 45:
+		arfcn = ((freq - (824.2 + 45)) / 0.2) + 128
+	#E/R-GSM 900
+	elif freq <= 890 + 0.2*(1023 - 1024) + 45:
+		arfcn = ((freq - (890 + 45)) / -0.2) + 955
+	# GSM 900
+	elif freq <= 890 + 0.2*124 + 45:
+		arfcn = (freq - (890 + 45)) / 0.2
+	else:
+		if region is "u":
+			if freq > 1850.2 + 0.2*(810 - 512) + 80:
+				arfcn = 0;
+			else:
+				arfcn = (freq - (1850.2 + 80) / 0.2) + 512
+		elif region is "e":
+			if freq > 1710.2 + 0.2*(885 - 512) + 95:
+				arfcn = 0;
+			else:
+				arfcn = (freq - (1710.2 + 95) / 0.2) + 512
+		else:
+			arfcn = 0
+
+	return arfcn
 
 ####################
 class app_flow_graph(stdgui.gui_flow_graph):
