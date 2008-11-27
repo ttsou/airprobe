@@ -5,12 +5,15 @@
 #include "system.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <errno.h>
 #include <string.h>
 #include "gsmstack.h"
 #include "gsm_constants.h"
 #include "interleave.h"
 #include "sch.h"
 #include "cch.h"
+
+#include "out_pcap.h"
 
 static void out_gsmdecode(char type, int arfcn, int ts, int fn, char *data, int len);
 
@@ -46,9 +49,14 @@ GS_new(GS_CTX *ctx)
 	interleave_init(&ctx->interleave_ctx, 456, 114);
 	ctx->fn = -1;
 	ctx->bsic = -1;
+
 	ctx->tun_fd = mktun("gsm", ctx->ether_addr);
 	if (ctx->tun_fd < 0)
-		return -1;
+		fprintf(stderr, "cannot open 'gsm' tun device, did you create it?\n");
+
+	ctx->pcap_fd = open_pcap_file("tvoid.pcap");
+	if (ctx->pcap_fd < 0)
+		fprintf(stderr, "cannot open PCAP file: %s\n", strerror(errno));
 
 	return 0;
 }
@@ -65,8 +73,14 @@ GS_process(GS_CTX *ctx, int ts, int type, const unsigned char *src)
 	unsigned char *data;
 	int len;
 
-	if (ts != 0)
+	if (ts != 0) {
+		/* non-0 timeslots should end up in PCAP */
+		data = decode_cch(ctx, ctx->burst, &len);
+		if (data == NULL)
+			return -1;
+		write_pcap_packet(ctx->pcap_fd, 0 /* arfcn */, ts, 0, data, len);
 		return;
+	}
 
 	if (type == SCH)
 	{
@@ -111,6 +125,7 @@ GS_process(GS_CTX *ctx, int ts, int type, const unsigned char *src)
 
 		out_gsmdecode(0, 0, ts, ctx->fn - 4, data, len);
 		write_interface(ctx->tun_fd, data+1, len-1, ctx->ether_addr);
+		write_pcap_packet(ctx->pcap_fd, 0 /* arfcn */, ts, fn, data, len);
 #if 0
 		if (ctx->fn % 51 != 0) && ( (((ctx->fn % 51 + 5) % 10 == 0) || (((ctx->fn % 51) + 1) % 10 ==0) ) )
 			ready = 1;

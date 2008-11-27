@@ -51,7 +51,8 @@ _gsm_la_SOURCES = 		\
 	mm_f.cc				\
 	gsm_burst_cf.cc		\
 	gsm_burst_sink_c.cc	\
-	tun.c
+	tun.c			\
+	out_pcap.c
 	
 
 # magic flags
@@ -82,7 +83,9 @@ grinclude_HEADERS =		\
 	gsm_burst_cf.h		\
 	gsm_burst_sink_c.h	\
 	gsm_constants.h		\
-	tun.h
+	tun.h			\
+	out_pcap.h		\
+	gsmtap.h
 
 
 # These swig headers get installed in ${prefix}/include/gnuradio/swig
