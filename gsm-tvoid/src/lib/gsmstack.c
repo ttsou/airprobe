@@ -125,7 +125,7 @@ GS_process(GS_CTX *ctx, int ts, int type, const unsigned char *src)
 
 		out_gsmdecode(0, 0, ts, ctx->fn - 4, data, len);
 		write_interface(ctx->tun_fd, data+1, len-1, ctx->ether_addr);
-		write_pcap_packet(ctx->pcap_fd, 0 /* arfcn */, ts, fn, data, len);
+		write_pcap_packet(ctx->pcap_fd, 0 /* arfcn */, ts, ctx->fn, data, len);
 #if 0
 		if (ctx->fn % 51 != 0) && ( (((ctx->fn % 51 + 5) % 10 == 0) || (((ctx->fn % 51) + 1) % 10 ==0) ) )
 			ready = 1;
