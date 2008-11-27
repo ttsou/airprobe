@@ -78,7 +78,7 @@ GS_process(GS_CTX *ctx, int ts, int type, const unsigned char *src)
 		data = decode_cch(ctx, ctx->burst, &len);
 		if (data == NULL)
 			return -1;
-		write_pcap_packet(ctx->pcap_fd, 0 /* arfcn */, ts, 0, data, len);
+		write_pcap_packet(ctx->pcap_fd, 0 /* arfcn */, ts, ctx->fn, data, len);
 		return;
 	}
 
