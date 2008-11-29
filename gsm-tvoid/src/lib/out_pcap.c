@@ -67,7 +67,8 @@ int open_pcap_file(char *fname)
 }
 
 int write_pcap_packet(int fd, int arfcn, int ts, int fn,
-		      char *data, unsigned int len)
+		      int burst, int burst_type,
+		      const unsigned char *data, unsigned int len)
 {
 	unsigned char buf[8192];
 	struct pcap_sf_pkthdr *ph;
@@ -75,7 +76,8 @@ int write_pcap_packet(int fd, int arfcn, int ts, int fn,
 	struct timeval tv;
 	int rc;
 
-	printf("writing pcap packet fd=%d len=%d\n", fd, len);
+	if (fd < 0)
+		return -EINVAL;
 
 	ph = (struct pcap_sf_pkthdr *) &buf[0];
 	gh = (struct gsmtap_hdr *) &buf[sizeof(struct pcap_sf_pkthdr)];
@@ -88,18 +90,22 @@ int write_pcap_packet(int fd, int arfcn, int ts, int fn,
 
 	gh->version = GSMTAP_VERSION;
 	gh->hdr_len = sizeof(struct gsmtap_hdr)>>2;
-	gh->type = GSMTAP_TYPE_UM;
+	if (burst)
+		gh->type = GSMTAP_TYPE_UM_BURST;
+	else
+		gh->type = GSMTAP_TYPE_UM;
 	gh->timeslot = ts;
 	gh->arfcn = htons(arfcn);
 	/* we don't support signal/noise yet */
 	gh->noise_db = gh->signal_db = 0;
 	gh->frame_number = htonl(fn);
+	gh->burst_type = burst_type & 0xff;
 
 	memcpy(buf + sizeof(*ph) + sizeof(*gh), data, len);
 	
 	rc = write(fd, buf, sizeof(*ph) + sizeof(*gh) + len);
 
-	fsync(fd);
+	//fsync(fd);
 
 	return rc;
 }
