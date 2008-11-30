@@ -1,0 +1,12 @@
+#ifndef _GSMSTACK_CHAN_H
+#define _GSMSTACK_CHAN_H
+
+/* 51 multiframe for CCCH TS0 of a FCCH+SCH+BCCH+PACH */
+const char ccch[] =
+	"FSBBBBPPPPFSPPPPPPPPFSPPPPPPPPFSPPPPPPPPFSPPPPPPPP_";
+
+/* SDCCH/8 + SACCH/C8;  A...D are alternating 0..3/4..7 */
+const char sdcch8[] =
+	"00001111222233334444555566667777AAAABBBBCCCCDDDD___";
+
+#endif /* _GSMSTACK_CHAN_H */
