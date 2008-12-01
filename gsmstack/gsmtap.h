@@ -43,6 +43,9 @@ struct gsmtap_hdr {
 
 /* PCAP related definitions */
 #define TCPDUMP_MAGIC   0xa1b2c3d4
+#ifndef LINKTYPE_GSMTAP
+#define LINKTYPE_GSMTAP	2342
+#endif
 struct pcap_timeval {
 	int32_t tv_sec;
 	int32_t tv_usec;

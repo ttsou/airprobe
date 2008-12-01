@@ -4,13 +4,14 @@
 #define NR_TIMESLOTS	8
 #define NR_ARFCN	1024
 
+#define USEFUL_BITS	142
 #define BURST_BITS	(USEFUL_BITS/8 + 1)
 
 #include "gsmtap.h"
 enum gsm_burst_type {
 	GSM_BURST_UNKNOWN = GSMTAP_BURST_UNKNOWN,
 	GSM_BURST_FCCH = GSMTAP_BURST_FCCH,
-	GSM_BURST_PARTIAL_FCCH = GSMTAP_BURST_PARTIAL_FCCH,
+	GSM_BURST_PARTIAL_SCH = GSMTAP_BURST_PARTIAL_SCH,
 	GSM_BURST_SCH = GSMTAP_BURST_SCH,
 	GSM_BURST_CTS_SCH = GSMTAP_BURST_CTS_SCH,
 	GSM_BURST_COMPACT_SCH = GSMTAP_BURST_COMPACT_SCH,
@@ -72,7 +73,8 @@ enum gsm_logical_channel_type {
 	GSM_LCHAN_SACCH8C,	/* Slow Associated Control CH */
 
 	/* TCH */
-	GSM_LCHAN_TCH,		/* Traffic CH */
+	GSM_LCHAN_TCH_F,	/* Traffic CH */
+	GSM_LCHAN_TCH_H,	/* Traffic CH */
 	GSM_LCHAN_SACCH,	/* Slow Associated Control CH */
 
 	/* uplink */

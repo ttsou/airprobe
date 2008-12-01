@@ -1,0 +1,25 @@
+gsmstack - A GSM Um Layer 1 implementation
+(C) 2008 by Harald Welte <laforge@gnumonks.org>, portions from gsm-tvoid
+========================================================================
+
+This is a GSM Layer 1 implementation mainly aimed at the requirements of
+a GSM protocol analyzer.  It starts off where the demodulation ends: With
+the raw bits of the differential-decoded GSM Um burst.
+
+Based on that input, the stack takes care of demultiplexing the bursts into the
+various physical and logical channels, decoding the various burst types,
+convolutional decode and parity checking (where applicable).
+
+For the CCCH, it includes FCH and SCH processing. Frequency correction
+informaiton can be signalled to the decoder/demodulator by callback functions.
+
+The recovereed TDMA Frame Number will be passed along with all MAC blocks
+to the Layer2 protocol instance on top.
+
+The output of this Layer1 stack are the 23byte MAC blocks for control
+channels, and the 260bits (32.5byte) speech frames for TCH/F channels
+
+The codebase is currently unfinished and highly experimental.
+
+Patches/contributions are welcome, please send them to laforge@gnumonks.org
+

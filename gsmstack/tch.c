@@ -13,7 +13,7 @@
 #include <ctype.h>
 #include <math.h>
 
-#include "burst_types.h"
+//#include "burst_types.h"
 #include "tch.h"
 //#include "fire_crc.h"
 

@@ -22,7 +22,7 @@ struct gsm_rf_chan *gsm_init_rfchan(unsigned int arfcn)
 	for (i = 0; i < NR_TIMESLOTS; i++) {
 		struct gsm_phys_chan *pchan;
 
-		pchan = rf->phys_chan[i];
+		pchan = &rf->phys_chan[i];
 		pchan->timeslot = i;
 		pchan->rf_chan = rf;
 	}

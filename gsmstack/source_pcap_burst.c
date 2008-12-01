@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
+#include <fcntl.h>
+
 #include <pcap.h>
 
 #include "gsmstack.h"
@@ -16,7 +19,7 @@
  */ 
 
 
-static struct gsm_rf_chan rfchans[NR_ARFCN];
+static struct gsm_rf_chan *rfchans[NR_ARFCN];
 
 static int read_pcap_hdr(int fd)
 {
@@ -59,7 +62,7 @@ static int send_burst(struct gsmtap_hdr *gh, int burst_len,
 	}
 
 	rfchan = rfchans[arfcn];
-	pchan = rfchan->phys_chan[gh->timeslot];
+	pchan = &rfchan->phys_chan[gh->timeslot];
 
 	memset(&burst, 0, sizeof(burst));
 	burst.phys_chan = pchan;
@@ -95,11 +98,11 @@ static int read_one_pkt(int fd, unsigned char *buf, int bufsize,
 		return -4;
 
 	if (tv) {
-		tv.tv_sec = pkthdr.tv_sec;
-		tv.tv_usec = pkthdr.tv_usec;
+		tv->tv_sec = pkthdr.ts.tv_sec;
+		tv->tv_usec = pkthdr.ts.tv_usec;
 	}
 
-	len = read(fd, buf, pkthdr.caplen)
+	len = read(fd, buf, pkthdr.caplen);
 	if (len < pkthdr.caplen)
 		return -5;
 
@@ -138,7 +141,7 @@ int main(int argc, char **argv)
 		unsigned char buf[1024];
 		struct timeval tv;
 		int burst_len;
-		burst_len = read_one_pkt(fd, &tv, sbuf, sizeof(buf));
+		burst_len = read_one_pkt(fd, buf, sizeof(buf), &tv);
 		if (burst_len < 0) {
 			fprintf(stderr, "read_one_pkt() = %d\n", burst_len);
 			exit(3);

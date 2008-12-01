@@ -81,6 +81,8 @@ static int get_lctype_for_tch_f(unsigned int fnr)
 	return lc_type;
 }
 
+/* get the logical channel type based on frame number and
+ * physical channel configuration */
 int get_lctype(struct gsm_phys_chan *pchan, int fnr)
 {
 	switch (pchan->config) {
@@ -98,8 +100,10 @@ int get_lctype(struct gsm_phys_chan *pchan, int fnr)
 	return -EINVAL;
 }
 
+/* get a pointer to the logical channel structure based on frame number
+ * and physical channel configuration */
 struct gsm_logi_chan *get_lchan(struct gsm_phys_chan *pchan, int fnr)
 {
 	int lctype = get_lctype(pchan, fnr);
-	return pchan->logi_chan[lctype];
+	return &pchan->logi_chan[lctype];
 }

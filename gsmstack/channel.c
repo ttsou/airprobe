@@ -1,7 +1,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 #include "gsmstack.h"
+#include "cch.h"
+#include "tch.h"
 
 /* convert an 18byte 8-bit-per-byte burst to a 142byte 1bit-per-byte */
 static void bit_per_byte(unsigned char *dest, const unsigned char *src)
@@ -21,26 +24,34 @@ static void bit_per_byte(unsigned char *dest, const unsigned char *src)
 static int add_burst_to_lchan(struct gsm_logi_chan *lchan,
 			      struct gsm_burst *burst)
 {
+	struct gsm_phys_chan *pchan = burst->pchan;
 	int rc = 0;
 
 	/* copy burst to burst buffer */
 	memcpy(lchan->burst_buf[lchan->next_burst], burst, sizeof(*burst));
 	lchan->next_burst++;
 
-	switch (lchan->type) {
-	case GSM_LCHAN_TCH_F:
-		/* FIXME */
-		break;
-	case GSM_LCHAN_TCH_H:
-		/* FIXME */
-	default:
-		if (lchan->next_burst == 4) {
-			lchan->next_burst = 0;
-			/* FIXME: decode the four bursts into a MAC block */
-	
-			/* pass the resulting MAC block up the stack */
-			rc = gsm_lchan_macblock()
+	if (lchan->next_burst == 4) {
+		lchan->next_burst = 0;
+		/* decode the four bursts into a MAC block */
+		switch (pchan->config) {
+		case GSM_PCHAN_TCH_H:
+			/* FIXME */
+			break;
+		case GSM_PCHAN_TCH_F:
+			rc = tch_decode();
+			break;
+		case GSM_PCHAN_CCCH:	
+		case GSM_PCHAN_SDCCH8_SACCH8C:
+			rc = cch_decode();
+			break;
+		default:
+			fprintf(stderr, "unknown pchan config %u\n",
+				pchan->config);
 		}
+		/* pass the resulting MAC block up the stack */
+		if (rc)
+			rc = gsm_lchan_macblock()
 	}
 
 	return rc;
@@ -65,7 +76,7 @@ static int gsm_rx_sdcch8(struct gsm_burst *burst)
 	return add_burst_to_lchan(lchan, burst);
 }
 
-static int gsm_rx_tch(struct gsm_burst *burst)
+static int gsm_rx_tch_f(struct gsm_burst *burst)
 {
 	struct gsm_phys_chan *pchan = burst->gsm_pchan;
 	struct gsm_logi_chan *lchan;
@@ -131,8 +142,9 @@ int gsm_rx_burst(struct gsm_burst *burst, int bits)
 		rc = gsm_rx_sdcch8(burst);
 		break;
 	case GSM_PCHAN_TCH_F:
-		rc = 
+		rc = gsm_rx_tch_h(burst);
 		break;
+	case GSM_PCHAN_TCH_H:
 	case GSM_PCHAN_UNKNOWN:
 	default:
 		fprintf(stderr, "unknown pchan config (ts=%u\n)\n",
