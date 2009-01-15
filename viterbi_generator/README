@@ -1,0 +1,16 @@
+This is generator for Viterbi Algorithm part of Viterbi Equalizer.
+It is able to generate viterbi detector for channels with memory lengths
+of 2,3,4,5 symbols.
+
+To generate function in C++ for channel memory length of four symbols (Lh=4)
+just type:
+$ make
+
+
+To generate function for some other channel memory length type:
+$ make Lh=x 
+where 'x' is channel memory length (value from 2 to 5)
+
+To check if algorithm works properly type:
+$ make test Lh=x
+
