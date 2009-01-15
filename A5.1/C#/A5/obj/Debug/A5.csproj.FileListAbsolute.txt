@@ -1,0 +1,5 @@
+C:\Users\Brett\Documents\Visual Studio 2008\Projects\A5\A5\bin\Debug\A5.exe
+C:\Users\Brett\Documents\Visual Studio 2008\Projects\A5\A5\bin\Debug\A5.pdb
+C:\Users\Brett\Documents\Visual Studio 2008\Projects\A5\A5\obj\Debug\ResolveAssemblyReference.cache
+C:\Users\Brett\Documents\Visual Studio 2008\Projects\A5\A5\obj\Debug\A5.exe
+C:\Users\Brett\Documents\Visual Studio 2008\Projects\A5\A5\obj\Debug\A5.pdb
