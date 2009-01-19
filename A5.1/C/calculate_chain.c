@@ -127,6 +127,7 @@ typedef word bit;
 
 /* Calculate the parity of a 32-bit word, i.e. the sum of its bits modulo 2 */
 bit parity(word x) {
+  //	x ^= x>>32;
 	x ^= x>>16;
 	x ^= x>>8;
 	x ^= x>>4;
@@ -152,7 +153,7 @@ word R1, R2, R3;
  * return the majority value of those 3 bits. */
 bit majority() {
 	int sum;
-	sum = parity(R1&R1MID) + parity(R2&R2MID) + parity(R3&R3MID);
+	sum = ((R1&R1MID) >> 8) + ((R2&R2MID) >> 10) + ((R3&R3MID) >> 10);
 	if (sum >= 2)
 		return 1;
 	else
@@ -173,169 +174,16 @@ inline void clock() {
 		R3 = clockone(R3, R3MASK, R3TAPS);
 }
 
-/* Clock all three of R1,R2,R3, ignoring their middle bits.
- * This is only used for key setup. */
-void clockallthree() {
-	R1 = clockone(R1, R1MASK, R1TAPS);
-	R2 = clockone(R2, R2MASK, R2TAPS);
-	R3 = clockone(R3, R3MASK, R3TAPS);
-}
-
 /* Generate an output bit from the current state.
  * You grab a bit from each register via the output generation taps;
  * then you XOR the resulting three bits. */
 bit getbit() {
-	return parity(R1&R1OUT)^parity(R2&R2OUT)^parity(R3&R3OUT);
-}
-
-/* Do the A5/1 key setup.  This routine accepts a 64-bit key and
- * a 22-bit frame number. */
-void keysetup(byte key[8], word frame) {
-	int i;
-	bit keybit, framebit;
-
-	/* Zero out the shift registers. */
-	R1 = R2 = R3 = 0;
-
-	/* Load the key into the shift registers,
-	 * LSB of first byte of key array first,
-	 * clocking each register once for every
-	 * key bit loaded.  (The usual clock
-	 * control rule is temporarily disabled.) */
-	for (i=0; i<64; i++) {
-		clockallthree(); /* always clock */
-		keybit = (key[i/8] >> (i&7)) & 1; /* The i-th bit of the key */
-		R1 ^= keybit; R2 ^= keybit; R3 ^= keybit;
-	}
-
-	/* Load the frame number into the shift
-	 * registers, LSB first,
-	 * clocking each register once for every
-	 * key bit loaded.  (The usual clock
-	 * control rule is still disabled.) */
-	for (i=0; i<22; i++) {
-		clockallthree(); /* always clock */
-		framebit = (frame >> i) & 1; /* The i-th bit of the frame # */
-		R1 ^= framebit; R2 ^= framebit; R3 ^= framebit;
-	}
-
-	/* Run the shift registers for 100 clocks
-	 * to mix the keying material and frame number
-	 * together with output generation disabled,
-	 * so that there is sufficient avalanche.
-	 * We re-enable the majority-based clock control
-	 * rule from now on. */
-	for (i=0; i<100; i++) {
-		clock();
-	}
-
-	/* Now the key is properly set up. */
-}
-	
-/* Generate output.  We generate 228 bits of
- * keystream output.  The first 114 bits is for
- * the A->B frame; the next 114 bits is for the
- * B->A frame.  You allocate a 15-byte buffer
- * for each direction, and this function fills
- * it in. */
-void run(byte AtoBkeystream[], byte BtoAkeystream[]) {
-	int i;
-
-	/* Zero out the output buffers. */
-	for (i=0; i<=113/8; i++)
-		AtoBkeystream[i] = BtoAkeystream[i] = 0;
-	
-	/* Generate 114 bits of keystream for the
-	 * A->B direction.  Store it, MSB first. */
-	for (i=0; i<114; i++) {
-		clock();
-		AtoBkeystream[i/8] |= getbit() << (7-(i&7));
-	}
-
-	/* Generate 114 bits of keystream for the
-	 * B->A direction.  Store it, MSB first. */
-	for (i=0; i<114; i++) {
-		clock();
-		BtoAkeystream[i/8] |= getbit() << (7-(i&7));
-	}
-}
-
-/* Test the code by comparing it against
- * a known-good test vector. */
-void test() {
-	byte key[8] = {0x12, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF};
-	word frame = 0x134;
-	byte goodAtoB[15] = { 0x53, 0x4E, 0xAA, 0x58, 0x2F, 0xE8, 0x15,
-	                      0x1A, 0xB6, 0xE1, 0x85, 0x5A, 0x72, 0x8C, 0x00 };
-	byte goodBtoA[15] = { 0x24, 0xFD, 0x35, 0xA3, 0x5D, 0x5F, 0xB6,
-	                      0x52, 0x6D, 0x32, 0xF9, 0x06, 0xDF, 0x1A, 0xC0 };
-	byte AtoB[15], BtoA[15];
-	int i, failed=0;
-
-	keysetup(key, frame);
-	run(AtoB, BtoA);
-
-	/* Compare against the test vector. */
-	for (i=0; i<15; i++)
-		if (AtoB[i] != goodAtoB[i])
-			failed = 1;
-	for (i=0; i<15; i++)
-		if (BtoA[i] != goodBtoA[i])
-			failed = 1;
-
-	/* Print some debugging output. */
-	printf("key: 0x");
-	for (i=0; i<8; i++)
-		printf("%02X", key[i]);
-	printf("\n");
-	printf("frame number: 0x%06X\n", (unsigned int)frame);
-	printf("known good output:\n");
-	printf(" A->B: 0x");
-	for (i=0; i<15; i++)
-		printf("%02X", goodAtoB[i]);
-	printf("  B->A: 0x");
-	for (i=0; i<15; i++)
-		printf("%02X", goodBtoA[i]);
-	printf("\n");
-	printf("observed output:\n");
-	printf(" A->B: 0x");
-	for (i=0; i<15; i++)
-		printf("%02X", AtoB[i]);
-	printf("  B->A: 0x");
-	for (i=0; i<15; i++)
-		printf("%02X", BtoA[i]);
-	printf("\n");
-	
-	if (!failed) {
-		printf("Self-check succeeded: everything looks ok.\n");
-		return;
-	} else {
-		/* Problems!  The test vectors didn't compare*/
-		printf("\nI don't know why this broke; contact the authors.\n");
-		exit(1);
-	}
-}
-
-word bin2hex (char *string)
-{
-        int i;
-        word res = 0;
-        int length;
-        
-        length = strlen (string);
-        
-        for (i = 0; i < length; i++)
-        {
-                        res  = res << 1;
-                        if (string[0] == '1') res += 1;
-                        string++;
-        }
-        return res;
-
+  //	return parity(R1&R1OUT)^parity(R2&R2OUT)^parity(R3&R3OUT);
+  return ((R1&R1OUT) >> 18) ^ ((R2&R2OUT) >> 21) ^ ((R3&R3OUT) >> 22);
 }
 
 inline word calculate_link (word input, word count) {
-  word result=0;
+  word result;
   int i;
 
   input ^= count ^ (count << 23) ^ (count << (22 + 23));
@@ -344,9 +192,10 @@ inline word calculate_link (word input, word count) {
   R2 = (input >> 23) & R2MASK;
   R3 = input & R3MASK;
 
-  for(i=0;i<64;i++) {
-    result = (result << 1)| getbit();
+  result = getbit();
+  for(i=1;i<64;i++) {
     clock();
+    result = (result << 1)| getbit();
   }
   return result;
 }
