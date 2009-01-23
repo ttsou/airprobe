@@ -123,19 +123,37 @@ uint64 calculate_chain (uint64 input, uint32 count) {
     input = calculate_link(input, i);
   }
   return input;
-}  
+}
+
+/* Linear congruential generator used to whiten start value.
+ * Numbers stolen from Lawrence Livermore National Laboratory RNG
+ * library: http://nuclear.llnl.gov/CNP/rng/rngman/node4.html 
+ */
+uint64 start_value_from_index (uint64 count) {
+  return 2862933555777941757UL * (count + 1) + 3037000493L;
+}
+
+void usage (char* argv[]) {
+  printf("Usage: %s <startvalue>\n\nSpecify the start value as 16 hex digits, or chain number as 10 hex digits. Calculates one\nchain of the A5/1 rainbow table, and outputs the end value.\n", argv[0]);
+  exit(1);
+}
 
 int main(int argc, char* argv[]) {
   int i,j;
   uint64 current;
 
-  if (argc<2 || sscanf(argv[1], "%16lx", &current) != 1) {
-    printf("Usage: %s <startvalue>\n\nSpecify the start value as 16 hex digits. Calculates one\nchain of the A5/1 rainbow table, and outputs the end value.\n", argv[0]);
-    exit(1);
+  if (argc<2) {
+    usage(argv);
+  } else if (strlen(argv[1])==16 && sscanf(argv[1], "%16lx", &current) == 1) {
+    printf("Calculating chain from start value 0x%16.16lx\n", current);
+    current = calculate_chain(current, pow(2, 21));
+  } else if (sscanf(argv[1], "%16lx", &current) == 1) {
+    current = start_value_from_index(current);
+    printf("Calculating chain from start value 0x%16.16lx\n", current);
+    current = calculate_chain(current, pow(2, 21));
+  } else {
+    usage(argv);
   }
-
-  current = calculate_chain(current, pow(2, 21));
-
-  printf("%16.16lx\n", current);
+  printf("End value: 0x%16.16lx\n", current);
   return 0;
 }
