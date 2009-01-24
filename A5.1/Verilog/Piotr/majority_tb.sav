@@ -1,0 +1,11 @@
+[size] 1279 725
+[pos] -1 -1
+*-4.381813 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+@29
+majority_tb.majority_inst.R1_clk_bit
+majority_tb.majority_inst.R2_clk_bit
+majority_tb.majority_inst.R3_clk_bit
+majority_tb.majority_inst.majority_bit
+majority_tb.majority_inst.R1_clk_out
+majority_tb.majority_inst.R2_clk_out
+majority_tb.majority_inst.R3_clk_out

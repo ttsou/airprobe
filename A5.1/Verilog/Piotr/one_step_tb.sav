@@ -1,0 +1,32 @@
+[size] 1270 532
+[pos] 0 188
+*-2.928085 21 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+@28
+one_step_tb.one_step_inst.R1_feedback
+one_step_tb.one_step_inst.R2_feedback
+one_step_tb.one_step_inst.R3_feedback
+one_step_tb.one_step_inst.clk
+@22
+one_step_tb.one_step_inst.in_state[64:1]
+one_step_tb.one_step_inst.out_state[64:1]
+@28
+one_step_tb.one_step_inst.R1_clk_out
+one_step_tb.one_step_inst.R2_clk_out
+one_step_tb.one_step_inst.R3_clk_out
+@22
+one_step_tb.one_step_inst.R1in[19:1]
+one_step_tb.one_step_inst.R1[19:1]
+one_step_tb.one_step_inst.R2in[22:1]
+one_step_tb.one_step_inst.R2[22:1]
+one_step_tb.one_step_inst.R3in[23:1]
+one_step_tb.one_step_inst.R3[23:1]
+@28
+one_step_tb.one_step_inst.majority_instance.R1_clk_bit
+one_step_tb.one_step_inst.majority_instance.R2_clk_bit
+one_step_tb.one_step_inst.majority_instance.R3_clk_bit
+@29
+one_step_tb.one_step_inst.majority_instance.majority_bit
+@28
+one_step_tb.one_step_inst.majority_instance.R1_clk_out
+one_step_tb.one_step_inst.majority_instance.R2_clk_out
+one_step_tb.one_step_inst.majority_instance.R3_clk_out
