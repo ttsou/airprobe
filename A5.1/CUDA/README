@@ -1,0 +1,5 @@
+
+To compile the CUDA kernel, copy (not link) this directory
+into your the project directory of your CUDA SDK, cd into
+it and "make verbose=1".
+
