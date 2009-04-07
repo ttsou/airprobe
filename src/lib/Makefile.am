@@ -42,45 +42,45 @@ NON_LOCAL_IFILES =			\
 
 
 LOCAL_IFILES = 				\
-	$(top_srcdir)/src/lib/gsm_receiver.i				
+	$(top_srcdir)/src/lib/gsm.i				
 
 # These files are built by SWIG.  The first is the C++ glue.
 # The second is the python wrapper that loads the _howto shared library
 # and knows how to call our extensions.
 
 BUILT_SOURCES = 			\
-	gsm_receiver.cc			\
-	gsm_receiver.py				
+	gsm.cc				\
+	gsm.py				
 
 # This gets howto.py installed in the right place
 ourpython_PYTHON =			\
-	gsm_receiver.py
+	gsm.py
 
-ourlib_LTLIBRARIES = _gsm_receiver.la
+ourlib_LTLIBRARIES = _gsm.la
 
-lib_LTLIBRARIES = libgsm-receiver.la
+lib_LTLIBRARIES = libgsmdemod.la
 
 # These are the source files that go into the shared library
-_gsm_receiver_la_SOURCES = 			\
-	gsm_receiver.cc			
+_gsm_la_SOURCES = 			\
+	gsm.cc			
 	
-libgsm_receiver_la_SOURCES = \
+libgsmdemod_la_SOURCES = \
 	gsm_receiver_cf.cc		
 
 # magic flags
-_gsm_receiver_la_LDFLAGS = $(NO_UNDEFINED) -module -avoid-version
+_gsm_la_LDFLAGS = $(NO_UNDEFINED) -module -avoid-version
 
 # link the library against some comon swig runtime code and the 
 # c++ standard library
-_gsm_receiver_la_LIBADD = 			\
+_gsm_la_LIBADD =		\
 	$(PYTHON_LDFLAGS)		\
-	libgsm-receiver.la		\
+	libgsmdemod.la			\
 	-lstdc++			
 
-#libgsm_receiver_la_LIBADD = 
+#libgsmdemod_la_LIBADD = 
 
-gsm_receiver.cc gsm_receiver.py: $(LOCAL_IFILES) $(ALL_IFILES)
-	$(SWIG) $(SWIGPYTHONARGS) -module gsm_receiver -o gsm_receiver.cc $(LOCAL_IFILES)
+gsm.cc gsm.py: $(LOCAL_IFILES) $(ALL_IFILES)
+	$(SWIG) $(SWIGPYTHONARGS) -module gsm -o gsm.cc $(LOCAL_IFILES)
 
 # These headers get installed in ${prefix}/include/gnuradio
 grinclude_HEADERS =			\

@@ -21,7 +21,7 @@ dnl
 
 AC_INIT
 AC_PREREQ(2.61)
-AC_CONFIG_SRCDIR([src/lib/gsm_receiver.i])
+AC_CONFIG_SRCDIR([src/lib/gsm.i])
 AM_CONFIG_HEADER(config.h)
 AC_CANONICAL_TARGET([])
 AC_CONFIG_AUX_DIR([.])
