@@ -1,0 +1,51 @@
+#! /bin/bash
+
+DIE=0
+touch README NEWS CHANGELOG 
+(autoconf --version) < /dev/null > /dev/null 2>&1 || {
+    echo
+        echo "You must have autoconf installed."
+	DIE=1
+}
+
+# libtool --version check not done...
+
+(automake --version) < /dev/null > /dev/null 2>&1 || {
+    echo
+        echo "You must have automake installed."
+        DIE=1
+}
+
+if test "$DIE" -eq 1; then
+    exit 1
+fi
+
+echo Removing old files...
+rm -fr config.cache autom4te*.cache config.h config.status aclocal.m4 config.cache config.log
+
+if test ! -d config; then
+    mkdir config
+fi
+echo "aclocal -I config"
+aclocal -I config
+if test $? -ne 0; then
+    exit 1
+fi
+echo "autoheader"
+autoheader
+if test $? -ne 0; then
+    exit 1
+fi
+
+echo "libtoolize --automake"
+libtoolize --automake
+automake --foreign --add-missing
+if test $? -ne 0; then
+    exit 1
+fi
+
+echo "autoconf"
+autoconf
+echo "BOOTSTRAP complete"
+
+#(cd gsm-tvoid ; ./bootstrap)
