@@ -32,7 +32,7 @@
  * a boost shared_ptr.  This is effectively the public constructor.
  */
 gsm_receiver_cf_sptr 
-gsm_receiver_make_cf ()
+gsm_make_receiver_cf ()
 {
   return gsm_receiver_cf_sptr (new gsm_receiver_cf ());
 }
@@ -59,15 +59,13 @@ gsm_receiver_cf::gsm_receiver_cf ()
 	      gr_make_io_signature (MIN_IN, MAX_IN, sizeof (gr_complex)),
 	      gr_make_io_signature (MIN_OUT, MAX_OUT, sizeof (float)))
 {
-  // nothing else required in this example
 }
 
 /*
- * Our virtual destructor.
+ * Virtual destructor.
  */
-gsm_receiver_square_ff::~gsm_receiver_cf ()
+gsm_receiver_cf::~gsm_receiver_cf ()
 {
-  // nothing else required in this example
 }
 
 int 

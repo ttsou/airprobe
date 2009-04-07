@@ -26,6 +26,7 @@ m4datadir = $(datadir)/aclocal
 
 # List your m4 macros here
 m4macros = 			\
+	acx_pthread.m4		\
 	bnv_have_qt.m4		\
 	cppunit.m4		\
 	gr_boost.m4		\
@@ -46,6 +47,7 @@ m4macros = 			\
 	gr_swig.m4		\
 	gr_sysv_shm.m4		\
 	gr_x86_64.m4		\
+	lf_cc.m4		\
 	lf_cxx.m4		\
 	lf_warnings.m4		\
 	lf_x11.m4		\

@@ -25,7 +25,7 @@
 #include <gr_block.h>
 #include <gr_complex.h>
 
-class gsm_receiver_cf.h;
+class gsm_receiver_cf;
 
 /*
  * We use boost::shared_ptr's instead of raw pointers for all access
@@ -47,7 +47,7 @@ typedef boost::shared_ptr<gsm_receiver_cf> gsm_receiver_cf_sptr;
  * constructor is private.  howto_make_square_ff is the public
  * interface for creating new instances.
  */
-gsm_receiver_cf_sptr gsm_receiver_make_square_cf ();
+gsm_receiver_cf_sptr gsm_make_receiver_cf ();
 
 /*!
  * \brief square a stream of floats.
@@ -58,7 +58,7 @@ gsm_receiver_cf_sptr gsm_receiver_make_square_cf ();
 class gsm_receiver_cf : public gr_block
 {
 private:
-  friend gsm_receiver_cf_sptr gsm_receiver_make_square_cf ();
+  friend gsm_receiver_cf_sptr gsm_make_receiver_cf ();
 
   gsm_receiver_cf (); 
 

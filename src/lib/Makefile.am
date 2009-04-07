@@ -58,10 +58,13 @@ ourpython_PYTHON =			\
 
 ourlib_LTLIBRARIES = _gsm_receiver.la
 
+lib_LTLIBRARIES = libgsm-receiver.la
+
 # These are the source files that go into the shared library
-_howto_la_SOURCES = 			\
-	gsm_receiver.cc			\
-	gsm_receiver_cf.cc		\
+_gsm_receiver_la_SOURCES = 			\
+	gsm_receiver.cc			
+	
+libgsm_receiver_la_SOURCES = \
 	gsm_receiver_cf.cc		
 
 # magic flags
@@ -71,16 +74,17 @@ _gsm_receiver_la_LDFLAGS = $(NO_UNDEFINED) -module -avoid-version
 # c++ standard library
 _gsm_receiver_la_LIBADD = 			\
 	$(PYTHON_LDFLAGS)		\
+	libgsm-receiver.la		\
 	-lstdc++			
 
+#libgsm_receiver_la_LIBADD = 
+
 gsm_receiver.cc gsm_receiver.py: $(LOCAL_IFILES) $(ALL_IFILES)
-	$(SWIG) $(SWIGPYTHONARGS) -module howto -o gsm_receiver.cc $(LOCAL_IFILES)
+	$(SWIG) $(SWIGPYTHONARGS) -module gsm_receiver -o gsm_receiver.cc $(LOCAL_IFILES)
 
 # These headers get installed in ${prefix}/include/gnuradio
 grinclude_HEADERS =			\
-	gsm_receiver_cf.h		\
 	gsm_receiver_cf.h		
-
 
 # These swig headers get installed in ${prefix}/include/gnuradio/swig
 swiginclude_HEADERS = 			\

@@ -1,51 +1,29 @@
-#! /bin/bash
+#!/bin/sh
 
-DIE=0
-touch README NEWS CHANGELOG 
-(autoconf --version) < /dev/null > /dev/null 2>&1 || {
-    echo
-        echo "You must have autoconf installed."
-	DIE=1
-}
+# Copyright 2001,2005 Free Software Foundation, Inc.
+# 
+# This file is part of GNU Radio
+# 
+# GNU Radio is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3, or (at your option)
+# any later version.
+# 
+# GNU Radio is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with GNU Radio; see the file COPYING.  If not, write to
+# the Free Software Foundation, Inc., 51 Franklin Street,
+# Boston, MA 02110-1301, USA.
 
-# libtool --version check not done...
 
-(automake --version) < /dev/null > /dev/null 2>&1 || {
-    echo
-        echo "You must have automake installed."
-        DIE=1
-}
+rm -fr config.cache autom4te*.cache
 
-if test "$DIE" -eq 1; then
-    exit 1
-fi
-
-echo Removing old files...
-rm -fr config.cache autom4te*.cache config.h config.status aclocal.m4 config.cache config.log
-
-if test ! -d config; then
-    mkdir config
-fi
-echo "aclocal -I config"
 aclocal -I config
-if test $? -ne 0; then
-    exit 1
-fi
-echo "autoheader"
-autoheader
-if test $? -ne 0; then
-    exit 1
-fi
-
-echo "libtoolize --automake"
-libtoolize --automake
-automake --add-missing -c -f -Wno-portability
-if test $? -ne 0; then
-    exit 1
-fi
-
-echo "autoconf"
 autoconf
-echo "BOOTSTRAP complete"
-
-#(cd gsm-tvoid ; ./bootstrap)
+autoheader
+libtoolize --automake
+automake --add-missing

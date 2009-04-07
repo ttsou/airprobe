@@ -31,6 +31,16 @@ GR_X86_64
 dnl LF_CONFIGURE_CC
 LF_CONFIGURE_CXX
 LF_SET_WARNINGS
+
+dnl add ${prefix}/lib${gr_libdir_suffix}/pkgconfig to the head of the PKG_CONFIG_PATH 
+if test x${PKG_CONFIG_PATH} = x; then
+    PKG_CONFIG_PATH=${prefix}/lib${gr_libdir_suffix}/pkgconfig
+else
+    PKG_CONFIG_PATH=${prefix}/lib${gr_libdir_suffix}/pkgconfig:${PKG_CONFIG_PATH}
+fi
+export PKG_CONFIG_PATH
+        
+
 GR_SET_GPROF
 GR_SET_PROF
 AM_PROG_AS
@@ -93,14 +103,15 @@ AC_SUBST(STD_DEFINES_AND_INCLUDES)
 AC_CONFIG_FILES([\
 	  Makefile \
 	  config/Makefile \
-	  doc/Makefile \
 	  src/Makefile \
 	  src/lib/Makefile \
-	  src/python/Makefile \
-	  src/python/run_tests \
+	  gsm-receiver.pc \
 	])
+#	  doc/Makefile \
+#	  src/python/Makefile \
+#	  src/python/run_tests \
 
 dnl run_tests is created from run_tests.in.  Make it executable.
-AC_CONFIG_COMMANDS([run_tests], [chmod +x src/python/run_tests])
+#AC_CONFIG_COMMANDS([run_tests], [chmod +x src/python/run_tests])
 
 AC_OUTPUT
