@@ -39,7 +39,7 @@ fi
 
 echo "libtoolize --automake"
 libtoolize --automake
-automake --foreign --add-missing
+automake --add-missing -c -f -Wno-portability
 if test $? -ne 0; then
     exit 1
 fi
