@@ -47,28 +47,30 @@ typedef boost::shared_ptr<gsm_receiver_cf> gsm_receiver_cf_sptr;
  * constructor is private.  howto_make_square_ff is the public
  * interface for creating new instances.
  */
-gsm_receiver_cf_sptr gsm_make_receiver_cf ();
+gsm_receiver_cf_sptr gsm_make_receiver_cf();
 
 /*!
- * \brief square a stream of floats.
+ * \brief Receives fcch
  * \ingroup block
- *
- * \sa howto_square2_ff for a version that subclasses gr_sync_block.
+ * \sa 
  */
+
 class gsm_receiver_cf : public gr_block
 {
-private:
-  friend gsm_receiver_cf_sptr gsm_make_receiver_cf ();
 
-  gsm_receiver_cf (); 
+  private:
+    friend gsm_receiver_cf_sptr gsm_make_receiver_cf();
 
- public:
-  ~gsm_receiver_cf ();
+    gsm_receiver_cf();
+    bool get_fcch_burst();
 
-  int general_work (int noutput_items,
-		    gr_vector_int &ninput_items,
-		    gr_vector_const_void_star &input_items,
-		    gr_vector_void_star &output_items);
+  public:
+    ~gsm_receiver_cf();
+
+    int general_work( int noutput_items,
+                      gr_vector_int &ninput_items,
+                      gr_vector_const_void_star &input_items,
+                      gr_vector_void_star &output_items );
 };
 
 #endif /* INCLUDED_GSM_RECEIVER_CF_H */

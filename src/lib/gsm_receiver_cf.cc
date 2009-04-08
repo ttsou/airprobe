@@ -68,11 +68,52 @@ gsm_receiver_cf::general_work (int noutput_items,
     out[i] = in[i] * in[i];
   }
 
-  // Tell runtime system how many input items we consumed on
-  // each input stream.
-
   consume_each (noutput_items);
 
-  // Tell runtime system how many output items we produced.
   return noutput_items;
 }
+
+
+bool gsm_receiver_cf::get_fcch_burst()
+{
+  int hit_count = 0;
+  int miss_count = 0;
+  int start_pos = -1;
+/*
+  for ( int i=0; i < BBUF_SIZE; i++ ) {
+      if ( d_burst_buffer[i] > 0 ) {
+          if ( ! hit_count++ )
+            start_pos = i;
+        } else {
+          if ( hit_count >= FCCH_HITS_NEEDED ) {
+              break;
+            } else
+            if ( ++miss_count > FCCH_MAX_MISSES ) {
+                start_pos = -1;
+                hit_count = miss_count = 0;
+              }
+        }
+    }
+
+  //Do we have a match?
+  if ( start_pos >= 0 ) {
+      //Is it within range? (we know it's long enough then too)
+      if ( start_pos < 2*MAX_CORR_DIST ) {
+          d_burst_start = start_pos;
+          d_bbuf_pos = 0; //load buffer from start
+          return FCCH;
+
+        } else {
+          //TODO: don't shift a tiny amount
+          shift_burst( start_pos - MAX_CORR_DIST );
+        }
+    } else {
+      //Didn't find anything
+      d_burst_start = MAX_CORR_DIST;
+      d_bbuf_pos = 0; //load buffer from start
+    }
+
+  return UNKNOWN;
+*/
+}
+
