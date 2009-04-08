@@ -27,25 +27,12 @@
 #include <gsm_receiver_cf.h>
 #include <gr_io_signature.h>
 
-/*
- * Create a new instance of gsm_receiver and return
- * a boost shared_ptr.  This is effectively the public constructor.
- */
 gsm_receiver_cf_sptr 
 gsm_make_receiver_cf ()
 {
   return gsm_receiver_cf_sptr (new gsm_receiver_cf ());
 }
 
-/*
- * Specify constraints on number of input and output streams.
- * This info is used to construct the input and output signatures
- * (2nd & 3rd args to gr_block's constructor).  The input and
- * output signatures are used by the runtime system to
- * check that a valid number and type of inputs and outputs
- * are connected to this block.  In this case, we accept
- * only 1 input and 1 output.
- */
 static const int MIN_IN = 1;	// mininum number of input streams
 static const int MAX_IN = 1;	// maximum number of input streams
 static const int MIN_OUT = 1;	// minimum number of output streams
