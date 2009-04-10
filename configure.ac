@@ -105,10 +105,11 @@ AC_CONFIG_FILES([\
 	  config/Makefile \
 	  src/Makefile \
 	  src/lib/Makefile \
+	  src/python/Makefile \
 	  gsm-receiver.pc \
+  
 	])
 #	  doc/Makefile \
-#	  src/python/Makefile \
 #	  src/python/run_tests \
 
 dnl run_tests is created from run_tests.in.  Make it executable.

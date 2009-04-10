@@ -25,6 +25,8 @@
 #include <gr_block.h>
 #include <gr_complex.h>
 
+#define BUFFER_SIZE 4096
+
 class gsm_receiver_cf;
 
 /*
@@ -47,26 +49,29 @@ typedef boost::shared_ptr<gsm_receiver_cf> gsm_receiver_cf_sptr;
  * constructor is private.  howto_make_square_ff is the public
  * interface for creating new instances.
  */
-gsm_receiver_cf_sptr gsm_make_receiver_cf();
+gsm_receiver_cf_sptr gsm_make_receiver_cf( int osr );
 
 /*!
  * \brief Receives fcch
  * \ingroup block
- * \sa 
+ * \sa
  */
 
 class gsm_receiver_cf : public gr_block
 {
 
   private:
-    friend gsm_receiver_cf_sptr gsm_make_receiver_cf();
-
-    gsm_receiver_cf();
-    bool get_fcch_burst();
+    int d_counter;
+    int d_return;
+    float d_phase_diff_buffer[BUFFER_SIZE];
+    
+    friend gsm_receiver_cf_sptr gsm_make_receiver_cf( int osr );
+    gsm_receiver_cf( int osr );
+    int find_fcch_burst( const gr_complex *in, const int items );
 
   public:
     ~gsm_receiver_cf();
-
+    void forecast( int noutput_items, gr_vector_int &ninput_items_required );
     int general_work( int noutput_items,
                       gr_vector_int &ninput_items,
                       gr_vector_const_void_star &input_items,
