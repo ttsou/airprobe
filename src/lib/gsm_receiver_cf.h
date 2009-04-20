@@ -24,8 +24,8 @@
 
 #include <gr_block.h>
 #include <gr_complex.h>
-
-#define BUFFER_SIZE 4096
+#include <gr_feval.h>
+#include <boost/circular_buffer.hpp>
 
 class gsm_receiver_cf;
 
@@ -42,6 +42,8 @@ class gsm_receiver_cf;
  */
 typedef boost::shared_ptr<gsm_receiver_cf> gsm_receiver_cf_sptr;
 
+typedef boost::circular_buffer<float> circular_buffer_float;
+
 /*!
  * \brief Return a shared_ptr to a new instance of gsm_receiver_cf.
  *
@@ -49,7 +51,7 @@ typedef boost::shared_ptr<gsm_receiver_cf> gsm_receiver_cf_sptr;
  * constructor is private.  howto_make_square_ff is the public
  * interface for creating new instances.
  */
-gsm_receiver_cf_sptr gsm_make_receiver_cf( int osr );
+gsm_receiver_cf_sptr gsm_make_receiver_cf( gr_feval_dd *tuner, int osr );
 
 /*!
  * \brief Receives fcch
@@ -61,13 +63,27 @@ class gsm_receiver_cf : public gr_block
 {
 
   private:
+    gr_feval_dd *d_tuner;
+    const int d_osr;
     int d_counter;
-    int d_return;
-    float d_phase_diff_buffer[BUFFER_SIZE];
+    float d_prev_freq_offset;
+    circular_buffer_float  d_phase_diff_buffer;
+    double d_x_temp, d_x2_temp, d_mean;
+    int d_fcch_count;
+    double d_best_sum;
     
-    friend gsm_receiver_cf_sptr gsm_make_receiver_cf( int osr );
-    gsm_receiver_cf( int osr );
-    int find_fcch_burst( const gr_complex *in, const int items );
+    enum states
+    {
+      fcch_search, sch_search
+    } d_state;
+
+    friend gsm_receiver_cf_sptr gsm_make_receiver_cf( gr_feval_dd *tuner, int osr );
+    gsm_receiver_cf( gr_feval_dd *tuner, int osr );
+
+    bool find_fcch_burst( const gr_complex *in, const int nitems );
+    bool find_sch_burst( const gr_complex *in, const int nitems , gr_complex *out);
+    double compute_freq_offset ( );
+    void set_frequency ( );
 
   public:
     ~gsm_receiver_cf();
