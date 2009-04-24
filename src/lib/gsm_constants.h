@@ -21,7 +21,7 @@
 #define TRAIN_POS         58
 
 #define FCCH_HITS_NEEDED        (USEFUL_BITS - 4) 
-#define FCCH_MAX_MISSES         2
+#define FCCH_MAX_MISSES         1
 
 static const int SYNC_BITS[] = {
   1, 0, 1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 0,

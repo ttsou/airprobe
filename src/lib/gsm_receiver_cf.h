@@ -26,6 +26,8 @@
 #include <gr_complex.h>
 #include <gr_feval.h>
 #include <boost/circular_buffer.hpp>
+#include <gsm_constants.h>
+
 
 class gsm_receiver_cf;
 
@@ -51,7 +53,7 @@ typedef boost::circular_buffer<float> circular_buffer_float;
  * constructor is private.  howto_make_square_ff is the public
  * interface for creating new instances.
  */
-gsm_receiver_cf_sptr gsm_make_receiver_cf( gr_feval_dd *tuner, int osr );
+gsm_receiver_cf_sptr gsm_make_receiver_cf(gr_feval_dd *tuner, int osr);
 
 /*!
  * \brief Receives fcch
@@ -64,34 +66,38 @@ class gsm_receiver_cf : public gr_block
 
   private:
     gr_feval_dd *d_tuner;
-    const int d_osr;
+    const int d_OSR;
     int d_counter;
+    int d_fcch_start_pos;
     float d_prev_freq_offset;
     circular_buffer_float  d_phase_diff_buffer;
     double d_x_temp, d_x2_temp, d_mean;
     int d_fcch_count;
     double d_best_sum;
-    
-    enum states
-    {
+    gr_complex d_sch_training_seq[N_SYNC_BITS]; //encoded training sequence of a SCH burst
+
+
+    enum states {
       fcch_search, sch_search
     } d_state;
 
-    friend gsm_receiver_cf_sptr gsm_make_receiver_cf( gr_feval_dd *tuner, int osr );
-    gsm_receiver_cf( gr_feval_dd *tuner, int osr );
+    friend gsm_receiver_cf_sptr gsm_make_receiver_cf(gr_feval_dd *tuner, int osr);
+    gsm_receiver_cf(gr_feval_dd *tuner, int osr);
 
-    bool find_fcch_burst( const gr_complex *in, const int nitems );
-    bool find_sch_burst( const gr_complex *in, const int nitems , gr_complex *out);
-    double compute_freq_offset ( );
-    void set_frequency ( );
+    bool find_fcch_burst(const gr_complex *in, const int nitems);
+    double compute_freq_offset();
+    void set_frequency(double freq_offset);
+    bool find_sch_burst(const gr_complex *in, const int nitems , float *out);
+    void gmsk_mapper(const int * input, gr_complex * gmsk_output, int ninput);
+    gr_complex correlation(const gr_complex * sequence, const gr_complex * input_signal, int ninput);
 
   public:
     ~gsm_receiver_cf();
-    void forecast( int noutput_items, gr_vector_int &ninput_items_required );
-    int general_work( int noutput_items,
-                      gr_vector_int &ninput_items,
-                      gr_vector_const_void_star &input_items,
-                      gr_vector_void_star &output_items );
+    void forecast(int noutput_items, gr_vector_int &ninput_items_required);
+    int general_work(int noutput_items,
+                     gr_vector_int &ninput_items,
+                     gr_vector_const_void_star &input_items,
+                     gr_vector_void_star &output_items);
 };
 
 #endif /* INCLUDED_GSM_RECEIVER_CF_H */

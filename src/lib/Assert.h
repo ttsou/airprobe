@@ -26,6 +26,8 @@
 #include "stdio.h"
 #include <iostream>
 
+#define NDEBUG
+
 /**@name Macros for standard messages. */
 //@{
 #define COUT(text) { std::cout << text << std::endl; }
