@@ -19,6 +19,7 @@
 #define FCCH_POS          TAIL_BITS
 #define SYNC_POS          39
 #define TRAIN_POS         58
+#define SAFETY_MARGIN     6
 
 #define FCCH_HITS_NEEDED        (USEFUL_BITS - 4) 
 #define FCCH_MAX_MISSES         1

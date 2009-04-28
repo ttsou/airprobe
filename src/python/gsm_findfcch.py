@@ -18,8 +18,8 @@ class tune(gr.feval_dd):
         self.top_block = top_block
         self.center_freq = 0
     def eval(self, freq_offet):
-        self.center_freq = self.center_freq - freq_offet
-        self.top_block.set_frequency(self.center_freq)
+#        self.center_freq = self.center_freq - freq_offet
+        self.top_block.set_frequency(freq_offet)
         return self.center_freq
 
 

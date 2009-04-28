@@ -54,14 +54,14 @@ gsm_receiver_cf::gsm_receiver_cf(gr_feval_dd *tuner, int osr)
                gr_make_io_signature(MIN_OUT, MAX_OUT, 142 * sizeof(float))),
     d_OSR(osr),
     d_tuner(tuner),
-    d_prev_freq_offset(0),
-    d_phase_diff_buffer(BUFFER_SIZE * osr),
     d_counter(0),
-    d_x_temp(0),
-    d_x2_temp(0),
-    d_fcch_count(0),
     d_fcch_start_pos(0),
-    d_state(fcch_search)
+    d_freq_offset(0),
+    d_state(first_fcch_search),
+    d_first(false)
+    //    d_fcch_count(0),
+    //    d_x_temp(0),
+    //    d_x2_temp(0)
 {
   gmsk_mapper(SYNC_BITS, d_sch_training_seq, N_SYNC_BITS);
 }
@@ -90,77 +90,56 @@ gsm_receiver_cf::general_work(int noutput_items,
 
   switch (d_state) {
 
-    case fcch_search:
+    case first_fcch_search:
 
       if (find_fcch_burst(in, ninput_items[0])) {
-        produced_out = 1;
+        set_frequency(d_freq_offset);
+        produced_out = 0;
+        d_state = next_fcch_search;
+      } else {
+        produced_out = 0;
+        d_state = first_fcch_search;
+      }
+
+      break;
+
+    case next_fcch_search:
+      if (find_fcch_burst(in, ninput_items[0])) {
+        produced_out = 0;
         d_state = sch_search;
       } else {
         produced_out = 0;
-        d_state = fcch_search;
+        d_state = next_fcch_search;
       }
-
       break;
 
     case sch_search:
-
       if (find_sch_burst(in, ninput_items[0], out)) {
-
-        d_state = sch_search;
+        d_state = read_bcch;
       } else {
-        for (int i = 0; i < ninput_items[0] - N_SYNC_BITS; i++) {
-          gr_complex result;
-          d_counter++;
-          int ninput = N_SYNC_BITS - 10;
-          const gr_complex * input_signal = in + i;
-          gr_complex * sequence = &d_sch_training_seq[5];
-          result =  correlation(&d_sch_training_seq[5], in + i, N_SYNC_BITS-10);
-           if (abs(result) > 60000) {
-             std::cout << "Max val: " << abs(result) << " position: " << d_counter - d_fcch_start_pos << std::endl;
-// 
-//             for (int j = 1; j <= 54; j++) {
-//               std::cout << sequence[j-1] << " * " << conj(input_signal[(j * d_OSR)]) << std::endl;
-//             }
-// 
-//             gr_complex result2(0, 0);
-// 
-//             for (int j = 1; j <= 54; j++) {
-//               result2 +=  sequence[j-1] *  conj(input_signal[(j * d_OSR)]);
-//             }
-// 
-//             std::cout << "Spr: " << abs(result2) << std::endl;
-// 
-//             std::cout << std::endl;
-           }
-
-
-//          std::cout << "(" << real(in[i]) << "," << imag(in[i]) << ")\n";
-//          std::cout << "(" << real(result) << "," << imag(result) << ")\n";
-        }
-
-        consume_each(ninput_items[0]);
-
         d_state = sch_search;
       }
-
+      break;
+      
+    case read_bcch:
       break;
   }
-
-//  for (int i = 0; i < TS_BITS; i++) {
-//    out[i] = d_phase_diff_buffer[i+start_pos-USEFUL_BITS];
-//  }
 
   return produced_out;
 }
 
 bool gsm_receiver_cf::find_fcch_burst(const gr_complex *in, const int nitems)
 {
+  circular_buffer_float  phase_diff_buffer(BUFFER_SIZE * d_OSR);
+
   float phase_diff = 0;
   gr_complex conjprod;
   int hit_count = 0;
   int miss_count = 0;
-  int start_pos;
-  float min_phase_diff, max_phase_diff, lowest_max_min_diff;
+  int start_pos = -1;
+  float min_phase_diff;
+  float max_phase_diff;
+  float lowest_max_min_diff = 99999;
 
   int to_consume = 0;
   int sample_number = 0;
@@ -183,7 +162,7 @@ bool gsm_receiver_cf::find_fcch_burst(const gr_complex *in, const int nitems)
         miss_count = 0;
         start_pos = -1;
         lowest_max_min_diff = 99999;
-        d_phase_diff_buffer.clear();
+        phase_diff_buffer.clear();
         fcch_search_state = search;
 
         break;
@@ -196,8 +175,7 @@ bool gsm_receiver_cf::find_fcch_burst(const gr_complex *in, const int nitems)
           fcch_search_state = search_fail;
         } else {
 
-          conjprod = in[sample_number] * conj(in[sample_number-1]);
-          phase_diff = gr_fast_atan2f(imag(conjprod), real(conjprod));
+          phase_diff = compute_phase_diff(in[sample_number], in[sample_number-1]);
 
           if (phase_diff > 0) {
             to_consume = sample_number;
@@ -228,16 +206,16 @@ bool gsm_receiver_cf::find_fcch_burst(const gr_complex *in, const int nitems)
           //find difference between minimal and maximal element in the buffer
           //for FCCH this value should be low
           //this part is searching for a region where this value is lowest
-          min_phase_diff = *(min_element(d_phase_diff_buffer.begin(), d_phase_diff_buffer.end()));
-          max_phase_diff = *(max_element(d_phase_diff_buffer.begin(), d_phase_diff_buffer.end()));
+          min_phase_diff = *(min_element(phase_diff_buffer.begin(), phase_diff_buffer.end()));
+          max_phase_diff = *(max_element(phase_diff_buffer.begin(), phase_diff_buffer.end()));
 
           if (lowest_max_min_diff > max_phase_diff - min_phase_diff) {
             lowest_max_min_diff = max_phase_diff - min_phase_diff;
             start_pos = sample_number - FCCH_HITS_NEEDED * d_OSR - FCCH_MAX_MISSES * d_OSR;
             d_best_sum = 0;
 
-            for (buffer_iter = (d_phase_diff_buffer.begin());
-                 buffer_iter != (d_phase_diff_buffer.end());
+            for (buffer_iter = (phase_diff_buffer.begin());
+                 buffer_iter != (phase_diff_buffer.end());
                  buffer_iter++) {
               d_best_sum += *buffer_iter - (M_PI / 2) / d_OSR;
             }
@@ -251,10 +229,8 @@ bool gsm_receiver_cf::find_fcch_burst(const gr_complex *in, const int nitems)
           continue;
         }
 
-        conjprod = in[sample_number] * conj(in[sample_number-1]);
-
-        phase_diff = gr_fast_atan2f(imag(conjprod), real(conjprod));
-        d_phase_diff_buffer.push_back(phase_diff);
+        phase_diff = compute_phase_diff(in[sample_number], in[sample_number-1]);
+        phase_diff_buffer.push_back(phase_diff);
 
         fcch_search_state = found_something;
 
@@ -280,7 +256,11 @@ bool gsm_receiver_cf::find_fcch_burst(const gr_complex *in, const int nitems)
   }
 
   //  DCOUT("hit_count: " << hit_count << " miss_count: " << miss_count << " d_counter: " << d_counter);
-
+        //!
+  for(int i = 0; i < to_consume; i++){
+    //std::cout << "(" << real(in[i]) << "," << imag(in[i]) << ")\n";
+  }
+  
   d_counter += to_consume;
 
   consume_each(to_consume);
@@ -291,24 +271,18 @@ bool gsm_receiver_cf::find_fcch_burst(const gr_complex *in, const int nitems)
 
 double gsm_receiver_cf::compute_freq_offset()
 {
-  float mean, phase_offset, freq_offset;
+  float phase_offset, freq_offset;
 
-  DCOUT(" d_phase_diff_buffer.size(): " <<  d_phase_diff_buffer.size());
-
-  //mean = d_best_sum / FCCH_HITS_NEEDED;
   phase_offset = d_best_sum / FCCH_HITS_NEEDED;
-  //phase_offset = mean - ;
   freq_offset = phase_offset * 1625000.0 / (12.0 * M_PI);
-  DCOUT("freq_offset: " << freq_offset << " d_best_sum: " << d_best_sum);
-  d_fcch_count++;
-  d_x_temp += freq_offset;
-  d_x2_temp += freq_offset * freq_offset;
-  d_mean = d_x_temp / d_fcch_count;
+  d_freq_offset -= freq_offset;
 
-  set_frequency(freq_offset);
-  d_prev_freq_offset -= freq_offset;
-
-  DCOUT("wariancja: " << sqrt((d_x2_temp / d_fcch_count - d_mean * d_mean)) << " fcch_count:" << d_fcch_count << " d_mean: " << d_mean);
+//  d_x_temp += freq_offset;
+//  d_x2_temp += freq_offset * freq_offset;
+//  d_mean = d_x_temp / d_fcch_count;
+//   d_fcch_count++;
+   DCOUT("freq_offset: " << freq_offset << " d_best_sum: " << d_best_sum);
+//   DCOUT("wariancja: " << sqrt((d_x2_temp / d_fcch_count - d_mean * d_mean)) << " fcch_count:" << d_fcch_count << " d_mean: " << d_mean);
 
   return freq_offset;
 }
