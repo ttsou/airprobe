@@ -10,7 +10,7 @@ from os import sys
 for extdir in ['../../debug/src/lib','../../debug/src/lib/.libs']:
     if extdir not in sys.path:
         sys.path.append(extdir)
-import gsm
+import gsm                        
 
 class tune(gr.feval_dd):
     def __init__(self, top_block):
@@ -18,8 +18,8 @@ class tune(gr.feval_dd):
         self.top_block = top_block
         self.center_freq = 0
     def eval(self, freq_offet):
-#        self.center_freq = self.center_freq - freq_offet
-        self.top_block.set_frequency(freq_offet)
+        self.center_freq = self.center_freq - freq_offet
+        self.top_block.set_frequency(self.center_freq)
         return self.center_freq
 
 
@@ -57,13 +57,13 @@ class gsm_receiver_first_blood(gr.top_block):
         self.clock_rate = clock_rate
         self.input_rate = clock_rate / options.decim
         self.gsm_symb_rate = 1625000.0 / 6.0
-        self.sps = ( self.input_rate / self.gsm_symb_rate ) / options.osr
+        self.sps = self.input_rate / self.gsm_symb_rate
 
     def _ustaw_filtr(self):
         filter_cutoff   = 145e3	
         filter_t_width  = 10e3
         offset = 0
-        #print "input_rate:", self.input_rate, "sample rate:", self.sps, " filter_cutoff:", filter_cutoff, " filter_t_width:", filter_t_width
+        print "input_rate:", self.input_rate, "sample rate:", self.sps, " filter_cutoff:", filter_cutoff, " filter_t_width:", filter_t_width
         filter_taps     = gr.firdes.low_pass(1.0, self.input_rate, filter_cutoff, filter_t_width, gr.firdes.WIN_HAMMING)
         filtr          = gr.freq_xlating_fir_filter_ccf(1, filter_taps, offset, self.input_rate)
         return filtr

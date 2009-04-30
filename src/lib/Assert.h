@@ -26,7 +26,7 @@
 #include "stdio.h"
 #include <iostream>
 
-#define NDEBUG
+//#define NDEBUG
 
 /**@name Macros for standard messages. */
 //@{

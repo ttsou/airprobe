@@ -25,8 +25,8 @@
 #include <gr_block.h>
 #include <gr_complex.h>
 #include <gr_feval.h>
-#include <boost/circular_buffer.hpp>
 #include <gsm_constants.h>
+#include <vector>
 
 
 class gsm_receiver_cf;
@@ -43,8 +43,7 @@ class gsm_receiver_cf;
  * As a convention, the _sptr suffix indicates a boost::shared_ptr
  */
 typedef boost::shared_ptr<gsm_receiver_cf> gsm_receiver_cf_sptr;
-
-typedef boost::circular_buffer<float> circular_buffer_float;
+typedef std::vector<gr_complex> vector_complex;
 
 /*!
  * \brief Return a shared_ptr to a new instance of gsm_receiver_cf.
@@ -75,12 +74,11 @@ class gsm_receiver_cf : public gr_block
     int d_fcch_start_pos;
     float d_freq_offset;
     double d_best_sum;
-
-    int d_fcch_count;
     
-    bool d_first;
-//    int d_fcch_count;
-//    double d_x_temp, d_x2_temp, d_mean;
+    int d_fcch_count; //!!!
+    double d_x_temp, d_x2_temp, d_mean;//!!
+    
+    vector_complex d_channel_imp_resp;
 
     enum states {
       first_fcch_search, next_fcch_search, sch_search, read_bcch
@@ -96,7 +94,7 @@ class gsm_receiver_cf : public gr_block
     
     bool find_sch_burst(const gr_complex *in, const int nitems , float *out);
     void gmsk_mapper(const int * input, gr_complex * gmsk_output, int ninput);
-    gr_complex correlation(const gr_complex * sequence, const gr_complex * input_signal, int ninput);
+    gr_complex correlate_sequence(const gr_complex * sequence, const gr_complex * input_signal, int ninput);
     
 
   public:
