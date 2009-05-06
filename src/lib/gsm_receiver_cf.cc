@@ -208,7 +208,7 @@ bool gsm_receiver_cf::find_fcch_burst(const gr_complex *in, const int nitems)
           fcch_search_state = init;
           //DCOUT("hit_count: " << hit_count << " miss_count: " << miss_count << " d_counter: " << d_counter);
           continue;
-        } else if ((miss_count >= FCCH_MAX_MISSES * d_OSR) && (hit_count > FCCH_HITS_NEEDED * d_OSR)) {
+        } else if (((miss_count >= FCCH_MAX_MISSES * d_OSR) && (hit_count > FCCH_HITS_NEEDED * d_OSR)) || (hit_count > 2 * FCCH_HITS_NEEDED * d_OSR)) {
           fcch_search_state = fcch_found;
           continue;
         } else if ((miss_count < FCCH_MAX_MISSES * d_OSR) && (hit_count > FCCH_HITS_NEEDED * d_OSR)) {
@@ -239,6 +239,7 @@ bool gsm_receiver_cf::find_fcch_burst(const gr_complex *in, const int nitems)
         }
 
         phase_diff = compute_phase_diff(in[sample_number], in[sample_number-1]);
+//        std::cout << phase_diff << "\n";
         phase_diff_buffer.push_back(phase_diff);
         fcch_search_state = found_something;
 
@@ -302,7 +303,7 @@ bool gsm_receiver_cf::find_sch_burst(const gr_complex *in, const int nitems , fl
   bool result = false;
   int sample_nr_near_sch_start = d_fcch_start_pos + (FRAME_BITS - SAFETY_MARGIN) * d_OSR;
   vector_complex correlation_buffer;
-  list_float power_buffer;
+  vector_float power_buffer;
   vector_float window_energy_buffer;
   int strongest_window_nr;
 
@@ -315,7 +316,7 @@ bool gsm_receiver_cf::find_sch_burst(const gr_complex *in, const int nitems , fl
   int chan_imp_length = 4;
   float energy = 0;
   bool loop_end = false;
-  list_float::iterator iter;
+  vector_float::iterator iter;
 
   while (!end) {
     switch (sch_search_state) {
@@ -350,34 +351,50 @@ bool gsm_receiver_cf::find_sch_burst(const gr_complex *in, const int nitems , fl
         }
 
         //compute window energies
+
+//         std::cout << "\nkorelacje wybrane do liczenia energii\n";
         iter = power_buffer.begin();
+        
         while (iter != power_buffer.end()) {
-          list_float::iterator iter_ii = iter;
+          vector_float::iterator iter_ii = iter;
           energy = 0;
 
-          for (int ii = 0; ii < chan_imp_length; ii++, iter_ii++) {
+          for (int ii = 0; ii < chan_imp_length; ii++) {
             if (iter_ii == power_buffer.end()) {
               loop_end = true;
               break;
             }
+//             std::cout << iter_ii - power_buffer.begin() << "\n";
             energy += (*iter_ii);
+            iter_ii = iter_ii+d_OSR;
           }
+//           std::cout <<  "\n";
 
           if (loop_end) {
             break;
           }
           iter++;
-//          std::cout << energy << "\n";
+//           std::cout << energy << "\n";
           window_energy_buffer.push_back(energy);
         }
 
         strongest_window_nr = max_element(window_energy_buffer.begin(), window_energy_buffer.end()) - window_energy_buffer.begin();
         d_channel_imp_resp.clear();
-        for (int ii = 0; ii < chan_imp_length; ii++) {
+       std::cout << "\nOdp impulsowa:\n";
+        for (int ii = 0; ii < chan_imp_length+1; ii++) {
           gr_complex correlation = correlation_buffer[strongest_window_nr + (ii * d_OSR)];
+         std::cout << correlation << "\n";
           d_channel_imp_resp.push_back(correlation);
         }
 
+        std::cout << "\nBurst:\n";
+
+        for (int ii = 0; ii < 156; ii++) {
+          gr_complex correlation = in[strongest_window_nr + (ii * d_OSR) - 42* d_OSR + SYNC_POS * d_OSR];
+         std::cout << correlation << "\n";
+          d_channel_imp_resp.push_back(correlation);
+        }
+        std::cout << "\n\n";
         DCOUT("strongest_window_nr: " << strongest_window_nr);
 
         sch_search_state = sch_found;
