@@ -12,6 +12,7 @@
 #define N_SYNC_BITS       64
 #define USEFUL_BITS       142  //(2*DATA_BITS + N_TRAIN_BITS )
 #define FCCH_BITS         USEFUL_BITS
+#define BURST_SIZE        (USEFUL_BITS+2*TAIL_BITS)
 
 #define TS_BITS           (TAIL_BITS+USEFUL_BITS+TAIL_BITS+GUARD_BITS)  //a full TS (156)
 #define TS_PER_FRAME      8

@@ -83,7 +83,7 @@ class gsm_receiver_first_blood(gr.top_block):
         parser = OptionParser(option_class=eng_option)
         parser.add_option("-d", "--decim", type="int", default=128,
                           help="Set USRP decimation rate to DECIM [default=%default]")
-        parser.add_option("-r", "--osr", type="int", default=1,
+        parser.add_option("-r", "--osr", type="int", default=4,
                           help="Oversampling ratio [default=%default]")
         parser.add_option("-I", "--inputfile", type="string", default="cfile",
                           help="Input filename")

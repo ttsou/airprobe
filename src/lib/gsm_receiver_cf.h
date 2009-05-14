@@ -95,7 +95,8 @@ class gsm_receiver_cf : public gr_block
     bool find_sch_burst(const gr_complex *in, const int nitems , float *out);
     void gmsk_mapper(const int * input, gr_complex * gmsk_output, int ninput);
     gr_complex correlate_sequence(const gr_complex * sequence, const gr_complex * input_signal, int ninput);
-    
+    inline void autocorrelation(const gr_complex * input, gr_complex * out, int length);
+    inline void mafi(const gr_complex * input, int input_length, gr_complex * filter, int filter_length, gr_complex * output);
 
   public:
     ~gsm_receiver_cf();

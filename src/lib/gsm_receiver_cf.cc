@@ -125,13 +125,14 @@ gsm_receiver_cf::general_work(int noutput_items,
     case sch_search:
       if (find_sch_burst(in, ninput_items[0], out)) {
 //         d_state = read_bcch;
-        d_state = next_fcch_search;
+        d_state = read_bcch;//next_fcch_search;
       } else {
         d_state = sch_search;
       }
       break;
 
     case read_bcch:
+      consume_each(ninput_items[0]);
       break;
   }
 
@@ -156,7 +157,6 @@ bool gsm_receiver_cf::find_fcch_burst(const gr_complex *in, const int nitems)
   bool end = false;
   bool result = false;
 //   float mean=0, phase_offset=0, freq_offset=0;
-
   circular_buffer_float::iterator buffer_iter;
 
   enum states {
@@ -295,6 +295,12 @@ void gsm_receiver_cf::set_frequency(double freq_offset)
   d_tuner->calleval(freq_offset);
 }
 
+inline float gsm_receiver_cf::compute_phase_diff(gr_complex val1, gr_complex val2)
+{
+  gr_complex conjprod = val1 * conj(val2);
+  return gr_fast_atan2f(imag(conjprod), real(conjprod));
+}
+
 bool gsm_receiver_cf::find_sch_burst(const gr_complex *in, const int nitems , float *out)
 {
 //  int sample_number = 0;
@@ -306,6 +312,8 @@ bool gsm_receiver_cf::find_sch_burst(const gr_complex *in, const int nitems , fl
   vector_float power_buffer;
   vector_float window_energy_buffer;
   int strongest_window_nr;
+  int chan_imp_resp_center;
+  float max_correlation = 0;
 
   enum states {
     start, reach_sch, find_sch_start, search_not_finished, sch_found
@@ -313,10 +321,21 @@ bool gsm_receiver_cf::find_sch_burst(const gr_complex *in, const int nitems , fl
 
   sch_search_state = start;
   //!!!!
-  int chan_imp_length = 4;
+  int chan_imp_length = 5;
+  //!!!!
+  gr_complex chan_imp_resp[100];
+  gr_complex rhh_temp[100];
+  gr_complex rhh[6];
+  gr_complex filtered_burst[148];
+  //!!!!
+  int burst_start = 0;
+  unsigned int stop_states[1] = { 4,  };
+  float output[BURST_SIZE];
+  
   float energy = 0;
   bool loop_end = false;
   vector_float::iterator iter;
+  gr_complex dzielnik(54, 0);
 
   while (!end) {
     switch (sch_search_state) {
@@ -342,31 +361,27 @@ bool gsm_receiver_cf::find_sch_burst(const gr_complex *in, const int nitems , fl
 //        DCOUT("find_sch_start d_counter" << d_counter);
         for (int ii = SYNC_POS * d_OSR; ii < (SYNC_POS + SYNC_SEARCH_RANGE)*d_OSR; ii++) {
           to_consume++;
-          gr_complex correlation =  correlate_sequence(&d_sch_training_seq[5], &in[ii], N_SYNC_BITS - 10);
+          gr_complex correlation = correlate_sequence(&d_sch_training_seq[5], &in[ii], N_SYNC_BITS - 10) / dzielnik;
           correlation_buffer.push_back(correlation); // tylko do znalezienia odp imp kanału
           power_buffer.push_back(pow(abs(correlation), 2));
-          if (abs(correlation) > 30000) {
+          if (abs(correlation) > 30000 / 54) {
             DCOUT("znaleziono środek sch na pozycji: " << ii - SYNC_POS * d_OSR);
           }
         }
 
         //compute window energies
 
-//         std::cout << "\nkorelacje wybrane do liczenia energii\n";
         iter = power_buffer.begin();
-        
         while (iter != power_buffer.end()) {
           vector_float::iterator iter_ii = iter;
           energy = 0;
 
-          for (int ii = 0; ii < chan_imp_length; ii++) {
+          for (int ii = 0; ii < (chan_imp_length)*d_OSR; ii++, iter_ii++) {
             if (iter_ii == power_buffer.end()) {
               loop_end = true;
               break;
             }
-//             std::cout << iter_ii - power_buffer.begin() << "\n";
             energy += (*iter_ii);
-            iter_ii = iter_ii+d_OSR;
           }
 //           std::cout <<  "\n";
 
@@ -374,26 +389,74 @@ bool gsm_receiver_cf::find_sch_burst(const gr_complex *in, const int nitems , fl
             break;
           }
           iter++;
-//           std::cout << energy << "\n";
+//             std::cout << energy << "\n";
           window_energy_buffer.push_back(energy);
         }
 
         strongest_window_nr = max_element(window_energy_buffer.begin(), window_energy_buffer.end()) - window_energy_buffer.begin();
         d_channel_imp_resp.clear();
-       std::cout << "\nOdp impulsowa:\n";
-        for (int ii = 0; ii < chan_imp_length+1; ii++) {
-          gr_complex correlation = correlation_buffer[strongest_window_nr + (ii * d_OSR)];
-         std::cout << correlation << "\n";
-          d_channel_imp_resp.push_back(correlation);
-        }
 
-        std::cout << "\nBurst:\n";
+//         std::cout << "# name: h_est\n" ;
+//         std::cout << "# type: complex matrix\n" ;
+//         std::cout << "# rows: 1\n" ;
+//         std::cout << "# columns: " << (chan_imp_length)*d_OSR << "\n";
 
-        for (int ii = 0; ii < 156; ii++) {
-          gr_complex correlation = in[strongest_window_nr + (ii * d_OSR) - 42* d_OSR + SYNC_POS * d_OSR];
-         std::cout << correlation << "\n";
+        max_correlation = 0;
+        for (int ii = 0; ii < (chan_imp_length)*d_OSR; ii++) {
+          gr_complex correlation = correlation_buffer[strongest_window_nr + ii];
+          if (abs(correlation) > max_correlation) {
+            chan_imp_resp_center = ii;
+            max_correlation = abs(correlation);
+          }
+//           std::cout << correlation << " ";
           d_channel_imp_resp.push_back(correlation);
+          chan_imp_resp[ii] = correlation;
         }
+        DCOUT("\nSrodek odp_imp:" << chan_imp_resp_center );
+
+        autocorrelation(chan_imp_resp, rhh_temp, chan_imp_length*d_OSR);
+//         std::cout << "\n# name: rhh_temp\n" ;
+//         std::cout << "# type: complex matrix\n" ;
+//         std::cout << "# rows: 1\n" ;
+//         std::cout << "# columns: " << (chan_imp_length)*d_OSR << "\n";
+
+//         for (int ii = 0; ii < (chan_imp_length)*d_OSR; ii++) {
+//           std::cout << rhh_temp[ii] << " ";
+//         }
+
+//         std::cout << "\n# name: Rhh\n" ;
+//         std::cout << "# type: complex matrix\n" ;
+//         std::cout << "# rows: 1\n" ;
+//         std::cout << "# columns: " << (chan_imp_length) << "\n";
+
+        for (int ii = 0; ii < (chan_imp_length); ii++) {
+          rhh[ii] = rhh_temp[ii*d_OSR];
+//           std::cout << rhh_temp[ii*d_OSR] << " ";
+        }
+        
+//         std::cout << "\n# name: normal_burst\n" ;
+//         std::cout << "# type: complex matrix\n" ;
+//         std::cout << "# rows: 1\n" ;
+//         std::cout << "# columns: " << 156*d_OSR << "\n";
+        burst_start = strongest_window_nr + chan_imp_resp_center - 48 * d_OSR - 2 * d_OSR + 2 + SYNC_POS * d_OSR;
+//         for (int ii = 0; ii < 156*d_OSR; ii++) {
+//           gr_complex sample = in[burst_start+ii];
+//           std::cout << sample << " ";
+//         }
+
+        mafi(&in[burst_start], 148, chan_imp_resp, chan_imp_length*d_OSR, filtered_burst);
+
+//         std::cout << "\n# name: Y\n" ;
+//         std::cout << "# type: complex matrix\n" ;
+//         std::cout << "# rows: 1\n" ;
+//         std::cout << "# columns: " << 148 << "\n";
+//         for (int ii = 0; ii < 148; ii++) {
+//           gr_complex filtered_sample = filtered_burst[ii];
+//           std::cout << filtered_sample << " ";
+//         }
+
+        viterbi_detector(filtered_burst, BURST_SIZE, rhh, 3, stop_states, 1, output);
+
         std::cout << "\n\n";
         DCOUT("strongest_window_nr: " << strongest_window_nr);
 
@@ -413,9 +476,7 @@ bool gsm_receiver_cf::find_sch_burst(const gr_complex *in, const int nitems , fl
   }
 
   d_counter += to_consume;
-
   consume_each(to_consume);
-
   return result;
 }
 
@@ -468,8 +529,39 @@ gr_complex gsm_receiver_cf::correlate_sequence(const gr_complex * sequence, cons
 // gr_complex gsm_receiver_cf::calc_energy(int window_len){
 //
 // }
-inline float gsm_receiver_cf::compute_phase_diff(gr_complex val1, gr_complex val2)
+
+//oblicza dodatnią część autokorelacji
+inline void gsm_receiver_cf::autocorrelation(const gr_complex * input, gr_complex * out, int length)
 {
-  gr_complex conjprod = val1 * conj(val2);
-  return gr_fast_atan2f(imag(conjprod), real(conjprod));
+  int i, k;
+  for (k = length - 1; k >= 0; k--) {
+    out[k] = gr_complex(0, 0);
+    for (i = k; i < length; i++) {
+      out[k] += input[i] * conj(input[i-k]);
+    }
+  }
+}
+
+//funkcja matched filter
+inline void gsm_receiver_cf::mafi(const gr_complex * input, int input_length, gr_complex * filter, int filter_length, gr_complex * output)
+{
+  int ii = 0, n, a;
+  std::cout << "\n";
+  for (n = 0; n < input_length; n++) {
+    a = n * d_OSR;
+    output[n] = 0;
+    ii = 0;
+
+    while (ii < filter_length) {
+//       if (n == 0) {
+//         std::cout << "a:" << a << " ii: " << ii << " input[" << a + ii << "]: " << input[a+ii] << "\n";
+//       }
+      if ((a + ii) >= input_length*d_OSR)
+        break;
+
+      output[n] += input[a+ii] * filter[ii];
+      ii++;
+    }
+//    output[n] = conj(output[n]);
+  }
 }
