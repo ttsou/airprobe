@@ -19,6 +19,14 @@
 # the Free Software Foundation, Inc., 51 Franklin Street,
 # Boston, MA 02110-1301, USA.
 # 
+DECODER_INCLUDEDIR = $(top_srcdir)/src/lib/decoder
+MAIN_INCLUDEDIR = $(top_srcdir)/src/lib
+
+#STD_DEFINES_AND_INCLUDES = \
+#        -I$(DECODER_INCLUDEDIR) \
+#        -I$(MAIN_INCLUDEDIR)
+
+DECODER_LA = $(top_builddir)/src/lib/decoder/libdecoder.la
 
 # includes
 grincludedir   = $(includedir)/gnuradio

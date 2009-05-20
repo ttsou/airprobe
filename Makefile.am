@@ -17,4 +17,3 @@ EXTRA_DIST = \
     
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = gsm-receiver.pc
-    

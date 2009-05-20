@@ -105,9 +105,9 @@ AC_CONFIG_FILES([\
 	  config/Makefile \
 	  src/Makefile \
 	  src/lib/Makefile \
+	  src/lib/decoder/Makefile \
 	  src/python/Makefile \
-	  gsm-receiver.pc \
-  
+	  gsm-receiver.pc   
 	])
 #	  doc/Makefile \
 #	  src/python/run_tests \

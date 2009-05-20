@@ -21,6 +21,7 @@
 
 include $(top_srcdir)/Makefile.common
 
+SUBDIRS = decoder
 # Install this stuff so that it ends up as the gnuradio.howto module
 # This usually ends up at:
 #   ${prefix}/lib/python${python_version}/site-packages/gnuradio
@@ -28,7 +29,7 @@ include $(top_srcdir)/Makefile.common
 ourpythondir = $(grpythondir)
 ourlibdir    = $(grpyexecdir)
 
-AM_CPPFLAGS = $(STD_DEFINES_AND_INCLUDES) $(PYTHON_CPPFLAGS) $(WITH_INCLUDES)
+AM_CPPFLAGS = $(STD_DEFINES_AND_INCLUDES) $(PYTHON_CPPFLAGS) $(WITH_INCLUDES) -I$(DECODER_INCLUDEDIR)
 
 SWIGPYTHONARGS = $(SWIGPYTHONFLAGS) $(SWIGGRFLAGS) $(WITH_SWIG_INCLUDES) \
 	$(WITH_INCLUDES)
@@ -75,7 +76,9 @@ _gsm_la_LDFLAGS = $(NO_UNDEFINED) -module -avoid-version
 _gsm_la_LIBADD =		\
 	$(PYTHON_LDFLAGS)		\
 	libgsmdemod.la			\
-	-lstdc++			
+	-lstdc++		\
+	decoder/libdecoder.la
+#	$(DECODER_LA) 	
 
 #libgsmdemod_la_LIBADD = 
 
