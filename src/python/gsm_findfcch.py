@@ -73,6 +73,7 @@ class gsm_receiver_first_blood(gr.top_block):
     
     def _ustaw_interpolator(self):
         interpolator = gr.fractional_interpolator_cc(0, self.sps) 
+#	interpolator = blks2.rational_resampler_ccf(13, 6)
         return interpolator
     
     def _ustaw_odbiornik(self):

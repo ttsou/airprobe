@@ -24,7 +24,6 @@
 #include "config.h"
 #endif
 
-#include <gsm_receiver_cf.h>
 #include <gr_io_signature.h>
 #include <gr_math.h>
 #include <math.h>
@@ -32,6 +31,9 @@
 #include <list>
 #include <boost/circular_buffer.hpp>
 #include <algorithm>
+#include <gsm_receiver_cf.h>
+#include <viterbi_detector.h>
+#include <sch.h>
 
 #define FCCH_BUFFER_SIZE (FCCH_HITS_NEEDED)
 #define SYNC_SEARCH_RANGE 40
@@ -112,7 +114,7 @@ gsm_receiver_cf::general_work(int noutput_items,
       if (find_fcch_burst(in, ninput_items[0])) {
         if (abs(d_freq_offset) > 100) {
           float mean_freq_offset = (prev_freq_offset + d_freq_offset) / 2;
-//           set_frequency(d_freq_offset);
+          set_frequency(d_freq_offset);
         }
         produced_out = 0;
         d_state = sch_search;
@@ -125,7 +127,7 @@ gsm_receiver_cf::general_work(int noutput_items,
     case sch_search:
       if (find_sch_burst(in, ninput_items[0], out)) {
 //         d_state = read_bcch;
-        d_state = read_bcch;//next_fcch_search;
+        d_state = next_fcch_search;//read_bcch;
       } else {
         d_state = sch_search;
       }
@@ -284,8 +286,8 @@ double gsm_receiver_cf::compute_freq_offset()
   d_x2_temp += freq_offset * freq_offset;
   d_mean = d_x_temp / d_fcch_count;
 
-  DCOUT("freq_offset: " << freq_offset );//" d_best_sum: " << d_best_sum
-  DCOUT("wariancja: " << sqrt((d_x2_temp / d_fcch_count - d_mean * d_mean)) << " fcch_count:" << d_fcch_count << " d_mean: " << d_mean);
+   DCOUT("freq_offset: " << freq_offset );//" d_best_sum: " << d_best_sum
+//   DCOUT("wariancja: " << sqrt((d_x2_temp / d_fcch_count - d_mean * d_mean)) << " fcch_count:" << d_fcch_count << " d_mean: " << d_mean);
 
   return freq_offset;
 }
@@ -328,14 +330,16 @@ bool gsm_receiver_cf::find_sch_burst(const gr_complex *in, const int nitems , fl
   gr_complex rhh[6];
   gr_complex filtered_burst[148];
   //!!!!
+  int fn_o;
+  int bsic_o;
   int burst_start = 0;
-  unsigned int stop_states[1] = { 4,  };
+  unsigned int stop_states[2] = {4,12};
   float output[BURST_SIZE];
+  unsigned char output_binary[BURST_SIZE];
   
   float energy = 0;
   bool loop_end = false;
   vector_float::iterator iter;
-  gr_complex dzielnik(54, 0);
 
   while (!end) {
     switch (sch_search_state) {
@@ -361,11 +365,11 @@ bool gsm_receiver_cf::find_sch_burst(const gr_complex *in, const int nitems , fl
 //        DCOUT("find_sch_start d_counter" << d_counter);
         for (int ii = SYNC_POS * d_OSR; ii < (SYNC_POS + SYNC_SEARCH_RANGE)*d_OSR; ii++) {
           to_consume++;
-          gr_complex correlation = correlate_sequence(&d_sch_training_seq[5], &in[ii], N_SYNC_BITS - 10) / dzielnik;
+          gr_complex correlation = correlate_sequence(&d_sch_training_seq[5], &in[ii], N_SYNC_BITS - 10);
           correlation_buffer.push_back(correlation); // tylko do znalezienia odp imp kanału
           power_buffer.push_back(pow(abs(correlation), 2));
           if (abs(correlation) > 30000 / 54) {
-            DCOUT("znaleziono środek sch na pozycji: " << ii - SYNC_POS * d_OSR);
+//             DCOUT("znaleziono środek sch na pozycji: " << ii - SYNC_POS * d_OSR);
           }
         }
 
@@ -400,7 +404,7 @@ bool gsm_receiver_cf::find_sch_burst(const gr_complex *in, const int nitems , fl
 //         std::cout << "# type: complex matrix\n" ;
 //         std::cout << "# rows: 1\n" ;
 //         std::cout << "# columns: " << (chan_imp_length)*d_OSR << "\n";
-
+        
         max_correlation = 0;
         for (int ii = 0; ii < (chan_imp_length)*d_OSR; ii++) {
           gr_complex correlation = correlation_buffer[strongest_window_nr + ii];
@@ -408,11 +412,11 @@ bool gsm_receiver_cf::find_sch_burst(const gr_complex *in, const int nitems , fl
             chan_imp_resp_center = ii;
             max_correlation = abs(correlation);
           }
-//           std::cout << correlation << " ";
+//            std::cout << correlation << " ";
           d_channel_imp_resp.push_back(correlation);
           chan_imp_resp[ii] = correlation;
         }
-        DCOUT("\nSrodek odp_imp:" << chan_imp_resp_center );
+//         DCOUT("\nSrodek odp_imp:" << chan_imp_resp_center );
 
         autocorrelation(chan_imp_resp, rhh_temp, chan_imp_length*d_OSR);
 //         std::cout << "\n# name: rhh_temp\n" ;
@@ -430,8 +434,8 @@ bool gsm_receiver_cf::find_sch_burst(const gr_complex *in, const int nitems , fl
 //         std::cout << "# columns: " << (chan_imp_length) << "\n";
 
         for (int ii = 0; ii < (chan_imp_length); ii++) {
-          rhh[ii] = rhh_temp[ii*d_OSR];
-//           std::cout << rhh_temp[ii*d_OSR] << " ";
+          rhh[ii] = conj(rhh_temp[ii*d_OSR]);
+//           std::cout << rhh[ii] << " ";
         }
         
 //         std::cout << "\n# name: normal_burst\n" ;
@@ -439,10 +443,10 @@ bool gsm_receiver_cf::find_sch_burst(const gr_complex *in, const int nitems , fl
 //         std::cout << "# rows: 1\n" ;
 //         std::cout << "# columns: " << 156*d_OSR << "\n";
         burst_start = strongest_window_nr + chan_imp_resp_center - 48 * d_OSR - 2 * d_OSR + 2 + SYNC_POS * d_OSR;
-//         for (int ii = 0; ii < 156*d_OSR; ii++) {
-//           gr_complex sample = in[burst_start+ii];
-//           std::cout << sample << " ";
-//         }
+        for (int ii = 0; ii < 156*d_OSR; ii++) {
+           gr_complex sample = in[burst_start+ii];
+//            std::cout << sample << " ";
+         }
 
         mafi(&in[burst_start], 148, chan_imp_resp, chan_imp_length*d_OSR, filtered_burst);
 
@@ -450,15 +454,22 @@ bool gsm_receiver_cf::find_sch_burst(const gr_complex *in, const int nitems , fl
 //         std::cout << "# type: complex matrix\n" ;
 //         std::cout << "# rows: 1\n" ;
 //         std::cout << "# columns: " << 148 << "\n";
-//         for (int ii = 0; ii < 148; ii++) {
-//           gr_complex filtered_sample = filtered_burst[ii];
+        for (int ii = 0; ii < 148; ii++) {
+          gr_complex filtered_sample = filtered_burst[ii];
 //           std::cout << filtered_sample << " ";
-//         }
+        }
 
-        viterbi_detector(filtered_burst, BURST_SIZE, rhh, 3, stop_states, 1, output);
+        viterbi_detector(filtered_burst, 148, rhh, 3, stop_states, 2, output);
+//          printf("# name: output\n# type: matrix\n# rows: 1\n# columns: 148\n");
+        for(int i=0; i<BURST_SIZE ; i++){
+           output_binary[i] = (output[i]>0);
+//             printf(" %d", output_binary[i]);
+        }
+//          printf("\n");
+        decode_sch(&output_binary[3], &fn_o, &bsic_o);
 
-        std::cout << "\n\n";
-        DCOUT("strongest_window_nr: " << strongest_window_nr);
+//         std::cout << "fn: " << fn_o << " bsic: " << bsic_o << "\n";
+//         DCOUT("strongest_window_nr: " << strongest_window_nr);
 
         sch_search_state = sch_found;
         break;
@@ -510,6 +521,7 @@ gr_complex gsm_receiver_cf::correlate_sequence(const gr_complex * sequence, cons
     result += sequence[ii] * conj(input_signal[sample_number]);
   }
 
+  result = result/gr_complex(length, 0);
   return result;
 }
 
@@ -546,22 +558,25 @@ inline void gsm_receiver_cf::autocorrelation(const gr_complex * input, gr_comple
 inline void gsm_receiver_cf::mafi(const gr_complex * input, int input_length, gr_complex * filter, int filter_length, gr_complex * output)
 {
   int ii = 0, n, a;
-  std::cout << "\n";
+//   std::cout << "\nfilter:";
+//   for(n = 0; n < filter_length; n++)
+//   {
+//     std::cout << filter[n] << " ";
+//   }
+//   std::cout << "\n";
   for (n = 0; n < input_length; n++) {
     a = n * d_OSR;
     output[n] = 0;
     ii = 0;
-
+    
     while (ii < filter_length) {
-//       if (n == 0) {
-//         std::cout << "a:" << a << " ii: " << ii << " input[" << a + ii << "]: " << input[a+ii] << "\n";
-//       }
       if ((a + ii) >= input_length*d_OSR)
         break;
-
-      output[n] += input[a+ii] * filter[ii];
+//       if(n==0)
+//         std::cout << input[a+ii] << " ";
+      output[n] += input[a+ii] * filter[ii]; //!!conj
       ii++;
     }
-//    output[n] = conj(output[n]);
+    output[n] = output[n]*gr_complex(0,-1);//!!nie powinno tego tu być
   }
 }
