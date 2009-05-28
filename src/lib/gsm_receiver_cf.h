@@ -232,7 +232,7 @@ class gsm_receiver_cf : public gr_block
     //variables used to store result of the find_fcch_burst fuction
     int d_fcch_start_pos;
     float d_freq_offset;
-    double d_best_sum;
+//     double d_best_sum;
 
 //    int d_fcch_count; //!!!
 //    double d_x_temp, d_x2_temp, d_mean;//!!
@@ -255,7 +255,7 @@ class gsm_receiver_cf : public gr_block
     gsm_receiver_cf(gr_feval_dd *tuner, int osr);
 
     bool find_fcch_burst(const gr_complex *in, const int nitems);
-    double compute_freq_offset();
+    double compute_freq_offset(double best_sum, unsigned denominator);
     void set_frequency(double freq_offset);
     inline float compute_phase_diff(gr_complex val1, gr_complex val2);
 

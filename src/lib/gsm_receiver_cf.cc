@@ -151,7 +151,19 @@ gsm_receiver_cf::general_work(int noutput_items,
 
         switch (b_type) {
           case fcch_burst: {
-              
+              int ii;
+              int first_sample = (GUARD_BITS+TAIL_BITS)*d_OSR;
+              int last_sample = first_sample+USEFUL_BITS*d_OSR;
+              double phase_sum = 0;
+              for(ii = first_sample; ii < last_sample; ii++){
+                phase_sum += compute_phase_diff(in[ii], in[ii-1]) - (M_PI / 2) / d_OSR;
+              }
+              std::cout << "freq_offset: " << d_freq_offset << "\n";
+
+              double freq_offset = compute_freq_offset(phase_sum, USEFUL_BITS-TAIL_BITS);
+              d_freq_offset -= freq_offset;
+              set_frequency(d_freq_offset);
+              std::cout << "freq_offset: " << d_freq_offset << "\n";
             }
             break;
           case sch_burst: {
@@ -200,12 +212,14 @@ bool gsm_receiver_cf::find_fcch_burst(const gr_complex *in, const int nitems)
   int start_pos = -1;
   float min_phase_diff;
   float max_phase_diff;
+  double best_sum;
   float lowest_max_min_diff = 99999;
 
   int to_consume = 0;
   int sample_number = 0;
   bool end = false;
   bool result = false;
+  double freq_offset;
   circular_buffer_float::iterator buffer_iter;
 
   enum states {
@@ -269,12 +283,12 @@ bool gsm_receiver_cf::find_fcch_burst(const gr_complex *in, const int nitems)
           if (lowest_max_min_diff > max_phase_diff - min_phase_diff) {
             lowest_max_min_diff = max_phase_diff - min_phase_diff;
             start_pos = sample_number - FCCH_HITS_NEEDED * d_OSR - FCCH_MAX_MISSES * d_OSR;
-            d_best_sum = 0;
+            best_sum = 0;
 
             for (buffer_iter = phase_diff_buffer.begin();
                  buffer_iter != (phase_diff_buffer.end());
                  buffer_iter++) {
-              d_best_sum += *buffer_iter - (M_PI / 2) / d_OSR;
+              best_sum += *buffer_iter - (M_PI / 2) / d_OSR;
             }
           }
         }
@@ -297,7 +311,9 @@ bool gsm_receiver_cf::find_fcch_burst(const gr_complex *in, const int nitems)
         to_consume = start_pos + FCCH_HITS_NEEDED * d_OSR + 1;
 
         d_fcch_start_pos = d_counter + start_pos;
-        compute_freq_offset();
+        freq_offset = compute_freq_offset(best_sum, FCCH_HITS_NEEDED);
+        d_freq_offset -= freq_offset;
+
         end = true;
         result = true;
         break;
@@ -315,21 +331,19 @@ bool gsm_receiver_cf::find_fcch_burst(const gr_complex *in, const int nitems)
   return result;
 }
 
-
-double gsm_receiver_cf::compute_freq_offset()
+double gsm_receiver_cf::compute_freq_offset(double best_sum, unsigned denominator)
 {
   float phase_offset, freq_offset;
 
-  phase_offset = d_best_sum / FCCH_HITS_NEEDED;
+  phase_offset = best_sum / denominator;
   freq_offset = phase_offset * 1625000.0 / (12.0 * M_PI);
-  d_freq_offset -= freq_offset;
 
 //  d_fcch_count++;
 //   d_x_temp += freq_offset;
 //   d_x2_temp += freq_offset * freq_offset;
 //   d_mean = d_x_temp / d_fcch_count;
 
-  DCOUT("freq_offset: " << freq_offset );//" d_best_sum: " << d_best_sum
+  DCOUT("freq_offset: " << freq_offset );//" best_sum: " << best_sum
 //   DCOUT("wariance: " << sqrt((d_x2_temp / d_fcch_count - d_mean * d_mean)) << " fcch_count:" << d_fcch_count << " d_mean: " << d_mean);
 
   return freq_offset;
@@ -545,12 +559,7 @@ gr_complex gsm_receiver_cf::correlate_sequence(const gr_complex * sequence, cons
 //   return result;
 // }
 
-
-// gr_complex gsm_receiver_cf::calc_energy(int window_len){
-//
-// }
-
-//oblicza dodatnią część autokorelacji
+//computes autocorrelation for positive values
 //TODO consider placing this funtion in a separate class for signal processing
 inline void gsm_receiver_cf::autocorrelation(const gr_complex * input, gr_complex * out, int length)
 {
