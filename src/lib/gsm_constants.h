@@ -6,7 +6,7 @@
 
 //Burst timing
 #define TAIL_BITS         3
-#define GUARD_BITS        8    //8.25
+#define GUARD_BITS        8.25
 #define DATA_BITS         58   //size of 1 data block in normal burst
 #define N_TRAIN_BITS      26
 #define N_SYNC_BITS       64
@@ -16,7 +16,7 @@
 
 #define TS_BITS           (TAIL_BITS+USEFUL_BITS+TAIL_BITS+GUARD_BITS)  //a full TS (156)
 #define TS_PER_FRAME      8
-#define FRAME_BITS        (TS_PER_FRAME * TS_BITS + 2) // +2 for extra 8*0.25 guard bits
+#define FRAME_BITS        (TS_PER_FRAME * TS_BITS) 
 #define FCCH_POS          TAIL_BITS
 #define SYNC_POS          39
 #define TRAIN_POS         58
@@ -25,12 +25,18 @@
 #define FCCH_HITS_NEEDED        (USEFUL_BITS - 4) 
 #define FCCH_MAX_MISSES         1
 
+#define CHAN_IMP_RESP_LENGTH  5
+
 static const int SYNC_BITS[] = {
   1, 0, 1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 0,
   0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1,
   0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1,
   0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1
 };
+
+const unsigned FCCH_FRAMES[] = {0,10,20,30,40};
+const unsigned SCH_FRAMES[] = {1,11,21,31,41};
+
 
 // Sync             : .+...++.+..+++.++++++.++++++....++.+..+.+.+++.+.+...+..++++..+..
 // Diff Encoded Sync: .++..+.+++.+..++.....++.....+...+.+++.+++++..+++++..++.+...+.++.
