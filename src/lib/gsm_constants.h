@@ -6,7 +6,9 @@
 
 //Burst timing
 #define TAIL_BITS         3
-#define GUARD_BITS        8.25
+#define GUARD_BITS        8
+#define GUARD_FRACTIONAL  0.25 //fractional part of guard period
+#define GUARD_PERIOD      GUARD_BITS + GUARD_FRACTIONAL
 #define DATA_BITS         58   //size of 1 data block in normal burst
 #define N_TRAIN_BITS      26
 #define N_SYNC_BITS       64
@@ -14,9 +16,9 @@
 #define FCCH_BITS         USEFUL_BITS
 #define BURST_SIZE        (USEFUL_BITS+2*TAIL_BITS)
 
-#define TS_BITS           (TAIL_BITS+USEFUL_BITS+TAIL_BITS+GUARD_BITS)  //a full TS (156)
+#define TS_BITS           (TAIL_BITS+USEFUL_BITS+TAIL_BITS+GUARD_BITS)  //a full TS (156 bits)
 #define TS_PER_FRAME      8
-#define FRAME_BITS        (TS_PER_FRAME * TS_BITS) 
+#define FRAME_BITS        (TS_PER_FRAME * TS_BITS + 2) // 156.25 * 8
 #define FCCH_POS          TAIL_BITS
 #define SYNC_POS          39
 #define TRAIN_POS         58
@@ -24,6 +26,7 @@
 
 #define FCCH_HITS_NEEDED        (USEFUL_BITS - 4) 
 #define FCCH_MAX_MISSES         1
+#define FCCH_MAX_FREQ_OFFSET    100
 
 #define CHAN_IMP_RESP_LENGTH  5
 

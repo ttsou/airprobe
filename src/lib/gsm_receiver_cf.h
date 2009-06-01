@@ -32,6 +32,7 @@
 //TODO !! - move this classes to some other place
 #include <vector>
 #include <algorithm>
+#include <math.h>
 typedef enum {empty, fcch_burst, sch_burst, normal_burst, rach_burst, dummy} burst_type;
 typedef enum {unknown, multiframe_26, multiframe_51} multiframe_type;
 
@@ -85,20 +86,30 @@ class multiframe_configuration
 class burst_counter
 {
   private:
+    const int d_OSR;
     uint32_t d_t1, d_t2, d_t3, d_timeslot_nr;
+    double d_first_sample_offset;
+    double d_offset;
   public:
-    burst_counter():
+    burst_counter(int osr):
+        d_OSR(osr),
         d_t1(0),
         d_t2(0),
         d_t3(0),
-        d_timeslot_nr(0) {
+        d_timeslot_nr(0),
+        d_first_sample_offset(0),
+        d_offset(0) {
     }
 
-    burst_counter(uint32_t t1, uint32_t t2, uint32_t t3, uint32_t timeslot_nr):
+    burst_counter(int osr, uint32_t t1, uint32_t t2, uint32_t t3, uint32_t timeslot_nr):
+        d_OSR(osr),
         d_t1(t1),
         d_t2(t2),
         d_t3(t3),
-        d_timeslot_nr(timeslot_nr) {
+        d_timeslot_nr(timeslot_nr),
+        d_offset(0) {
+      double first_sample_position = (get_frame_nr()*8+timeslot_nr)*TS_BITS;
+      d_first_sample_offset = first_sample_position - floor(first_sample_position);
     }
 
     burst_counter & operator++(int) {
@@ -113,6 +124,10 @@ class burst_counter
         d_t2 = (d_t2 + 1) % 26;
         d_t3 = (d_t3 + 1) % 51;
       }
+      
+      d_first_sample_offset += GUARD_FRACTIONAL * d_OSR;
+      d_offset = floor(d_first_sample_offset);
+      d_first_sample_offset = d_first_sample_offset - d_offset;
       return (*this);
     }
 
@@ -121,6 +136,9 @@ class burst_counter
       d_t2 = t2;
       d_t3 = t3;
       d_timeslot_nr = timeslot_nr;
+      double first_sample_position = (get_frame_nr()*8+timeslot_nr)*TS_BITS;
+      d_first_sample_offset = first_sample_position - floor(first_sample_position);
+      d_offset = 0;
     }
 
     uint32_t get_t1() {
@@ -140,7 +158,11 @@ class burst_counter
     }
 
     uint32_t get_frame_nr() {
-      return   (51 * 26 * d_t1) + (51 * (((d_t3 + 26) - d_t2) % 26)) + d_t3;
+      return (51 * 26 * d_t1) + (51 * (((d_t3 + 26) - d_t2) % 26)) + d_t3;
+    }
+    
+    unsigned get_offset(){
+       return (unsigned)d_offset;
     }
 };
 
@@ -180,7 +202,7 @@ burst_type channel_configuration::get_burst_type(burst_counter burst_nr)
   uint32_t timeslot_nr = burst_nr.get_timeslot_nr();
   multiframe_type m_type = d_timeslots_descriptions[timeslot_nr].get_type();
   uint32_t nr;
-  
+
   switch (m_type) {
     case multiframe_26:
       nr = burst_nr.get_t2();
@@ -227,7 +249,7 @@ class gsm_receiver_cf : public gr_block
     gr_complex d_sch_training_seq[N_SYNC_BITS]; //encoded training sequence of a SCH burst
 
     gr_feval_dd *d_tuner;
-    int d_counter;
+    unsigned d_counter;
 
     //variables used to store result of the find_fcch_burst fuction
     int d_fcch_start_pos;

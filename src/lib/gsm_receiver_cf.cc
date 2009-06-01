@@ -36,7 +36,7 @@
 #include <sch.h>
 
 #define FCCH_BUFFER_SIZE (FCCH_HITS_NEEDED)
-#define SYNC_SEARCH_RANGE 60
+#define SYNC_SEARCH_RANGE 30
 
 //TODO !! - move this methods to some else place
 
@@ -70,7 +70,8 @@ gsm_receiver_cf::gsm_receiver_cf(gr_feval_dd *tuner, int osr)
     d_counter(0),
     d_fcch_start_pos(0),
     d_freq_offset(0),
-    d_state(first_fcch_search)
+    d_state(first_fcch_search),
+    d_burst_nr(osr)
 //    d_fcch_count(0), //!!
 //    d_x_temp(0),//!!
 //    d_x2_temp(0)//!!
@@ -128,19 +129,35 @@ gsm_receiver_cf::general_work(int noutput_items,
       }
       break;
 
-    case sch_search:
+    case sch_search: {
+      gr_complex chan_imp_resp[CHAN_IMP_RESP_LENGTH*d_OSR];
+      int t1, t2, t3;
+      int burst_start = 0;
+      unsigned char output_binary[BURST_SIZE];
+
       if (find_sch_burst(in, ninput_items[0], out)) {
-        d_channel_conf.set_multiframe_type(0, multiframe_51);
-        d_channel_conf.set_burst_types(0, FCCH_FRAMES, sizeof(FCCH_FRAMES) / sizeof(unsigned), fcch_burst);
-        d_channel_conf.set_burst_types(0, SCH_FRAMES, sizeof(SCH_FRAMES) / sizeof(unsigned), sch_burst);
-        d_burst_nr++;
-        d_state = synchronized;
+        burst_start = get_sch_chan_imp_resp(in, chan_imp_resp);
+        detect_burst(in, chan_imp_resp, burst_start, output_binary);
+        if (decode_sch(&output_binary[3], &t1, &t2, &t3, &d_ncc, &d_bcc) == 0) {
+          DCOUT("sch burst_start: " << burst_start);
+          d_burst_nr.set(t1, t2, t3, 0);
+          DCOUT("bcc: " << d_bcc << " ncc: " << d_ncc << " t1: " << t1 << " t2: " << t2 << " t3: " << t3);
+          d_channel_conf.set_multiframe_type(0, multiframe_51);
+          d_channel_conf.set_burst_types(0, FCCH_FRAMES, sizeof(FCCH_FRAMES) / sizeof(unsigned), fcch_burst);
+          d_channel_conf.set_burst_types(0, SCH_FRAMES, sizeof(SCH_FRAMES) / sizeof(unsigned), sch_burst);
+          d_burst_nr++;
+          consume_each(burst_start + BURST_SIZE * d_OSR);
+          d_state = synchronized;
+        } else {
+          d_state = next_fcch_search;
+        }
       } else {
         d_state = sch_search;
       }
       break;
+    }
 
-      //in this state receiver is synchronized and it processes bursts according to burst type for given burst number
+    //in this state receiver is synchronized and it processes bursts according to burst type for given burst number
     case synchronized: {
       gr_complex chan_imp_resp[100];//!!
       burst_type b_type = d_channel_conf.get_burst_type(d_burst_nr);
@@ -152,20 +169,20 @@ gsm_receiver_cf::general_work(int noutput_items,
       switch (b_type) {
         case fcch_burst: {
           int ii;
-          int first_sample = (GUARD_BITS+TAIL_BITS) *d_OSR;
-          int last_sample = first_sample+USEFUL_BITS*d_OSR;
+          int first_sample = ceil((GUARD_PERIOD + 2*TAIL_BITS) * d_OSR)+1;
+          int last_sample = first_sample + USEFUL_BITS * d_OSR;
           double phase_sum = 0;
           for (ii = first_sample; ii < last_sample; ii++) {
-            double phase_diff = compute_phase_diff(in[ii], in[ii-1]) * d_OSR;
-//                   std::cout << "phase_diff: " << phase_diff << "\n";
+            double phase_diff = compute_phase_diff(in[ii], in[ii-1]) - (M_PI / 2) / d_OSR;
             phase_sum += phase_diff;
           }
-          //std::cout << "phase_sum: " << phase_sum << "\n";
-
-//               double freq_offset = compute_freq_offset(phase_sum, USEFUL_BITS-TAIL_BITS);
-//               d_freq_offset -= freq_offset;
-//               set_frequency(d_freq_offset);
-//              std::cout << "freq_offset: " << d_freq_offset << "\n";
+          double freq_offset = compute_freq_offset(phase_sum, last_sample - first_sample);
+          if(abs(freq_offset) > FCCH_MAX_FREQ_OFFSET){
+            d_freq_offset -= freq_offset;
+            set_frequency(d_freq_offset);
+            DCOUT("adjusting frequency, new frequency offset: " << d_freq_offset << "\n");
+          }
+          
         }
         break;
         case sch_burst: {
@@ -174,15 +191,15 @@ gsm_receiver_cf::general_work(int noutput_items,
           detect_burst(in, chan_imp_resp, burst_start, output_binary);
           if (decode_sch(&output_binary[3], &t1, &t2, &t3, &d_ncc, &d_bcc) == 0) {
 //                d_burst_nr.set(t1, t2, t3, 0);
-            printf("bcc: %d, ncc: %d, t1: %d, t2: %d, t3: %d\n", d_bcc, d_ncc, t1, t2, t3);
-            offset =  burst_start - GUARD_BITS * d_OSR;
+            DCOUT("bcc: " << d_bcc << " ncc: " << d_ncc << " t1: " << t1 << " t2: " << t2 << " t3: " << t3);
+            offset =  burst_start - floor((GUARD_PERIOD) * d_OSR);
+            DCOUT(offset);
             to_consume += offset;
           }
-          std::cout << offset << std::endl;
         }
         break;
         case normal_burst:
-
+          
           break;
 
         case rach_burst:
@@ -194,7 +211,8 @@ gsm_receiver_cf::general_work(int noutput_items,
       }
 
       d_burst_nr++;
-      to_consume += floor(TS_BITS * d_OSR);
+
+      to_consume += TS_BITS * d_OSR + d_burst_nr.get_offset();
       consume_each(to_consume);
     }
     break;
@@ -315,6 +333,7 @@ bool gsm_receiver_cf::find_fcch_burst(const gr_complex *in, const int nitems)
         d_fcch_start_pos = d_counter + start_pos;
         freq_offset = compute_freq_offset(best_sum, FCCH_HITS_NEEDED);
         d_freq_offset -= freq_offset;
+        DCOUT("freq_offset: " << d_freq_offset);
 
         end = true;
         result = true;
@@ -345,7 +364,7 @@ double gsm_receiver_cf::compute_freq_offset(double best_sum, unsigned denominato
 //   d_x2_temp += freq_offset * freq_offset;
 //   d_mean = d_x_temp / d_fcch_count;
 
-  DCOUT("freq_offset: " << freq_offset);   //" best_sum: " << best_sum
+//   DCOUT("freq_offset: " << freq_offset);   //" best_sum: " << best_sum
 //   DCOUT("wariance: " << sqrt((d_x2_temp / d_fcch_count - d_mean * d_mean)) << " fcch_count:" << d_fcch_count << " d_mean: " << d_mean);
 
   return freq_offset;
@@ -368,19 +387,16 @@ bool gsm_receiver_cf::find_sch_burst(const gr_complex *in, const int nitems , fl
   bool end = false;
   bool result = false;
   int sample_nr_near_sch_start = d_fcch_start_pos + (FRAME_BITS - SAFETY_MARGIN) * d_OSR;
-  gr_complex chan_imp_resp[CHAN_IMP_RESP_LENGTH*d_OSR];
+
 //   vector_complex correlation_buffer;
 //   vector_float power_buffer;
 //   vector_float window_energy_buffer;
 
   enum states {
-    start, reach_sch, find_sch_start, detect_and_decode_sch, search_not_finished, sch_found
+    start, reach_sch, search_not_finished, sch_found
   } sch_search_state;
 
   sch_search_state = start;
-  int t1, t2, t3;
-  int burst_start = 0;
-  unsigned char output_binary[BURST_SIZE];
 
   while (!end) {
     switch (sch_search_state) {
@@ -389,7 +405,7 @@ bool gsm_receiver_cf::find_sch_burst(const gr_complex *in, const int nitems , fl
         if (d_counter < sample_nr_near_sch_start) {
           sch_search_state = reach_sch;
         } else {
-          sch_search_state = find_sch_start;
+          sch_search_state = sch_found;
         }
         break;
 
@@ -402,26 +418,13 @@ bool gsm_receiver_cf::find_sch_burst(const gr_complex *in, const int nitems , fl
         sch_search_state = search_not_finished;
         break;
 
-      case find_sch_start:
-        burst_start = get_sch_chan_imp_resp(in, chan_imp_resp);
-        sch_search_state = detect_and_decode_sch;
-        break;
-      case detect_and_decode_sch:
-        detect_burst(in, chan_imp_resp, burst_start, output_binary);
-        decode_sch(&output_binary[3], &t1, &t2, &t3, &d_ncc, &d_bcc);
-        d_burst_nr.set(t1, t2, t3, 0);
-
-        printf("bcc: %d, ncc: %d, t1: %d, t2: %d, t3: %d\n", d_bcc, d_ncc, t1, t2, t3);
-        to_consume += burst_start + BURST_SIZE * d_OSR;
-        sch_search_state = sch_found;
-        break;
-
       case search_not_finished:
         result = false;
         end = true;
         break;
 
       case sch_found:
+        to_consume = 0;
         result = true;
         end = true;
         break;
