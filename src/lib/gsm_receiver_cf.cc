@@ -36,7 +36,7 @@
 #include <sch.h>
 
 #define FCCH_BUFFER_SIZE (FCCH_HITS_NEEDED)
-#define SYNC_SEARCH_RANGE 40
+#define SYNC_SEARCH_RANGE 60
 
 //TODO !! - move this methods to some else place
 
@@ -142,60 +142,62 @@ gsm_receiver_cf::general_work(int noutput_items,
 
       //in this state receiver is synchronized and it processes bursts according to burst type for given burst number
     case synchronized: {
-        gr_complex chan_imp_resp[100];//!!
-        burst_type b_type = d_channel_conf.get_burst_type(d_burst_nr);
-        int burst_start;
-        int offset = 0;
-        int to_consume = 0;
-        unsigned char output_binary[BURST_SIZE];
+      gr_complex chan_imp_resp[100];//!!
+      burst_type b_type = d_channel_conf.get_burst_type(d_burst_nr);
+      int burst_start;
+      int offset = 0;
+      int to_consume = 0;
+      unsigned char output_binary[BURST_SIZE];
 
-        switch (b_type) {
-          case fcch_burst: {
-              int ii;
-              int first_sample = (GUARD_BITS+TAIL_BITS)*d_OSR;
-              int last_sample = first_sample+USEFUL_BITS*d_OSR;
-              double phase_sum = 0;
-              for(ii = first_sample; ii < last_sample; ii++){
-                phase_sum += compute_phase_diff(in[ii], in[ii-1]) - (M_PI / 2) / d_OSR;
-              }
-              std::cout << "freq_offset: " << d_freq_offset << "\n";
+      switch (b_type) {
+        case fcch_burst: {
+          int ii;
+          int first_sample = (GUARD_BITS+TAIL_BITS) *d_OSR;
+          int last_sample = first_sample+USEFUL_BITS*d_OSR;
+          double phase_sum = 0;
+          for (ii = first_sample; ii < last_sample; ii++) {
+            double phase_diff = compute_phase_diff(in[ii], in[ii-1]) * d_OSR;
+//                   std::cout << "phase_diff: " << phase_diff << "\n";
+            phase_sum += phase_diff;
+          }
+          //std::cout << "phase_sum: " << phase_sum << "\n";
 
-              double freq_offset = compute_freq_offset(phase_sum, USEFUL_BITS-TAIL_BITS);
-              d_freq_offset -= freq_offset;
-              set_frequency(d_freq_offset);
-              std::cout << "freq_offset: " << d_freq_offset << "\n";
-            }
-            break;
-          case sch_burst: {
-              int t1, t2, t3, d_ncc, d_bcc;
-              burst_start = get_sch_chan_imp_resp(in, chan_imp_resp);
-              detect_burst(in, chan_imp_resp, burst_start, output_binary);
-              if(decode_sch(&output_binary[3], &t1, &t2, &t3, &d_ncc, &d_bcc) == 0){
-//                d_burst_nr.set(t1, t2, t3, 0);
-                printf("bcc: %d, ncc: %d, t1: %d, t2: %d, t3: %d\n", d_bcc, d_ncc, t1, t2, t3);
-                offset =  burst_start - GUARD_BITS * d_OSR;
-                to_consume += offset;
-              }
-              std::cout << offset << std::endl;
-            }
-            break;
-          case normal_burst:
-
-            break;
-
-          case rach_burst:
-            break;
-          case dummy:
-            break;
-          case empty:
-            break;
+//               double freq_offset = compute_freq_offset(phase_sum, USEFUL_BITS-TAIL_BITS);
+//               d_freq_offset -= freq_offset;
+//               set_frequency(d_freq_offset);
+//              std::cout << "freq_offset: " << d_freq_offset << "\n";
         }
+        break;
+        case sch_burst: {
+          int t1, t2, t3, d_ncc, d_bcc;
+          burst_start = get_sch_chan_imp_resp(in, chan_imp_resp);
+          detect_burst(in, chan_imp_resp, burst_start, output_binary);
+          if (decode_sch(&output_binary[3], &t1, &t2, &t3, &d_ncc, &d_bcc) == 0) {
+//                d_burst_nr.set(t1, t2, t3, 0);
+            printf("bcc: %d, ncc: %d, t1: %d, t2: %d, t3: %d\n", d_bcc, d_ncc, t1, t2, t3);
+            offset =  burst_start - GUARD_BITS * d_OSR;
+            to_consume += offset;
+          }
+          std::cout << offset << std::endl;
+        }
+        break;
+        case normal_burst:
 
-        d_burst_nr++;
-        to_consume += floor(TS_BITS * d_OSR);
-        consume_each(to_consume);
+          break;
+
+        case rach_burst:
+          break;
+        case dummy:
+          break;
+        case empty:
+          break;
       }
-      break;
+
+      d_burst_nr++;
+      to_consume += floor(TS_BITS * d_OSR);
+      consume_each(to_consume);
+    }
+    break;
   }
 
   return produced_out;
@@ -277,8 +279,8 @@ bool gsm_receiver_cf::find_fcch_burst(const gr_complex *in, const int nitems)
           //find difference between minimal and maximal element in the buffer
           //for FCCH this value should be low
           //this part is searching for a region where this value is lowest
-          min_phase_diff = *(min_element(phase_diff_buffer.begin(), phase_diff_buffer.end()));
-          max_phase_diff = *(max_element(phase_diff_buffer.begin(), phase_diff_buffer.end()));
+          min_phase_diff = * (min_element(phase_diff_buffer.begin(), phase_diff_buffer.end()));
+          max_phase_diff = * (max_element(phase_diff_buffer.begin(), phase_diff_buffer.end()));
 
           if (lowest_max_min_diff > max_phase_diff - min_phase_diff) {
             lowest_max_min_diff = max_phase_diff - min_phase_diff;
@@ -343,7 +345,7 @@ double gsm_receiver_cf::compute_freq_offset(double best_sum, unsigned denominato
 //   d_x2_temp += freq_offset * freq_offset;
 //   d_mean = d_x_temp / d_fcch_count;
 
-  DCOUT("freq_offset: " << freq_offset );//" best_sum: " << best_sum
+  DCOUT("freq_offset: " << freq_offset);   //" best_sum: " << best_sum
 //   DCOUT("wariance: " << sqrt((d_x2_temp / d_fcch_count - d_mean * d_mean)) << " fcch_count:" << d_fcch_count << " d_mean: " << d_mean);
 
   return freq_offset;
@@ -443,7 +445,7 @@ int gsm_receiver_cf::get_sch_chan_imp_resp(const gr_complex *in, gr_complex * ch
   float max_correlation = 0;
   float energy = 0;
 
-  for (int ii = SYNC_POS * d_OSR; ii < (SYNC_POS + SYNC_SEARCH_RANGE)*d_OSR; ii++) {
+  for (int ii = SYNC_POS * d_OSR; ii < (SYNC_POS + SYNC_SEARCH_RANGE) *d_OSR; ii++) {
     gr_complex correlation = correlate_sequence(&d_sch_training_seq[5], &in[ii], N_SYNC_BITS - 10);
     correlation_buffer.push_back(correlation);
     power_buffer.push_back(pow(abs(correlation), 2));
@@ -456,7 +458,7 @@ int gsm_receiver_cf::get_sch_chan_imp_resp(const gr_complex *in, gr_complex * ch
     vector_float::iterator iter_ii = iter;
     energy = 0;
 
-    for (int ii = 0; ii < (d_chan_imp_length)*d_OSR; ii++, iter_ii++) {
+    for (int ii = 0; ii < (d_chan_imp_length) *d_OSR; ii++, iter_ii++) {
       if (iter_ii == power_buffer.end()) {
         loop_end = true;
         break;
@@ -474,7 +476,7 @@ int gsm_receiver_cf::get_sch_chan_imp_resp(const gr_complex *in, gr_complex * ch
   d_channel_imp_resp.clear();
 
   max_correlation = 0;
-  for (int ii = 0; ii < (d_chan_imp_length)*d_OSR; ii++) {
+  for (int ii = 0; ii < (d_chan_imp_length) *d_OSR; ii++) {
     gr_complex correlation = correlation_buffer[strongest_window_nr + ii];
     if (abs(correlation) > max_correlation) {
       chan_imp_resp_center = ii;
@@ -589,6 +591,6 @@ inline void gsm_receiver_cf::mafi(const gr_complex * input, int input_length, gr
       output[n] += input[a+ii] * filter[ii]; //!!conj
       ii++;
     }
-    output[n] = output[n] * gr_complex(0, -1);//!!this shouldn't be here
+    output[n] = output[n] * gr_complex(0, -1);   //!!this shouldn't be here
   }
 }

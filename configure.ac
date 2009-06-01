@@ -26,6 +26,7 @@ AM_CONFIG_HEADER(config.h)
 AC_CANONICAL_TARGET([])
 AC_CONFIG_AUX_DIR([.])
 AM_INIT_AUTOMAKE(gsm-receiver,0.0.1)
+AC_CONFIG_MACRO_DIR([config])
 
 GR_X86_64
 dnl LF_CONFIGURE_CC
@@ -53,7 +54,6 @@ AC_LIBTOOL_WIN32_DLL
 AC_ENABLE_SHARED	dnl do build shared libraries
 AC_DISABLE_STATIC	dnl don't build static libraries
 m4_ifdef([LT_INIT],[LT_INIT],[AC_PROG_LIBTOOL])
-
 dnl Locate python, SWIG, etc
 GR_NO_UNDEFINED
 GR_SCRIPTING
