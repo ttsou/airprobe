@@ -73,9 +73,6 @@ gsm_receiver_cf::gsm_receiver_cf(gr_feval_dd *tuner, int osr)
     d_freq_offset(0),
     d_state(first_fcch_search),
     d_burst_nr(osr)
-//    d_fcch_count(0), //!!
-//    d_x_temp(0),//!!
-//    d_x2_temp(0)//!!
 {
   int i;
   gmsk_mapper(SYNC_BITS, N_SYNC_BITS, d_sch_training_seq, gr_complex(0.0,-1.0));
@@ -208,23 +205,15 @@ gsm_receiver_cf::general_work(int noutput_items,
         break;
 
         case normal_burst:
-//           std::cout << "# name: norm_complex\n" ;
-//           std::cout << "# type: complex matrix\n" ;
-//           std::cout << "# rows: 1\n" ;
-//           std::cout << "# columns: " << floor(d_OSR*(TS_BITS+GUARD_PERIOD)) << "\n";
           burst_start = get_norm_chan_imp_resp(in, chan_imp_resp, TRAIN_SEARCH_RANGE);
-//           std::cout << burst_start << "\n" ;
           detect_burst(in, &d_channel_imp_resp[0], burst_start, output_binary);
 //           printf("burst = [ ");
 // 
-          for (int i = 0; i < BURST_SIZE ; i++) {
-            printf(" %d", output_binary[i]);
-          }
-          printf("];\n");
-//           
-//           for(int i=0; i<floor(d_OSR*(TS_BITS+GUARD_PERIOD)); i++){
-//             std::cout << in[i] << "\n";
+//           for (int i = 0; i < BURST_SIZE ; i++) {
+//             printf(" %d", output_binary[i]);
 //           }
+//           printf("];\n");
+
           break;
 
         case rach_burst:
@@ -380,18 +369,8 @@ bool gsm_receiver_cf::find_fcch_burst(const gr_complex *in, const int nitems)
 double gsm_receiver_cf::compute_freq_offset(double best_sum, unsigned denominator)
 {
   float phase_offset, freq_offset;
-
   phase_offset = best_sum / denominator;
   freq_offset = phase_offset * 1625000.0 / (12.0 * M_PI);
-
-//  d_fcch_count++;
-//   d_x_temp += freq_offset;
-//   d_x2_temp += freq_offset * freq_offset;
-//   d_mean = d_x_temp / d_fcch_count;
-
-//   DCOUT("freq_offset: " << freq_offset);   //" best_sum: " << best_sum
-//   DCOUT("wariance: " << sqrt((d_x2_temp / d_fcch_count - d_mean * d_mean)) << " fcch_count:" << d_fcch_count << " d_mean: " << d_mean);
-
   return freq_offset;
 }
 
@@ -412,10 +391,6 @@ bool gsm_receiver_cf::find_sch_burst(const gr_complex *in, const int nitems , fl
   bool end = false;
   bool result = false;
   int sample_nr_near_sch_start = d_fcch_start_pos + (FRAME_BITS - SAFETY_MARGIN) * d_OSR;
-
-//   vector_complex correlation_buffer;
-//   vector_float power_buffer;
-//   vector_float window_energy_buffer;
 
   enum states {
     start, reach_sch, search_not_finished, sch_found
@@ -621,20 +596,13 @@ int gsm_receiver_cf::get_norm_chan_imp_resp(const gr_complex *in, gr_complex * c
   int chan_imp_resp_center;
   float max_correlation = 0;
   float energy = 0;
+  
   int search_start_pos = floor((TRAIN_POS + GUARD_PERIOD) * d_OSR);
   int search_stop_pos = search_start_pos + search_range * d_OSR;
-//   std::cout << "# name: correlation\n" ;
-//   std::cout << "# type: complex matrix\n" ;
-//   std::cout << "# rows: 1\n" ;
-//   std::cout << "# columns: " << (search_stop_pos - search_start_pos) << "\n";
-
 
   for (int ii = search_start_pos; ii < search_stop_pos; ii++) {
-//    for (int ii = SYNC_POS * d_OSR; ii < (SYNC_POS + SYNC_SEARCH_RANGE) *d_OSR; ii++) {
-//   for (int ii = 1; ii < (150) *d_OSR; ii++) {
     gr_complex correlation = correlate_sequence(&d_norm_training_seq[d_bcc][5], &in[ii], N_TRAIN_BITS - 10);
 
-//     std::cout << correlation << "\n" ;
     correlation_buffer.push_back(correlation);
     power_buffer.push_back(pow(abs(correlation), 2));
   }
@@ -657,7 +625,6 @@ int gsm_receiver_cf::get_norm_chan_imp_resp(const gr_complex *in, gr_complex * c
       break;
     }
     iter++;
-//     std::cout << energy << "\n";
     window_energy_buffer.push_back(energy);
   }
   
