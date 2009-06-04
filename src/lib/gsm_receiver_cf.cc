@@ -37,6 +37,7 @@
 
 #define FCCH_BUFFER_SIZE (FCCH_HITS_NEEDED)
 #define SYNC_SEARCH_RANGE 30
+#define TRAIN_SEARCH_RANGE 40
 
 //TODO !! - move this methods to some else place
 
@@ -76,7 +77,12 @@ gsm_receiver_cf::gsm_receiver_cf(gr_feval_dd *tuner, int osr)
 //    d_x_temp(0),//!!
 //    d_x2_temp(0)//!!
 {
-  gmsk_mapper(SYNC_BITS, d_sch_training_seq, N_SYNC_BITS);
+  int i;
+  gmsk_mapper(SYNC_BITS, N_SYNC_BITS, d_sch_training_seq, gr_complex(0.0,-1.0));
+
+  for (i = 0; i < TRAIN_SEQ_NUM; i++) {
+    gmsk_mapper(train_seq[i], N_TRAIN_BITS, d_norm_training_seq[i], gr_complex(1.0,0.0));
+  }
 }
 
 /*
@@ -142,10 +148,12 @@ gsm_receiver_cf::general_work(int noutput_items,
           DCOUT("sch burst_start: " << burst_start);
           d_burst_nr.set(t1, t2, t3, 0);
           DCOUT("bcc: " << d_bcc << " ncc: " << d_ncc << " t1: " << t1 << " t2: " << t2 << " t3: " << t3);
-          d_channel_conf.set_multiframe_type(0, multiframe_51);
-          d_channel_conf.set_burst_types(0, FCCH_FRAMES, sizeof(FCCH_FRAMES) / sizeof(unsigned), fcch_burst);
-          d_channel_conf.set_burst_types(0, SCH_FRAMES, sizeof(SCH_FRAMES) / sizeof(unsigned), sch_burst);
+          d_channel_conf.set_multiframe_type(TSC0, multiframe_51);
+          d_channel_conf.set_burst_types(TSC0, FCCH_FRAMES, sizeof(FCCH_FRAMES) / sizeof(unsigned), fcch_burst);
+          d_channel_conf.set_burst_types(TSC0, SCH_FRAMES, sizeof(SCH_FRAMES) / sizeof(unsigned), sch_burst);
+          d_channel_conf.set_burst_types(TSC0, BCCH_FRAMES, sizeof(BCCH_FRAMES) / sizeof(unsigned), normal_burst);
           d_burst_nr++;
+
           consume_each(burst_start + BURST_SIZE * d_OSR);
           d_state = synchronized;
         } else {
@@ -159,7 +167,7 @@ gsm_receiver_cf::general_work(int noutput_items,
 
     //in this state receiver is synchronized and it processes bursts according to burst type for given burst number
     case synchronized: {
-      gr_complex chan_imp_resp[100];//!!
+      gr_complex chan_imp_resp[d_chan_imp_length*d_OSR];
       burst_type b_type = d_channel_conf.get_burst_type(d_burst_nr);
       int burst_start;
       int offset = 0;
@@ -169,7 +177,7 @@ gsm_receiver_cf::general_work(int noutput_items,
       switch (b_type) {
         case fcch_burst: {
           int ii;
-          int first_sample = ceil((GUARD_PERIOD + 2*TAIL_BITS) * d_OSR)+1;
+          int first_sample = ceil((GUARD_PERIOD + 2 * TAIL_BITS) * d_OSR) + 1;
           int last_sample = first_sample + USEFUL_BITS * d_OSR;
           double phase_sum = 0;
           for (ii = first_sample; ii < last_sample; ii++) {
@@ -177,18 +185,18 @@ gsm_receiver_cf::general_work(int noutput_items,
             phase_sum += phase_diff;
           }
           double freq_offset = compute_freq_offset(phase_sum, last_sample - first_sample);
-          if(abs(freq_offset) > FCCH_MAX_FREQ_OFFSET){
+          if (abs(freq_offset) > FCCH_MAX_FREQ_OFFSET) {
             d_freq_offset -= freq_offset;
             set_frequency(d_freq_offset);
             DCOUT("adjusting frequency, new frequency offset: " << d_freq_offset << "\n");
           }
-          
         }
         break;
+
         case sch_burst: {
           int t1, t2, t3, d_ncc, d_bcc;
           burst_start = get_sch_chan_imp_resp(in, chan_imp_resp);
-          detect_burst(in, chan_imp_resp, burst_start, output_binary);
+          detect_burst(in, &d_channel_imp_resp[0], burst_start, output_binary);
           if (decode_sch(&output_binary[3], &t1, &t2, &t3, &d_ncc, &d_bcc) == 0) {
 //                d_burst_nr.set(t1, t2, t3, 0);
             DCOUT("bcc: " << d_bcc << " ncc: " << d_ncc << " t1: " << t1 << " t2: " << t2 << " t3: " << t3);
@@ -198,8 +206,25 @@ gsm_receiver_cf::general_work(int noutput_items,
           }
         }
         break;
+
         case normal_burst:
-          
+//           std::cout << "# name: norm_complex\n" ;
+//           std::cout << "# type: complex matrix\n" ;
+//           std::cout << "# rows: 1\n" ;
+//           std::cout << "# columns: " << floor(d_OSR*(TS_BITS+GUARD_PERIOD)) << "\n";
+          burst_start = get_norm_chan_imp_resp(in, chan_imp_resp, TRAIN_SEARCH_RANGE);
+//           std::cout << burst_start << "\n" ;
+          detect_burst(in, &d_channel_imp_resp[0], burst_start, output_binary);
+//           printf("burst = [ ");
+// 
+          for (int i = 0; i < BURST_SIZE ; i++) {
+            printf(" %d", output_binary[i]);
+          }
+          printf("];\n");
+//           
+//           for(int i=0; i<floor(d_OSR*(TS_BITS+GUARD_PERIOD)); i++){
+//             std::cout << in[i] << "\n";
+//           }
           break;
 
         case rach_burst:
@@ -517,14 +542,14 @@ void gsm_receiver_cf::detect_burst(const gr_complex * in, gr_complex * chan_imp_
 }
 
 //TODO consider placing this funtion in a separate class for signal processing
-void gsm_receiver_cf::gmsk_mapper(const int * input, gr_complex * output, int ninput)
+void gsm_receiver_cf::gmsk_mapper(const unsigned char * input, int ninput, gr_complex * gmsk_output, gr_complex start_point)
 {
   gr_complex j = gr_complex(0.0, 1.0);
 
   int current_symbol;
   int encoded_symbol;
   int previous_symbol = 2 * input[0] - 1;
-  output[0] = gr_complex(1.0, 0.0);
+  gmsk_output[0] = start_point;
 
   for (int i = 1; i < ninput; i++) {
     //change bits representation to NRZ
@@ -532,7 +557,7 @@ void gsm_receiver_cf::gmsk_mapper(const int * input, gr_complex * output, int ni
     //differentially encode
     encoded_symbol = current_symbol * previous_symbol;
     //and do gmsk mapping
-    output[i] = j * gr_complex(encoded_symbol, 0.0) * output[i-1];
+    gmsk_output[i] = j * gr_complex(encoded_symbol, 0.0) * gmsk_output[i-1];
     previous_symbol = current_symbol;
   }
 }
@@ -591,9 +616,123 @@ inline void gsm_receiver_cf::mafi(const gr_complex * input, int input_length, gr
     while (ii < filter_length) {
       if ((a + ii) >= input_length*d_OSR)
         break;
+      output[n] += input[a+ii] * filter[ii];
+      ii++;
+    }
+  }
+}
+
+int gsm_receiver_cf::get_norm_chan_imp_resp(const gr_complex *in, gr_complex * chan_imp_resp, unsigned search_range)
+{
+  vector_complex correlation_buffer;
+  vector_float power_buffer;
+  vector_float window_energy_buffer;
+
+  int strongest_window_nr;
+  int burst_start = 0;
+  int chan_imp_resp_center;
+  float max_correlation = 0;
+  float energy = 0;
+  int search_start_pos = floor((TRAIN_POS + GUARD_PERIOD) * d_OSR);
+  int search_stop_pos = search_start_pos + search_range * d_OSR;
+//   std::cout << "# name: correlation\n" ;
+//   std::cout << "# type: complex matrix\n" ;
+//   std::cout << "# rows: 1\n" ;
+//   std::cout << "# columns: " << (search_stop_pos - search_start_pos) << "\n";
+
+
+  for (int ii = search_start_pos; ii < search_stop_pos; ii++) {
+//    for (int ii = SYNC_POS * d_OSR; ii < (SYNC_POS + SYNC_SEARCH_RANGE) *d_OSR; ii++) {
+//   for (int ii = 1; ii < (150) *d_OSR; ii++) {
+    gr_complex correlation = correlate_sequence(&d_norm_training_seq[d_bcc][5], &in[ii], N_TRAIN_BITS - 10);
+
+//     std::cout << correlation << "\n" ;
+    correlation_buffer.push_back(correlation);
+    power_buffer.push_back(pow(abs(correlation), 2));
+  }
+
+  //compute window energies
+  vector_float::iterator iter = power_buffer.begin();
+  bool loop_end = false;
+  while (iter != power_buffer.end()) {
+    vector_float::iterator iter_ii = iter;
+    energy = 0;
+
+    for (int ii = 0; ii < (d_chan_imp_length)*d_OSR; ii++, iter_ii++) {
+      if (iter_ii == power_buffer.end()) {
+        loop_end = true;
+        break;
+      }
+      energy += (*iter_ii);
+    }
+    if (loop_end) {
+      break;
+    }
+    iter++;
+//     std::cout << energy << "\n";
+    window_energy_buffer.push_back(energy);
+  }
+  
+
+
+  strongest_window_nr = max_element(window_energy_buffer.begin(), window_energy_buffer.end()) - window_energy_buffer.begin();
+  d_channel_imp_resp.clear();
+  strongest_window_nr = 36;
+
+  max_correlation = 0;
+  for (int ii = 0; ii < (d_chan_imp_length)*d_OSR; ii++) {
+    gr_complex correlation = correlation_buffer[strongest_window_nr + ii];
+    if (abs(correlation) > max_correlation) {
+      chan_imp_resp_center = ii;
+      max_correlation = abs(correlation);
+    }
+    d_channel_imp_resp.push_back(correlation);
+    chan_imp_resp[ii] = correlation;
+  }
+
+  std::cout << "center: " << strongest_window_nr + chan_imp_resp_center  << " stronegest window nr: " <<  strongest_window_nr << "\n";
+  
+  burst_start = search_start_pos + strongest_window_nr + chan_imp_resp_center - 66 * d_OSR - 2 * d_OSR + 2;
+  return burst_start;
+}
+
+void gsm_receiver_cf::detect_norm_burst(const gr_complex * in, gr_complex * chan_imp_resp, int burst_start, unsigned char * output_binary)
+{
+  float output[BURST_SIZE];
+  gr_complex rhh_temp[CHAN_IMP_RESP_LENGTH*d_OSR];
+  gr_complex rhh[CHAN_IMP_RESP_LENGTH];
+  gr_complex filtered_burst[BURST_SIZE];
+  int start_state = 3;
+  unsigned int stop_states[2] = {4, 12};
+
+  autocorrelation(chan_imp_resp, rhh_temp, d_chan_imp_length*d_OSR);
+  for (int ii = 0; ii < (d_chan_imp_length); ii++) {
+    rhh[ii] = conj(rhh_temp[ii*d_OSR]);
+  }
+
+  mafi_norm(&in[burst_start], BURST_SIZE, chan_imp_resp, d_chan_imp_length*d_OSR, filtered_burst);
+
+  viterbi_detector(filtered_burst, BURST_SIZE, rhh, start_state, stop_states, 2, output);
+
+  for (int i = 0; i < BURST_SIZE ; i++) {
+    output_binary[i] = (output[i] > 0);
+  }
+}
+
+inline void gsm_receiver_cf::mafi_norm(const gr_complex * input, int input_length, gr_complex * filter, int filter_length, gr_complex * output)
+{
+  int ii = 0, n, a;
+
+  for (n = 0; n < input_length; n++) {
+    a = n * d_OSR;
+    output[n] = 0;
+    ii = 0;
+
+    while (ii < filter_length) {
+      if ((a + ii) >= input_length*d_OSR)
+        break;
       output[n] += input[a+ii] * filter[ii]; //!!conj
       ii++;
     }
-    output[n] = output[n] * gr_complex(0, -1);   //!!this shouldn't be here
   }
 }

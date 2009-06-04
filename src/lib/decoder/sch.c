@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include "burst_types.h"
+#include <gsm_constants.h>
 
 /*
  * Synchronization channel.
@@ -251,8 +251,8 @@ int decode_sch(const unsigned char *buf, int * t1_o, int * t2_o, int * t3_o, int
   // extract encoded data from synchronization burst
   /* buf, 39 bit */
   /* buf + 39 + 64 = 103, 39 */
-  memcpy(data, buf, SB_EDATA_LEN_1);
-  memcpy(data + SB_EDATA_LEN_1, buf + SB_EDATA_LEN_1 + N_SYNC_BITS, SB_EDATA_LEN_2);
+  memcpy(data, buf, SCH_DATA_LEN);
+  memcpy(data + SCH_DATA_LEN, buf + SCH_DATA_LEN + N_SYNC_BITS, SCH_DATA_LEN);
 
   // Viterbi decode
   if (errors = conv_decode(data, decoded_data)) {

@@ -247,7 +247,8 @@ class gsm_receiver_cf : public gr_block
     const int d_chan_imp_length;
 
     gr_complex d_sch_training_seq[N_SYNC_BITS]; //encoded training sequence of a SCH burst
-
+    gr_complex d_norm_training_seq[TRAIN_SEQ_NUM][N_TRAIN_BITS];
+    
     gr_feval_dd *d_tuner;
     unsigned d_counter;
 
@@ -284,11 +285,14 @@ class gsm_receiver_cf : public gr_block
     bool find_sch_burst(const gr_complex *in, const int nitems , float *out);
     int get_sch_chan_imp_resp(const gr_complex *in, gr_complex * chan_imp_resp);
     void detect_burst(const gr_complex * in, gr_complex * chan_imp_resp, int burst_start, unsigned char * output_binary);
-    void gmsk_mapper(const int * input, gr_complex * gmsk_output, int ninput);
+    void gmsk_mapper(const unsigned char * input, int ninput, gr_complex * gmsk_output, gr_complex start_point);
     gr_complex correlate_sequence(const gr_complex * sequence, const gr_complex * input_signal, int ninput);
     inline void autocorrelation(const gr_complex * input, gr_complex * out, int length);
     inline void mafi(const gr_complex * input, int input_length, gr_complex * filter, int filter_length, gr_complex * output);
-
+    int get_norm_chan_imp_resp(const gr_complex *in, gr_complex * chan_imp_resp, unsigned search_range);
+    void detect_norm_burst(const gr_complex * in, gr_complex * chan_imp_resp, int burst_start, unsigned char * output_binary);
+    inline void mafi_norm(const gr_complex * input, int input_length, gr_complex * filter, int filter_length, gr_complex * output);
+    
   public:
     ~gsm_receiver_cf();
     void forecast(int noutput_items, gr_vector_int &ninput_items_required);

@@ -16,6 +16,7 @@
 #define FCCH_BITS         USEFUL_BITS
 #define BURST_SIZE        (USEFUL_BITS+2*TAIL_BITS)
 
+#define SCH_DATA_LEN      39
 #define TS_BITS           (TAIL_BITS+USEFUL_BITS+TAIL_BITS+GUARD_BITS)  //a full TS (156 bits)
 #define TS_PER_FRAME      8
 #define FRAME_BITS        (TS_PER_FRAME * TS_BITS + 2) // 156.25 * 8
@@ -30,7 +31,7 @@
 
 #define CHAN_IMP_RESP_LENGTH  5
 
-static const int SYNC_BITS[] = {
+static const unsigned char SYNC_BITS[] = {
   1, 0, 1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 0,
   0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1,
   0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1,
@@ -39,7 +40,7 @@ static const int SYNC_BITS[] = {
 
 const unsigned FCCH_FRAMES[] = {0,10,20,30,40};
 const unsigned SCH_FRAMES[] = {1,11,21,31,41};
-
+const unsigned BCCH_FRAMES[] = {2,3,4,5,  12}; //remove 12
 
 // Sync             : .+...++.+..+++.++++++.++++++....++.+..+.+.+++.+.+...+..++++..+..
 // Diff Encoded Sync: .++..+.+++.+..++.....++.....+...+.+++.+++++..+++++..++.+...+.++.
@@ -52,10 +53,11 @@ const unsigned SCH_FRAMES[] = {1,11,21,31,41};
 #define TSC5  5
 #define TSC6  6
 #define TSC7  7
-#define TS_FCCH  8
-#define TS_DUMMY 9
+#define TS_DUMMY 8
 
-static const unsigned char train_seq[10][N_TRAIN_BITS] = {
+#define TRAIN_SEQ_NUM 9
+
+static const unsigned char train_seq[TRAIN_SEQ_NUM][N_TRAIN_BITS] = {
   {0, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1},
   {0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1},
   {0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0},
@@ -64,9 +66,9 @@ static const unsigned char train_seq[10][N_TRAIN_BITS] = {
   {0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 0},
   {1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1},
   {1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0},
-  {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, //#9 FCCH ;-)
   {0, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1} // DUMMY
 };
+
 
 //Dummy burst 0xFB 76 0A 4E 09 10 1F 1C 5C 5C 57 4A 33 39 E9 F1 2F A8
 static const unsigned char dummy_burst[] = {
