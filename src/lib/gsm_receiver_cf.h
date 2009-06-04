@@ -290,8 +290,6 @@ class gsm_receiver_cf : public gr_block
     inline void autocorrelation(const gr_complex * input, gr_complex * out, int length);
     inline void mafi(const gr_complex * input, int input_length, gr_complex * filter, int filter_length, gr_complex * output);
     int get_norm_chan_imp_resp(const gr_complex *in, gr_complex * chan_imp_resp, unsigned search_range);
-    void detect_norm_burst(const gr_complex * in, gr_complex * chan_imp_resp, int burst_start, unsigned char * output_binary);
-    inline void mafi_norm(const gr_complex * input, int input_length, gr_complex * filter, int filter_length, gr_complex * output);
     
   public:
     ~gsm_receiver_cf();
