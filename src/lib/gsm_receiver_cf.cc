@@ -577,18 +577,6 @@ gr_complex gsm_receiver_cf::correlate_sequence(const gr_complex * sequence, cons
   return result;
 }
 
-// gr_complex gsm_receiver_cf::compute_energy(const gr_complex * input_signal, int length)
-// {
-//   float result = 0;
-//   int sample_number = 0;
-//
-//   for (int ii = 0; ii < length; ii++) {
-//     result += input_signal[(ii * d_OSR)];
-//   }
-//
-//   return result;
-// }
-
 //computes autocorrelation for positive values
 //TODO consider placing this funtion in a separate class for signal processing
 inline void gsm_receiver_cf::autocorrelation(const gr_complex * input, gr_complex * out, int length)

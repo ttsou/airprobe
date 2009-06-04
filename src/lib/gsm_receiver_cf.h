@@ -269,9 +269,8 @@ class gsm_receiver_cf : public gr_block
     int d_bcc;
 
     enum states {
-      //synchronization search part
-      first_fcch_search, next_fcch_search, sch_search, synchronized
-      //
+      first_fcch_search, next_fcch_search, sch_search, //synchronization search part
+      synchronized //receiver is synchronized in this state
     } d_state;
 
     friend gsm_receiver_cf_sptr gsm_make_receiver_cf(gr_feval_dd *tuner, int osr);
@@ -290,9 +289,7 @@ class gsm_receiver_cf : public gr_block
     inline void autocorrelation(const gr_complex * input, gr_complex * out, int length);
     inline void mafi(const gr_complex * input, int input_length, gr_complex * filter, int filter_length, gr_complex * output);
     int get_norm_chan_imp_resp(const gr_complex *in, gr_complex * chan_imp_resp, unsigned search_range);
-    void detect_norm_burst(const gr_complex * in, gr_complex * chan_imp_resp, int burst_start, unsigned char * output_binary);
-    inline void mafi_norm(const gr_complex * input, int input_length, gr_complex * filter, int filter_length, gr_complex * output);
-    
+
   public:
     ~gsm_receiver_cf();
     void forecast(int noutput_items, gr_vector_int &ninput_items_required);
