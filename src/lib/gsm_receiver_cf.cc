@@ -695,3 +695,44 @@ int gsm_receiver_cf::get_norm_chan_imp_resp(const gr_complex *in, gr_complex * c
   burst_start = search_start_pos + strongest_window_nr + chan_imp_resp_center - 66 * d_OSR - 2 * d_OSR + 2;
   return burst_start;
 }
+
+void gsm_receiver_cf::detect_norm_burst(const gr_complex * in, gr_complex * chan_imp_resp, int burst_start, unsigned char * output_binary)
+{
+  float output[BURST_SIZE];
+  gr_complex rhh_temp[CHAN_IMP_RESP_LENGTH*d_OSR];
+  gr_complex rhh[CHAN_IMP_RESP_LENGTH];
+  gr_complex filtered_burst[BURST_SIZE];
+  int start_state = 3;
+  unsigned int stop_states[2] = {4, 12};
+
+  autocorrelation(chan_imp_resp, rhh_temp, d_chan_imp_length*d_OSR);
+  for (int ii = 0; ii < (d_chan_imp_length); ii++) {
+    rhh[ii] = conj(rhh_temp[ii*d_OSR]);
+  }
+
+  mafi_norm(&in[burst_start], BURST_SIZE, chan_imp_resp, d_chan_imp_length*d_OSR, filtered_burst);
+
+  viterbi_detector(filtered_burst, BURST_SIZE, rhh, start_state, stop_states, 2, output);
+
+  for (int i = 0; i < BURST_SIZE ; i++) {
+    output_binary[i] = (output[i] > 0);
+  }
+}
+
+inline void gsm_receiver_cf::mafi_norm(const gr_complex * input, int input_length, gr_complex * filter, int filter_length, gr_complex * output)
+{
+  int ii = 0, n, a;
+
+  for (n = 0; n < input_length; n++) {
+    a = n * d_OSR;
+    output[n] = 0;
+    ii = 0;
+
+    while (ii < filter_length) {
+      if ((a + ii) >= input_length*d_OSR)
+        break;
+      output[n] += input[a+ii] * filter[ii]; //!!conj
+      ii++;
+    }
+  }
+}
