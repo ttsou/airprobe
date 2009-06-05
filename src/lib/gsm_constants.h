@@ -22,10 +22,12 @@
 #define FRAME_BITS        (TS_PER_FRAME * TS_BITS + 2) // 156.25 * 8
 #define FCCH_POS          TAIL_BITS
 #define SYNC_POS          39
-#define TRAIN_POS         58
-#define SAFETY_MARGIN     6
+#define TRAIN_POS         TAIL_BITS + DATA_BITS + 5 //first 5 bits of a training sequence
+//aren't used for channel impulse response estimation
+#define TRAIN_BEGINNING   5
+#define SAFETY_MARGIN     6   //
 
-#define FCCH_HITS_NEEDED        (USEFUL_BITS - 4) 
+#define FCCH_HITS_NEEDED        (USEFUL_BITS - 4)
 #define FCCH_MAX_MISSES         1
 #define FCCH_MAX_FREQ_OFFSET    100
 
@@ -38,9 +40,9 @@ static const unsigned char SYNC_BITS[] = {
   0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1
 };
 
-const unsigned FCCH_FRAMES[] = {0,10,20,30,40};
-const unsigned SCH_FRAMES[] = {1,11,21,31,41};
-const unsigned BCCH_FRAMES[] = {2,3,4,5,  12}; //remove 12
+const unsigned FCCH_FRAMES[] = {0, 10, 20, 30, 40};
+const unsigned SCH_FRAMES[] = {1, 11, 21, 31, 41};
+const unsigned BCCH_FRAMES[] = {2, 3, 4, 5};
 
 // Sync             : .+...++.+..+++.++++++.++++++....++.+..+.+.+++.+.+...+..++++..+..
 // Diff Encoded Sync: .++..+.+++.+..++.....++.....+...+.+++.+++++..+++++..++.+...+.++.
@@ -89,6 +91,40 @@ static const unsigned char dummy_burst[] = {
   1, 0, 1, 0, 0, 1, 1, 1, 1, 1,
   0, 0, 0, 1, 0, 0, 1, 0, 1, 1,
   1, 1, 1, 0, 1, 0, 1, 0
+};
+
+
+/*
+ * The frequency correction burst is used for frequency synchronization
+ * of the mobile.  This is broadcast in TS0 together with the SCH and
+ * BCCH.
+ *
+ * Modulating the bits below causes a spike at 62.5kHz above (below for
+ * COMPACT) the center frequency.  One can use this spike with a narrow
+ * band filter to accurately determine the center of the channel.
+ */
+static const unsigned char fc_fb[] = {               //I don't use this tables, 
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,    //I copied this here from burst_types.h because 
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,    //the description is very informative - p.krysik
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+};
+
+static const unsigned char fc_compact_fb[] = {
+  1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+  1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+  1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+  1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+  1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+  1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+  1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+  1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+  1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0
 };
 
 //Diff encoded train_seq

@@ -164,6 +164,10 @@ class burst_counter
     unsigned get_offset(){
        return (unsigned)d_offset;
     }
+    //!!
+    float get_first_sample_offset(){
+      return d_first_sample_offset;
+    }
 };
 
 class channel_configuration
@@ -255,10 +259,6 @@ class gsm_receiver_cf : public gr_block
     //variables used to store result of the find_fcch_burst fuction
     int d_fcch_start_pos;
     float d_freq_offset;
-//     double d_best_sum;
-
-//    int d_fcch_count; //!!!
-//    double d_x_temp, d_x2_temp, d_mean;//!!
 
     burst_counter d_burst_nr;
     channel_configuration d_channel_conf;

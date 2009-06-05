@@ -75,10 +75,10 @@ gsm_receiver_cf::gsm_receiver_cf(gr_feval_dd *tuner, int osr)
     d_burst_nr(osr)
 {
   int i;
-  gmsk_mapper(SYNC_BITS, N_SYNC_BITS, d_sch_training_seq, gr_complex(0.0,-1.0));
+  gmsk_mapper(SYNC_BITS, N_SYNC_BITS, d_sch_training_seq, gr_complex(0.0, -1.0));
 
   for (i = 0; i < TRAIN_SEQ_NUM; i++) {
-    gmsk_mapper(train_seq[i], N_TRAIN_BITS, d_norm_training_seq[i], gr_complex(1.0,0.0));
+    gmsk_mapper(train_seq[i], N_TRAIN_BITS, d_norm_training_seq[i], gr_complex(1.0, 0.0));
   }
 }
 
@@ -91,7 +91,7 @@ gsm_receiver_cf::~gsm_receiver_cf()
 
 void gsm_receiver_cf::forecast(int noutput_items, gr_vector_int &ninput_items_required)
 {
-  ninput_items_required[0] = noutput_items * (TS_BITS + 2 * SAFETY_MARGIN) * d_OSR;
+  ninput_items_required[0] = noutput_items * floor((TS_BITS + 2 * GUARD_PERIOD) * d_OSR);
 }
 
 int
@@ -207,13 +207,11 @@ gsm_receiver_cf::general_work(int noutput_items,
         case normal_burst:
           burst_start = get_norm_chan_imp_resp(in, chan_imp_resp, TRAIN_SEARCH_RANGE);
           detect_burst(in, &d_channel_imp_resp[0], burst_start, output_binary);
-//           printf("burst = [ ");
-// 
-//           for (int i = 0; i < BURST_SIZE ; i++) {
-//             printf(" %d", output_binary[i]);
-//           }
-//           printf("];\n");
-
+          printf("burst = [ ");
+          for (int i = 0; i < BURST_SIZE ; i++) {
+            printf(" %d", output_binary[i]);
+          }
+          printf("];\n");
           break;
 
         case rach_burst:
@@ -596,12 +594,13 @@ int gsm_receiver_cf::get_norm_chan_imp_resp(const gr_complex *in, gr_complex * c
   int chan_imp_resp_center;
   float max_correlation = 0;
   float energy = 0;
-  
-  int search_start_pos = floor((TRAIN_POS + GUARD_PERIOD) * d_OSR);
-  int search_stop_pos = search_start_pos + search_range * d_OSR;
+
+  int search_center = (int)((TRAIN_POS + GUARD_PERIOD) * d_OSR);
+  int search_start_pos = search_center+1;
+  int search_stop_pos = search_center + d_chan_imp_length * d_OSR + 2*d_OSR;
 
   for (int ii = search_start_pos; ii < search_stop_pos; ii++) {
-    gr_complex correlation = correlate_sequence(&d_norm_training_seq[d_bcc][5], &in[ii], N_TRAIN_BITS - 10);
+    gr_complex correlation = correlate_sequence(&d_norm_training_seq[d_bcc][TRAIN_BEGINNING], &in[ii], N_TRAIN_BITS - 10);
 
     correlation_buffer.push_back(correlation);
     power_buffer.push_back(pow(abs(correlation), 2));
@@ -615,24 +614,27 @@ int gsm_receiver_cf::get_norm_chan_imp_resp(const gr_complex *in, gr_complex * c
     energy = 0;
 
     for (int ii = 0; ii < (d_chan_imp_length)*d_OSR; ii++, iter_ii++) {
+//     for (int ii = 0; ii < (d_chan_imp_length); ii++) {
       if (iter_ii == power_buffer.end()) {
         loop_end = true;
         break;
       }
       energy += (*iter_ii);
+//       iter_ii = iter_ii + d_OSR;
     }
     if (loop_end) {
       break;
     }
     iter++;
+//      std::cout << energy << "\n";
+
     window_energy_buffer.push_back(energy);
   }
-  
-
+//   std::cout << window_energy_buffer.size() << "\n";
 
   strongest_window_nr = max_element(window_energy_buffer.begin(), window_energy_buffer.end()) - window_energy_buffer.begin();
   d_channel_imp_resp.clear();
-  strongest_window_nr = 36;
+//   strongest_window_nr = 3;
 
   max_correlation = 0;
   for (int ii = 0; ii < (d_chan_imp_length)*d_OSR; ii++) {
@@ -644,9 +646,20 @@ int gsm_receiver_cf::get_norm_chan_imp_resp(const gr_complex *in, gr_complex * c
     d_channel_imp_resp.push_back(correlation);
     chan_imp_resp[ii] = correlation;
   }
+//WE WANT TO USE THE FIRST SAMPLE OF THE IMPULSERESPONSE, AND THE
+// CORRESPONDING SAMPLES OF THE RECEIVED SIGNAL.                                 
+// THE VARIABLE sync_w SHOULD CONTAIN THE BEGINNING OF THE USED PART OF          
+// TRAINING SEQUENCE, WHICH IS 3+57+1+6=67 BITS INTO THE BURST. THAT IS          
+// WE HAVE THAT sync_T16 EQUALS FIRST SAMPLE IN BIT NUMBER 67.
 
-  std::cout << "center: " << strongest_window_nr + chan_imp_resp_center  << " stronegest window nr: " <<  strongest_window_nr << "\n";
-  
-  burst_start = search_start_pos + strongest_window_nr + chan_imp_resp_center - 66 * d_OSR - 2 * d_OSR + 2;
+
+  burst_start = search_start_pos + chan_imp_resp_center + strongest_window_nr - 66 * d_OSR - 2 * d_OSR + 2; 
+// COMPENSATING FOR THE 2 Tb DELAY INTRODUCED IN THE GMSK MODULATOR.             
+// EACH BIT IS STRECHED OVER A PERIOD OF 3 Tb WITH ITS MAXIMUM VALUE             
+// IN THE LAST BIT PERIOD. HENCE, burst_start IS 2 * OSR
+//compute burst start 
+  std::cout << " burst_start: " << (float)burst_start/(float)d_OSR<< " center: " << ((float)(search_start_pos + strongest_window_nr + chan_imp_resp_center))/d_OSR << " stronegest window nr: " <<  strongest_window_nr << "\n";
+
   return burst_start;
+
 }
