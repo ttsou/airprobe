@@ -53,4 +53,9 @@
 ** TEST(S):  Tested with real world normal burst.
 */
 
+#ifndef INCLUDED_VITERBI_DETECTOR_H
+#define INCLUDED_VITERBI_DETECTOR_H
+
 void viterbi_detector(const gr_complex * input, unsigned int samples_num, gr_complex * rhh, unsigned int start_state, const unsigned int * stop_states, unsigned int stops_num, float * output);
+
+#endif /* INCLUDED_VITERBI_DETECTOR_H */

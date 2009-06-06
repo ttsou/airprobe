@@ -22,206 +22,12 @@
 #ifndef INCLUDED_GSM_RECEIVER_CF_H
 #define INCLUDED_GSM_RECEIVER_CF_H
 
+#include <vector>
 #include <gr_block.h>
 #include <gr_complex.h>
 #include <gr_feval.h>
 #include <gsm_constants.h>
-#include <vector>
-
-
-//TODO !! - move this classes to some other place
-#include <vector>
-#include <algorithm>
-#include <math.h>
-typedef enum {empty, fcch_burst, sch_burst, normal_burst, rach_burst, dummy} burst_type;
-typedef enum {unknown, multiframe_26, multiframe_51} multiframe_type;
-
-class multiframe_configuration
-{
-  private:
-    multiframe_type d_type;
-    std::vector<burst_type> d_burst_types;
-  public:
-    multiframe_configuration() {
-      d_type = unknown;
-      fill(d_burst_types.begin(), d_burst_types.end(), empty);
-    }
-
-//     multiframe_configuration(multiframe_type type, const std::vector<burst_type> & burst_types):
-//         d_type(type) {
-//       d_burst_types.resize(burst_types.size());
-//       copy(burst_types.begin(), burst_types.end(), d_burst_types.begin());
-//     }
-
-//     multiframe_configuration(multiframe_configuration & conf) {
-//       d_type = conf.d_type;
-//       copy(conf.d_burst_types.begin(), conf.d_burst_types.end(), d_burst_types.begin());
-//     }
-
-    ~multiframe_configuration() {}
-
-    void set_type(multiframe_type type) {
-      if (type == multiframe_26) {
-        d_burst_types.resize(26);
-      } else {
-        d_burst_types.resize(51);
-      }
-
-      d_type = type;
-    }
-
-    void set_burst_type(int nr, burst_type type) {
-      d_burst_types[nr] = type;
-    }
-
-    multiframe_type get_type() {
-      return d_type;
-    }
-
-    burst_type get_burst_type(int nr) {
-      return d_burst_types[nr];
-    }
-};
-
-class burst_counter
-{
-  private:
-    const int d_OSR;
-    uint32_t d_t1, d_t2, d_t3, d_timeslot_nr;
-    double d_first_sample_offset;
-    double d_offset;
-  public:
-    burst_counter(int osr):
-        d_OSR(osr),
-        d_t1(0),
-        d_t2(0),
-        d_t3(0),
-        d_timeslot_nr(0),
-        d_first_sample_offset(0),
-        d_offset(0) {
-    }
-
-    burst_counter(int osr, uint32_t t1, uint32_t t2, uint32_t t3, uint32_t timeslot_nr):
-        d_OSR(osr),
-        d_t1(t1),
-        d_t2(t2),
-        d_t3(t3),
-        d_timeslot_nr(timeslot_nr),
-        d_offset(0) {
-      double first_sample_position = (get_frame_nr()*8+timeslot_nr)*TS_BITS;
-      d_first_sample_offset = first_sample_position - floor(first_sample_position);
-    }
-
-    burst_counter & operator++(int) {
-      d_timeslot_nr++;
-      if (d_timeslot_nr == TS_PER_FRAME) {
-        d_timeslot_nr = 0;
-
-        if ((d_t2 == 25) && (d_t3 == 50)) {
-          d_t1 = (d_t1 + 1) % (1 << 11);
-        }
-
-        d_t2 = (d_t2 + 1) % 26;
-        d_t3 = (d_t3 + 1) % 51;
-      }
-      
-      d_first_sample_offset += GUARD_FRACTIONAL * d_OSR;
-      d_offset = floor(d_first_sample_offset);
-      d_first_sample_offset = d_first_sample_offset - d_offset;
-      return (*this);
-    }
-
-    void set(uint32_t t1, uint32_t t2, uint32_t t3, uint32_t timeslot_nr) {
-      d_t1 = t1;
-      d_t2 = t2;
-      d_t3 = t3;
-      d_timeslot_nr = timeslot_nr;
-      double first_sample_position = (get_frame_nr()*8+timeslot_nr)*TS_BITS;
-      d_first_sample_offset = first_sample_position - floor(first_sample_position);
-      d_offset = 0;
-    }
-
-    uint32_t get_t1() {
-      return d_t1;
-    }
-
-    uint32_t get_t2() {
-      return d_t2;
-    }
-
-    uint32_t get_t3() {
-      return d_t3;
-    }
-
-    uint32_t get_timeslot_nr() {
-      return d_timeslot_nr;
-    }
-
-    uint32_t get_frame_nr() {
-      return (51 * 26 * d_t1) + (51 * (((d_t3 + 26) - d_t2) % 26)) + d_t3;
-    }
-    
-    unsigned get_offset(){
-       return (unsigned)d_offset;
-    }
-    //!!
-    float get_first_sample_offset(){
-      return d_first_sample_offset;
-    }
-};
-
-class channel_configuration
-{
-  private:
-    multiframe_configuration d_timeslots_descriptions[TS_PER_FRAME];
-  public:
-    channel_configuration() {
-      for (int i = 0; i < TS_PER_FRAME; i++) {
-        d_timeslots_descriptions[i].set_type(unknown);
-      }
-    }
-//     void set_timeslot_desc(int timeslot_nr, multiframe_configuration conf){
-//       d_timeslots_descriptions[timeslot_nr] = conf;
-//     }
-    void set_multiframe_type(int timeslot_nr, multiframe_type type) {
-      d_timeslots_descriptions[timeslot_nr].set_type(type);
-    }
-
-    void set_burst_types(int timeslot_nr, const unsigned mapping[], unsigned mapping_size, burst_type b_type) {
-      unsigned i;
-      for (i = 0; i < mapping_size; i++) {
-        d_timeslots_descriptions[timeslot_nr].set_burst_type(mapping[i], b_type);
-      }
-    }
-
-    void set_single_burst_type(int timeslot_nr, int burst_nr, burst_type b_type) {
-      d_timeslots_descriptions[timeslot_nr].set_burst_type(burst_nr, b_type);
-    }
-
-    burst_type get_burst_type(burst_counter burst_nr);
-};
-
-burst_type channel_configuration::get_burst_type(burst_counter burst_nr)
-{
-  uint32_t timeslot_nr = burst_nr.get_timeslot_nr();
-  multiframe_type m_type = d_timeslots_descriptions[timeslot_nr].get_type();
-  uint32_t nr;
-
-  switch (m_type) {
-    case multiframe_26:
-      nr = burst_nr.get_t2();
-      break;
-    case multiframe_51:
-      nr = burst_nr.get_t3();
-      break;
-    default:
-      nr = 0;
-      break;
-  }
-
-  return d_timeslots_descriptions[timeslot_nr].get_burst_type(nr);
-}
-// move it to some other place !!
+#include <gsm_receiver_config.h>
 
 class gsm_receiver_cf;
 
@@ -245,7 +51,6 @@ gsm_receiver_cf_sptr gsm_make_receiver_cf(gr_feval_dd *tuner, int osr);
 
 class gsm_receiver_cf : public gr_block
 {
-
   private:
     const int d_OSR;
     const int d_chan_imp_length;
@@ -288,7 +93,9 @@ class gsm_receiver_cf : public gr_block
     gr_complex correlate_sequence(const gr_complex * sequence, const gr_complex * input_signal, int ninput);
     inline void autocorrelation(const gr_complex * input, gr_complex * out, int length);
     inline void mafi(const gr_complex * input, int input_length, gr_complex * filter, int filter_length, gr_complex * output);
-    int get_norm_chan_imp_resp(const gr_complex *in, gr_complex * chan_imp_resp, unsigned search_range);
+    int get_norm_chan_imp_resp(const gr_complex *in, gr_complex * chan_imp_resp, unsigned search_range, int bcc);
+    void przetwarzaj_normalny_pakiet(burst_counter burst_nr, unsigned char * pakiet);
+    void konfiguruj_odbiornik();
 
   public:
     ~gsm_receiver_cf();

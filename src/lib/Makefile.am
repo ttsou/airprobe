@@ -66,7 +66,9 @@ _gsm_la_SOURCES = 			\
 	gsm.cc			
 	
 libgsmdemod_la_SOURCES = \
-	gsm_receiver_cf.cc		
+	gsm_receiver_cf.cc \
+	gsm_receiver_config.cc \
+	viterbi_detector.cc
 
 # magic flags
 _gsm_la_LDFLAGS = $(NO_UNDEFINED) -module -avoid-version
@@ -87,7 +89,11 @@ gsm.cc gsm.py: $(LOCAL_IFILES) $(ALL_IFILES)
 
 # These headers get installed in ${prefix}/include/gnuradio
 grinclude_HEADERS =			\
-	gsm_receiver_cf.h		
+	gsm_receiver_cf.h		\
+	gsm_receiver_config.h
+
+noinst_HEADERS = 	\
+	viterbi_detector.h
 
 # These swig headers get installed in ${prefix}/include/gnuradio/swig
 swiginclude_HEADERS = 			\

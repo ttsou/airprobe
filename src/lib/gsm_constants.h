@@ -22,7 +22,7 @@
 #define FRAME_BITS        (TS_PER_FRAME * TS_BITS + 2) // 156.25 * 8
 #define FCCH_POS          TAIL_BITS
 #define SYNC_POS          39
-#define TRAIN_POS         TAIL_BITS + DATA_BITS + 5 //first 5 bits of a training sequence
+#define TRAIN_POS         ( TAIL_BITS + DATA_BITS + 5) //first 5 bits of a training sequence
 //aren't used for channel impulse response estimation
 #define TRAIN_BEGINNING   5
 #define SAFETY_MARGIN     6   //
@@ -41,9 +41,12 @@ static const unsigned char SYNC_BITS[] = {
 };
 
 const unsigned FCCH_FRAMES[] = {0, 10, 20, 30, 40};
-const unsigned SCH_FRAMES[] = {1, 11, 21, 31, 41};
-const unsigned BCCH_FRAMES[] = {2, 3, 4, 5};
+const unsigned SCH_FRAMES[] = {1,11,21,31,41};
 
+const unsigned BCCH_FRAMES[] = {2,3,4,5};             //!!the receiver shouldn't care about logical 
+const unsigned TRAFFIC_CHANNEL_F[] = {0,1,2,3,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,20,21,22,23,24};
+                                                      //!!channels so this will be removed from this header
+const unsigned TEST[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50};
 // Sync             : .+...++.+..+++.++++++.++++++....++.+..+.+.+++.+.+...+..++++..+..
 // Diff Encoded Sync: .++..+.+++.+..++.....++.....+...+.+++.+++++..+++++..++.+...+.++.
 

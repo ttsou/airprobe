@@ -39,9 +39,54 @@
 #define SYNC_SEARCH_RANGE 30
 #define TRAIN_SEARCH_RANGE 40
 
-//TODO !! - move this methods to some else place
+//tutaj umieściłem funkcję która dostaje normalny pakiet + numer 
+//numer pakietu to numer ramki + numer szczeliny czasowej
+//w tym przykładzie po prostu wyrzuca zawartość pakietu na wyjście
+//ps. pakiety które nie mają trzech zer na początku zazwyczaj są błędnie odebrane
+//ewentulanie innego typu (np. obierasz dummy jako normalny)
+void gsm_receiver_cf::przetwarzaj_normalny_pakiet(burst_counter burst_nr, unsigned char * pakiet)
+{
+  if (burst_nr.get_timeslot_nr() == 6) {
+    printf("burst = [ ");
+    for (int i = 0; i < BURST_SIZE ; i++) {
+      printf(" %d", pakiet[i]);
+    }
+    printf("];\n");
+//     std::cout  << " t2: " << burst_nr.get_t2() << "\n";
+  }
+}
 
-// - move it to some else place !!
+// Tutaj ustawia się jekie rodzaje pakietów przypadają na dane stany licznika.
+// Licznik ramek składa składa się z trzech części: t3,t2,t1.
+// T3 liczy modulo 51, a t2 liczy modulo 26.
+// Ja zakładam, że dla danej szczeliny do określenia jaki typ pakietu przypada
+// dla danej chwili może być używany tylko jeden z tych liczników. Z dokumentu
+// 3gpp 04.03 wynika, że to jest prawda w warstwie fizycznej.
+void gsm_receiver_cf::konfiguruj_odbiornik()
+{
+  // poniżej jest przykład jak się konfiguruje odbiornik
+  // najpierw mówię mu, że szczelina w szczelinie nr.0 typy pakietów zmieniają się wg.
+  // licznika t3, czyli modulo 51:
+
+  d_channel_conf.set_multiframe_type(TSC0, multiframe_51);
+  // tutaj mówię mu, gdzie ma szukać pakietów korekcji częstotliwości FCCH
+  // w gsm_constants jest definicja: const unsigned FCCH_FRAMES[] = {0, 10, 20, 30, 40};
+  // kanał fcch jest nadawany zawsze w w szczelinie nr.0 więc podaję najapierw TSC0
+  // potem wartości licznika z tej wcześniej zdefiniowanej tablicy, dalej ilość elementów tablicy,
+  // a na końcu typ pakietu
+  // typy są zdefiniowane w gsm_receiver_config.h
+  d_channel_conf.set_burst_types(TSC0, FCCH_FRAMES, sizeof(FCCH_FRAMES) / sizeof(unsigned), fcch_burst);
+
+  //w plikach z danymi są opisy i tam można znaleźć nr. szczeliny, w której nadawany był głos
+  //w pierwszym to jest:
+  //Traffic channel timeslot: 6
+  //mogę skonfigurować żeby odbiornik na ślepo szukał tam pakietów normalnych, bez uciekania
+  //się do dekodowania informacji sterującej:
+//    d_channel_conf.set_multiframe_type(TSC6, multiframe_26);
+//    d_channel_conf.set_burst_types(TSC6, TRAFFIC_CHANNEL_F, sizeof(TRAFFIC_CHANNEL_F) / sizeof(unsigned), normal_burst);
+}
+
+
 typedef std::list<float> list_float;
 typedef std::vector<float> vector_float;
 
@@ -71,8 +116,8 @@ gsm_receiver_cf::gsm_receiver_cf(gr_feval_dd *tuner, int osr)
     d_counter(0),
     d_fcch_start_pos(0),
     d_freq_offset(0),
-    d_state(first_fcch_search),
-    d_burst_nr(osr)
+    d_burst_nr(osr),
+    d_state(first_fcch_search)
 {
   int i;
   gmsk_mapper(SYNC_BITS, N_SYNC_BITS, d_sch_training_seq, gr_complex(0.0, -1.0));
@@ -133,101 +178,106 @@ gsm_receiver_cf::general_work(int noutput_items,
       break;
 
     case sch_search: {
-      gr_complex chan_imp_resp[CHAN_IMP_RESP_LENGTH*d_OSR];
-      int t1, t2, t3;
-      int burst_start = 0;
-      unsigned char output_binary[BURST_SIZE];
+        gr_complex chan_imp_resp[CHAN_IMP_RESP_LENGTH*d_OSR];
+        int t1, t2, t3;
+        int burst_start = 0;
+        unsigned char output_binary[BURST_SIZE];
 
-      if (find_sch_burst(in, ninput_items[0], out)) {
-        burst_start = get_sch_chan_imp_resp(in, chan_imp_resp);
-        detect_burst(in, chan_imp_resp, burst_start, output_binary);
-        if (decode_sch(&output_binary[3], &t1, &t2, &t3, &d_ncc, &d_bcc) == 0) {
-          DCOUT("sch burst_start: " << burst_start);
-          d_burst_nr.set(t1, t2, t3, 0);
-          DCOUT("bcc: " << d_bcc << " ncc: " << d_ncc << " t1: " << t1 << " t2: " << t2 << " t3: " << t3);
-          d_channel_conf.set_multiframe_type(TSC0, multiframe_51);
-          d_channel_conf.set_burst_types(TSC0, FCCH_FRAMES, sizeof(FCCH_FRAMES) / sizeof(unsigned), fcch_burst);
-          d_channel_conf.set_burst_types(TSC0, SCH_FRAMES, sizeof(SCH_FRAMES) / sizeof(unsigned), sch_burst);
-          d_channel_conf.set_burst_types(TSC0, BCCH_FRAMES, sizeof(BCCH_FRAMES) / sizeof(unsigned), normal_burst);
-          d_burst_nr++;
+        if (find_sch_burst(in, ninput_items[0], out)) {
+          burst_start = get_sch_chan_imp_resp(in, chan_imp_resp);
+          detect_burst(in, chan_imp_resp, burst_start, output_binary);
+          if (decode_sch(&output_binary[3], &t1, &t2, &t3, &d_ncc, &d_bcc) == 0) {
+            DCOUT("sch burst_start: " << burst_start);
+            d_burst_nr.set(t1, t2, t3, 0);
+            DCOUT("bcc: " << d_bcc << " ncc: " << d_ncc << " t1: " << t1 << " t2: " << t2 << " t3: " << t3);
+            d_channel_conf.set_multiframe_type(TSC0, multiframe_51);
+            konfiguruj_odbiornik();//!!
+            d_channel_conf.set_burst_types(TSC0, FCCH_FRAMES, sizeof(FCCH_FRAMES) / sizeof(unsigned), fcch_burst);
+            d_channel_conf.set_burst_types(TSC0, SCH_FRAMES, sizeof(SCH_FRAMES) / sizeof(unsigned), sch_burst);
+            d_channel_conf.set_burst_types(TSC0, BCCH_FRAMES, sizeof(BCCH_FRAMES) / sizeof(unsigned), normal_burst);
+            d_burst_nr++;
 
-          consume_each(burst_start + BURST_SIZE * d_OSR);
-          d_state = synchronized;
+            consume_each(burst_start + BURST_SIZE * d_OSR);
+            d_state = synchronized;
+          } else {
+            d_state = next_fcch_search;
+          }
         } else {
-          d_state = next_fcch_search;
+          d_state = sch_search;
         }
-      } else {
-        d_state = sch_search;
+        break;
+      }
+
+      //in this state receiver is synchronized and it processes bursts according to burst type for given burst number
+    case synchronized: {
+        gr_complex chan_imp_resp[d_chan_imp_length*d_OSR];
+        burst_type b_type = d_channel_conf.get_burst_type(d_burst_nr);
+        int burst_start;
+        int offset = 0;
+        int to_consume = 0;
+        unsigned char output_binary[BURST_SIZE];
+
+        switch (b_type) {
+          case fcch_burst: {
+              int ii;
+              int first_sample = ceil((GUARD_PERIOD + 2 * TAIL_BITS) * d_OSR) + 1;
+              int last_sample = first_sample + USEFUL_BITS * d_OSR;
+              double phase_sum = 0;
+              for (ii = first_sample; ii < last_sample; ii++) {
+                double phase_diff = compute_phase_diff(in[ii], in[ii-1]) - (M_PI / 2) / d_OSR;
+                phase_sum += phase_diff;
+              }
+              double freq_offset = compute_freq_offset(phase_sum, last_sample - first_sample);
+              if (abs(freq_offset) > FCCH_MAX_FREQ_OFFSET) {
+                d_freq_offset -= freq_offset;
+                set_frequency(d_freq_offset);
+                DCOUT("adjusting frequency, new frequency offset: " << d_freq_offset << "\n");
+              }
+            }
+            break;
+
+          case sch_burst: {
+              int t1, t2, t3, d_ncc, d_bcc;
+              burst_start = get_sch_chan_imp_resp(in, chan_imp_resp);
+              detect_burst(in, &d_channel_imp_resp[0], burst_start, output_binary);
+              if (decode_sch(&output_binary[3], &t1, &t2, &t3, &d_ncc, &d_bcc) == 0) {
+//                d_burst_nr.set(t1, t2, t3, 0);
+                DCOUT("bcc: " << d_bcc << " ncc: " << d_ncc << " t1: " << t1 << " t2: " << t2 << " t3: " << t3);
+                offset =  burst_start - floor((GUARD_PERIOD) * d_OSR);
+                DCOUT(offset);
+                to_consume += offset;
+              }
+            }
+            break;
+
+          case normal_burst:
+            burst_start = get_norm_chan_imp_resp(in, chan_imp_resp, TRAIN_SEARCH_RANGE, d_bcc);
+            detect_burst(in, &d_channel_imp_resp[0], burst_start, output_binary);
+            przetwarzaj_normalny_pakiet(d_burst_nr, output_binary);
+            break;
+
+          case rach_burst:
+            //implementation of this channel isn't possible in current gsm_receiver
+            //it would take some realtime processing, counter of samples from USRP to
+            //stay synchronized with this device and possibility to switch frequency from  uplink
+            //to C0 (where sch is) back and forth
+
+            break;
+          case dummy:
+            burst_start = get_norm_chan_imp_resp(in, chan_imp_resp, TRAIN_SEARCH_RANGE, 8);
+            detect_burst(in, &d_channel_imp_resp[0], burst_start, output_binary);
+            break;
+          case empty:
+            break;
+        }
+
+        d_burst_nr++;
+
+
+        to_consume += TS_BITS * d_OSR + d_burst_nr.get_offset();
+        consume_each(to_consume);
       }
       break;
-    }
-
-    //in this state receiver is synchronized and it processes bursts according to burst type for given burst number
-    case synchronized: {
-      gr_complex chan_imp_resp[d_chan_imp_length*d_OSR];
-      burst_type b_type = d_channel_conf.get_burst_type(d_burst_nr);
-      int burst_start;
-      int offset = 0;
-      int to_consume = 0;
-      unsigned char output_binary[BURST_SIZE];
-
-      switch (b_type) {
-        case fcch_burst: {
-          int ii;
-          int first_sample = ceil((GUARD_PERIOD + 2 * TAIL_BITS) * d_OSR) + 1;
-          int last_sample = first_sample + USEFUL_BITS * d_OSR;
-          double phase_sum = 0;
-          for (ii = first_sample; ii < last_sample; ii++) {
-            double phase_diff = compute_phase_diff(in[ii], in[ii-1]) - (M_PI / 2) / d_OSR;
-            phase_sum += phase_diff;
-          }
-          double freq_offset = compute_freq_offset(phase_sum, last_sample - first_sample);
-          if (abs(freq_offset) > FCCH_MAX_FREQ_OFFSET) {
-            d_freq_offset -= freq_offset;
-            set_frequency(d_freq_offset);
-            DCOUT("adjusting frequency, new frequency offset: " << d_freq_offset << "\n");
-          }
-        }
-        break;
-
-        case sch_burst: {
-          int t1, t2, t3, d_ncc, d_bcc;
-          burst_start = get_sch_chan_imp_resp(in, chan_imp_resp);
-          detect_burst(in, &d_channel_imp_resp[0], burst_start, output_binary);
-          if (decode_sch(&output_binary[3], &t1, &t2, &t3, &d_ncc, &d_bcc) == 0) {
-//                d_burst_nr.set(t1, t2, t3, 0);
-            DCOUT("bcc: " << d_bcc << " ncc: " << d_ncc << " t1: " << t1 << " t2: " << t2 << " t3: " << t3);
-            offset =  burst_start - floor((GUARD_PERIOD) * d_OSR);
-            DCOUT(offset);
-            to_consume += offset;
-          }
-        }
-        break;
-
-        case normal_burst:
-          burst_start = get_norm_chan_imp_resp(in, chan_imp_resp, TRAIN_SEARCH_RANGE);
-          detect_burst(in, &d_channel_imp_resp[0], burst_start, output_binary);
-          printf("burst = [ ");
-          for (int i = 0; i < BURST_SIZE ; i++) {
-            printf(" %d", output_binary[i]);
-          }
-          printf("];\n");
-          break;
-
-        case rach_burst:
-          break;
-        case dummy:
-          break;
-        case empty:
-          break;
-      }
-
-      d_burst_nr++;
-
-      to_consume += TS_BITS * d_OSR + d_burst_nr.get_offset();
-      consume_each(to_consume);
-    }
-    break;
   }
 
   return produced_out;
@@ -244,7 +294,7 @@ bool gsm_receiver_cf::find_fcch_burst(const gr_complex *in, const int nitems)
   int start_pos = -1;
   float min_phase_diff;
   float max_phase_diff;
-  double best_sum;
+  double best_sum = 0;
   float lowest_max_min_diff = 99999;
 
   int to_consume = 0;
@@ -388,7 +438,7 @@ bool gsm_receiver_cf::find_sch_burst(const gr_complex *in, const int nitems , fl
   int to_consume = 0;
   bool end = false;
   bool result = false;
-  int sample_nr_near_sch_start = d_fcch_start_pos + (FRAME_BITS - SAFETY_MARGIN) * d_OSR;
+  unsigned sample_nr_near_sch_start = d_fcch_start_pos + (FRAME_BITS - SAFETY_MARGIN) * d_OSR;
 
   enum states {
     start, reach_sch, search_not_finished, sch_found
@@ -442,7 +492,7 @@ int gsm_receiver_cf::get_sch_chan_imp_resp(const gr_complex *in, gr_complex * ch
 
   int strongest_window_nr;
   int burst_start = 0;
-  int chan_imp_resp_center;
+  int chan_imp_resp_center = 0;
   float max_correlation = 0;
   float energy = 0;
 
@@ -564,7 +614,6 @@ inline void gsm_receiver_cf::autocorrelation(const gr_complex * input, gr_comple
 }
 
 //TODO consider use of some generalized function for filtering and placing it in a separate class  for signal processing
-//funkcja matched filter
 inline void gsm_receiver_cf::mafi(const gr_complex * input, int input_length, gr_complex * filter, int filter_length, gr_complex * output)
 {
   int ii = 0, n, a;
@@ -583,7 +632,7 @@ inline void gsm_receiver_cf::mafi(const gr_complex * input, int input_length, gr
   }
 }
 
-int gsm_receiver_cf::get_norm_chan_imp_resp(const gr_complex *in, gr_complex * chan_imp_resp, unsigned search_range)
+int gsm_receiver_cf::get_norm_chan_imp_resp(const gr_complex *in, gr_complex * chan_imp_resp, unsigned search_range, int bcc)
 {
   vector_complex correlation_buffer;
   vector_float power_buffer;
@@ -591,16 +640,16 @@ int gsm_receiver_cf::get_norm_chan_imp_resp(const gr_complex *in, gr_complex * c
 
   int strongest_window_nr;
   int burst_start = 0;
-  int chan_imp_resp_center;
+  int chan_imp_resp_center = 0;
   float max_correlation = 0;
   float energy = 0;
 
   int search_center = (int)((TRAIN_POS + GUARD_PERIOD) * d_OSR);
-  int search_start_pos = search_center+1;
-  int search_stop_pos = search_center + d_chan_imp_length * d_OSR + 2*d_OSR;
+  int search_start_pos = search_center + 1;
+  int search_stop_pos = search_center + d_chan_imp_length * d_OSR + 2 * d_OSR;
 
   for (int ii = search_start_pos; ii < search_stop_pos; ii++) {
-    gr_complex correlation = correlate_sequence(&d_norm_training_seq[d_bcc][TRAIN_BEGINNING], &in[ii], N_TRAIN_BITS - 10);
+    gr_complex correlation = correlate_sequence(&d_norm_training_seq[bcc][TRAIN_BEGINNING], &in[ii], N_TRAIN_BITS - 10);
 
     correlation_buffer.push_back(correlation);
     power_buffer.push_back(pow(abs(correlation), 2));
@@ -614,27 +663,22 @@ int gsm_receiver_cf::get_norm_chan_imp_resp(const gr_complex *in, gr_complex * c
     energy = 0;
 
     for (int ii = 0; ii < (d_chan_imp_length)*d_OSR; ii++, iter_ii++) {
-//     for (int ii = 0; ii < (d_chan_imp_length); ii++) {
       if (iter_ii == power_buffer.end()) {
         loop_end = true;
         break;
       }
       energy += (*iter_ii);
-//       iter_ii = iter_ii + d_OSR;
     }
     if (loop_end) {
       break;
     }
     iter++;
-//      std::cout << energy << "\n";
 
     window_energy_buffer.push_back(energy);
   }
-//   std::cout << window_energy_buffer.size() << "\n";
 
   strongest_window_nr = max_element(window_energy_buffer.begin(), window_energy_buffer.end()) - window_energy_buffer.begin();
   d_channel_imp_resp.clear();
-//   strongest_window_nr = 3;
 
   max_correlation = 0;
   for (int ii = 0; ii < (d_chan_imp_length)*d_OSR; ii++) {
@@ -646,20 +690,22 @@ int gsm_receiver_cf::get_norm_chan_imp_resp(const gr_complex *in, gr_complex * c
     d_channel_imp_resp.push_back(correlation);
     chan_imp_resp[ii] = correlation;
   }
-//WE WANT TO USE THE FIRST SAMPLE OF THE IMPULSERESPONSE, AND THE
-// CORRESPONDING SAMPLES OF THE RECEIVED SIGNAL.                                 
-// THE VARIABLE sync_w SHOULD CONTAIN THE BEGINNING OF THE USED PART OF          
-// TRAINING SEQUENCE, WHICH IS 3+57+1+6=67 BITS INTO THE BURST. THAT IS          
-// WE HAVE THAT sync_T16 EQUALS FIRST SAMPLE IN BIT NUMBER 67.
+  // We want to use the first sample of the impulseresponse, and the
+  // corresponding samples of the received signal.
+  // the variable sync_w should contain the beginning of the used part of
+  // training sequence, which is 3+57+1+6=67 bits into the burst. That is
+  // we have that sync_t16 equals first sample in bit number 67.
 
+  burst_start = search_start_pos + chan_imp_resp_center + strongest_window_nr - TRAIN_POS * d_OSR;
 
-  burst_start = search_start_pos + chan_imp_resp_center + strongest_window_nr - 66 * d_OSR - 2 * d_OSR + 2; 
-// COMPENSATING FOR THE 2 Tb DELAY INTRODUCED IN THE GMSK MODULATOR.             
-// EACH BIT IS STRECHED OVER A PERIOD OF 3 Tb WITH ITS MAXIMUM VALUE             
-// IN THE LAST BIT PERIOD. HENCE, burst_start IS 2 * OSR
-//compute burst start 
-  std::cout << " burst_start: " << (float)burst_start/(float)d_OSR<< " center: " << ((float)(search_start_pos + strongest_window_nr + chan_imp_resp_center))/d_OSR << " stronegest window nr: " <<  strongest_window_nr << "\n";
+  // GMSK modulator introduces ISI - each bit is expanded for 3*Tb
+  // and it's maximum value is in the last bit period, so burst starts
+  // 2*Tb earlier
+  burst_start -= 2 * d_OSR;
+  burst_start += 2;
+  //std::cout << " burst_start: " << burst_start << " center: " << ((float)(search_start_pos + strongest_window_nr + chan_imp_resp_center)) / d_OSR << " stronegest window nr: " <<  strongest_window_nr << "\n";
 
   return burst_start;
 
 }
+
