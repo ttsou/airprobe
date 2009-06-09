@@ -46,7 +46,7 @@
 //ewentulanie innego typu (np. obierasz dummy jako normalny)
 void gsm_receiver_cf::przetwarzaj_normalny_pakiet(burst_counter burst_nr, unsigned char * pakiet)
 {
-  if (burst_nr.get_timeslot_nr() == 6) {
+  if (burst_nr.get_timeslot_nr() == 0) {
     printf("burst = [ ");
     for (int i = 0; i < BURST_SIZE ; i++) {
       printf(" %d", pakiet[i]);
