@@ -113,8 +113,8 @@ gsm_receiver_cf::gsm_receiver_cf(gr_feval_dd *tuner, int osr)
     d_OSR(osr),
     d_chan_imp_length(CHAN_IMP_RESP_LENGTH),
     d_tuner(tuner),
-    d_counter(0),
-    d_fcch_start_pos(0),
+    d_samples_counter(0),
+//     d_fcch_start_pos(0),
     d_freq_offset(0),
     d_burst_nr(osr),
     d_state(first_fcch_search)
@@ -166,9 +166,10 @@ gsm_receiver_cf::general_work(int noutput_items,
     case next_fcch_search:
       prev_freq_offset = d_freq_offset;
       if (find_fcch_burst(in, ninput_items[0])) {
-        if (abs(d_freq_offset) > 100) {
+        if (abs(d_freq_offset) > 100.0) {
           set_frequency(d_freq_offset);
         }
+        d_samples_counter = 0;
         produced_out = 0;
         d_state = sch_search;
       } else {
@@ -389,10 +390,11 @@ bool gsm_receiver_cf::find_fcch_burst(const gr_complex *in, const int nitems)
         break;
 
       case fcch_found:
-        DCOUT("fcch found on position: " << d_counter + start_pos);
+//         DCOUT("fcch found on position: " << d_samples_counter + start_pos);
+        DCOUT("fcch found on position: " << start_pos);
         to_consume = start_pos + FCCH_HITS_NEEDED * d_OSR + 1;
 
-        d_fcch_start_pos = d_counter + start_pos;
+//         d_fcch_start_pos = d_samples_counter + start_pos;
         freq_offset = compute_freq_offset(best_sum, FCCH_HITS_NEEDED);
         d_freq_offset -= freq_offset;
         DCOUT("freq_offset: " << d_freq_offset);
@@ -408,7 +410,7 @@ bool gsm_receiver_cf::find_fcch_burst(const gr_complex *in, const int nitems)
     }
   }
 
-  d_counter += to_consume;
+//   d_samples_counter += to_consume;
   consume_each(to_consume);
 
   return result;
@@ -438,8 +440,9 @@ bool gsm_receiver_cf::find_sch_burst(const gr_complex *in, const int nitems , fl
   int to_consume = 0;
   bool end = false;
   bool result = false;
-  unsigned sample_nr_near_sch_start = d_fcch_start_pos + (FRAME_BITS - SAFETY_MARGIN) * d_OSR;
-
+//   unsigned sample_nr_near_sch_start = d_fcch_start_pos + (FRAME_BITS - SAFETY_MARGIN) * d_OSR;
+  const unsigned sample_nr_near_sch_start = (FRAME_BITS - SAFETY_MARGIN + TS_BITS) * d_OSR;
+  
   enum states {
     start, reach_sch, search_not_finished, sch_found
   } sch_search_state;
@@ -450,7 +453,7 @@ bool gsm_receiver_cf::find_sch_burst(const gr_complex *in, const int nitems , fl
     switch (sch_search_state) {
 
       case start:
-        if (d_counter < sample_nr_near_sch_start) {
+        if (d_samples_counter < sample_nr_near_sch_start) {
           sch_search_state = reach_sch;
         } else {
           sch_search_state = sch_found;
@@ -458,8 +461,8 @@ bool gsm_receiver_cf::find_sch_burst(const gr_complex *in, const int nitems , fl
         break;
 
       case reach_sch:
-        if (d_counter + nitems >= sample_nr_near_sch_start) {
-          to_consume = sample_nr_near_sch_start - d_counter;
+        if (d_samples_counter + nitems >= sample_nr_near_sch_start) {
+          to_consume = sample_nr_near_sch_start - d_samples_counter;
         } else {
           to_consume = nitems;
         }
@@ -479,7 +482,7 @@ bool gsm_receiver_cf::find_sch_burst(const gr_complex *in, const int nitems , fl
     }
   }
 
-  d_counter += to_consume;
+  d_samples_counter += to_consume;
   consume_each(to_consume);
   return result;
 }
