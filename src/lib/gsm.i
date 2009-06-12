@@ -25,13 +25,13 @@
 %include "exception.i"
 %import "gnuradio.i"			// the common stuff
 
-%include "gsm_constants.h"
+/* %include "gsm_constants.h" */
 
 %{
 #include "gnuradio_swig_bug_workaround.h"	// mandatory bug fix
 #include "gsm_receiver_cf.h"
 #include <stdexcept>
-#include "gsm_constants.h"
+/* #include "gsm_constants.h" */
 %}
 
 // ----------------------------------------------------------------

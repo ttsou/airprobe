@@ -206,12 +206,12 @@ class gsm_receiver_cf : public gr_block
      * @param burst_nr
      * @param pakiet
      */
-    void przetwarzaj_normalny_pakiet(burst_counter burst_nr, unsigned char * pakiet);
+    void process_normal_burst(burst_counter burst_nr, unsigned char * pakiet);
 
     /**
      *
      */
-    void konfiguruj_odbiornik();
+    void configure_receiver();
 
   public:
     ~gsm_receiver_cf();

@@ -93,6 +93,7 @@ grinclude_HEADERS =			\
 	gsm_receiver_config.h
 
 noinst_HEADERS = 	\
+	gsm_constants.h \
 	viterbi_detector.h
 
 # These swig headers get installed in ${prefix}/include/gnuradio/swig

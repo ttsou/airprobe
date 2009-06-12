@@ -35,7 +35,6 @@
 #include <viterbi_detector.h>
 #include <sch.h>
 
-// #define FCCH_BUFFER_SIZE ()
 #define SYNC_SEARCH_RANGE 30
 #define TRAIN_SEARCH_RANGE 40
 
@@ -44,7 +43,7 @@
 //w tym przykładzie po prostu wyrzuca zawartość pakietu na wyjście
 //ps. pakiety które nie mają trzech zer na początku zazwyczaj są błędnie odebrane
 //ewentulanie innego typu (np. obierasz dummy jako normalny)
-void gsm_receiver_cf::przetwarzaj_normalny_pakiet(burst_counter burst_nr, unsigned char * pakiet)
+void gsm_receiver_cf::process_normal_burst(burst_counter burst_nr, unsigned char * pakiet)
 {
   if (burst_nr.get_timeslot_nr() == 0) {
     printf("burst = [ ");
@@ -62,7 +61,7 @@ void gsm_receiver_cf::przetwarzaj_normalny_pakiet(burst_counter burst_nr, unsign
 // Ja zakładam, że dla danej szczeliny do określenia jaki typ pakietu przypada
 // dla danej chwili może być używany tylko jeden z tych liczników. Z dokumentu
 // 3gpp 04.03 wynika, że to jest prawda w warstwie fizycznej.
-void gsm_receiver_cf::konfiguruj_odbiornik()
+void gsm_receiver_cf::configure_receiver()
 {
   // poniżej jest przykład jak się konfiguruje odbiornik
   // najpierw mówię mu, że szczelina w szczelinie nr.0 typy pakietów zmieniają się wg.
@@ -194,7 +193,7 @@ gsm_receiver_cf::general_work(int noutput_items,
 
             //configure the receiver - tell him where to find which burst type
             d_channel_conf.set_multiframe_type(TIMESLOT0, multiframe_51);  //in the timeslot nr.0 bursts changes according to t3 counter
-            konfiguruj_odbiornik();//TODO: this shouldn't be here - remove it when gsm receiver's interface will be ready
+            configure_receiver();//TODO: this shouldn't be here - remove it when gsm receiver's interface will be ready
             d_channel_conf.set_burst_types(TIMESLOT0, FCCH_FRAMES, sizeof(FCCH_FRAMES) / sizeof(unsigned), fcch_burst);  //tell where to find fcch bursts
             d_channel_conf.set_burst_types(TIMESLOT0, SCH_FRAMES, sizeof(SCH_FRAMES) / sizeof(unsigned), sch_burst);     //sch bursts
             d_channel_conf.set_burst_types(TIMESLOT0, BCCH_FRAMES, sizeof(BCCH_FRAMES) / sizeof(unsigned), normal_burst);//!and maybe normal bursts of the BCCH logical channel
@@ -250,7 +249,7 @@ gsm_receiver_cf::general_work(int noutput_items,
           case normal_burst:                                                                  //if it's normal burst
             burst_start = get_norm_chan_imp_resp(input, &channel_imp_resp[0], TRAIN_SEARCH_RANGE, d_bcc); //get channel impulse response for given training sequence number - d_bcc
             detect_burst(input, &channel_imp_resp[0], burst_start, output_binary);            //MLSE detection of bits
-            przetwarzaj_normalny_pakiet(d_burst_nr, output_binary); //TODO: this shouldn't be here - remove it when gsm receiver's interface will be ready
+            process_normal_burst(d_burst_nr, output_binary); //TODO: this shouldn't be here - remove it when gsm receiver's interface will be ready
             break;
 
           case rach_burst:
