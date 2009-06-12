@@ -26,9 +26,18 @@ AM_CPPFLAGS = $(STD_DEFINES_AND_INCLUDES) -I$(MAIN_INCLUDEDIR)
 noinst_LTLIBRARIES = libdecoder.la
 
 libdecoder_la_SOURCES = \
-	sch.c 
+	sch.c		\
+	cch.c 		\
+	fire_crc.c	\
+	gsmstack.c	\
+	interleave.c
         
 noinst_HEADERS = \
 	sch.h \
-	burst_types.h \
+	cch.h 		\
+	fire_crc.h	\
+	gsmstack.h	\
+	interleave.h	\
 	system.h	
+	
+#	burst_types.h 
