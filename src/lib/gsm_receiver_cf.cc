@@ -35,7 +35,7 @@
 #include <viterbi_detector.h>
 #include <sch.h>
 
-#define FCCH_BUFFER_SIZE (FCCH_HITS_NEEDED)
+// #define FCCH_BUFFER_SIZE ()
 #define SYNC_SEARCH_RANGE 30
 #define TRAIN_SEARCH_RANGE 40
 
@@ -82,8 +82,8 @@ void gsm_receiver_cf::konfiguruj_odbiornik()
   //Traffic channel timeslot: 6
   //mogę skonfigurować żeby odbiornik na ślepo szukał tam pakietów normalnych, bez uciekania
   //się do dekodowania informacji sterującej:
-//    d_channel_conf.set_multiframe_type(TSC6, multiframe_26);
-//    d_channel_conf.set_burst_types(TSC6, TRAFFIC_CHANNEL_F, sizeof(TRAFFIC_CHANNEL_F) / sizeof(unsigned), normal_burst);
+//    d_channel_conf.set_multiframe_type(TIMESLOT6, multiframe_26);
+//    d_channel_conf.set_burst_types(TIMESLOT6, TRAFFIC_CHANNEL_F, sizeof(TRAFFIC_CHANNEL_F) / sizeof(unsigned), normal_burst);
 }
 
 
@@ -148,10 +148,10 @@ gsm_receiver_cf::general_work(int noutput_items,
   const gr_complex *input = (const gr_complex *) input_items[0];
   float *out = (float *) output_items[0];
   int produced_out = 0;  //how many output elements were produced - this isn't used yet
-                         //probably the gsm receiver will be changed into sink so this variable won't be necessary
+  //probably the gsm receiver will be changed into sink so this variable won't be necessary
 
   switch (d_state) {
-    //bootstrapping
+      //bootstrapping
     case first_fcch_search:
       if (find_fcch_burst(input, nitems_items[0])) { //find frequency correction burst in the input buffer
         set_frequency(d_freq_offset);                //if fcch search is successful set frequency offset
@@ -164,40 +164,40 @@ gsm_receiver_cf::general_work(int noutput_items,
       break;
 
     case next_fcch_search: {                         //this state is used because it takes a bunch of buffered samples
-                                                     //before previous set_frequqency cause change
-      float prev_freq_offset = d_freq_offset;
-      if (find_fcch_burst(input, nitems_items[0])) { 
-        if (abs(prev_freq_offset - d_freq_offset) > FCCH_MAX_FREQ_OFFSET) {            
-          set_frequency(d_freq_offset);              //call set_frequncy only frequency offset change is greater than some value
+        //before previous set_frequqency cause change
+        float prev_freq_offset = d_freq_offset;
+        if (find_fcch_burst(input, nitems_items[0])) {
+          if (abs(prev_freq_offset - d_freq_offset) > FCCH_MAX_FREQ_OFFSET) {
+            set_frequency(d_freq_offset);              //call set_frequncy only frequency offset change is greater than some value
+          }
+          //produced_out = 0;
+          d_state = sch_search;
+        } else {
+          //produced_out = 0;
+          d_state = next_fcch_search;
         }
-        //produced_out = 0;
-        d_state = sch_search;
-      } else {
-        //produced_out = 0;
-        d_state = next_fcch_search;
+        break;
       }
-      break;
-    }
     case sch_search: {
-        vector_complex channel_imp_resp(CHAN_IMP_RESP_LENGTH*d_OSR); 
+        vector_complex channel_imp_resp(CHAN_IMP_RESP_LENGTH*d_OSR);
         int t1, t2, t3;
         int burst_start = 0;
         unsigned char output_binary[BURST_SIZE];
 
-        if (find_sch_burst(nitems_items[0])) {                              //wait for a SCH burst
+        if (reach_sch_burst(nitems_items[0])) {                              //wait for a SCH burst
           burst_start = get_sch_chan_imp_resp(input, &channel_imp_resp[0]); //get channel impulse response from it
           detect_burst(input, &channel_imp_resp[0], burst_start, output_binary); //detect bits using MLSE detection
           if (decode_sch(&output_binary[3], &t1, &t2, &t3, &d_ncc, &d_bcc) == 0) { //decode SCH burst
             DCOUT("sch burst_start: " << burst_start);
-            DCOUT("bcc: " << d_bcc << " ncc: " << d_ncc << " t1: " << t1 << " t2: " << t2 << " t3: " << t3);            
+            DCOUT("bcc: " << d_bcc << " ncc: " << d_ncc << " t1: " << t1 << " t2: " << t2 << " t3: " << t3);
             d_burst_nr.set(t1, t2, t3, 0);                                  //set counter of bursts value
-            
+
             //configure the receiver - tell him where to find which burst type
-            d_channel_conf.set_multiframe_type(TSC0, multiframe_51);  //in the timeslot nr.0 (TSC0) bursts changes according to t3 counter
+            d_channel_conf.set_multiframe_type(TIMESLOT0, multiframe_51);  //in the timeslot nr.0 bursts changes according to t3 counter
             konfiguruj_odbiornik();//TODO: this shouldn't be here - remove it when gsm receiver's interface will be ready
-            d_channel_conf.set_burst_types(TSC0, FCCH_FRAMES, sizeof(FCCH_FRAMES) / sizeof(unsigned), fcch_burst);  //tell where to find fcch bursts
-            d_channel_conf.set_burst_types(TSC0, SCH_FRAMES, sizeof(SCH_FRAMES) / sizeof(unsigned), sch_burst);     //sch bursts
-            d_channel_conf.set_burst_types(TSC0, BCCH_FRAMES, sizeof(BCCH_FRAMES) / sizeof(unsigned), normal_burst);//!and maybe normal bursts of the BCCH logical channel
+            d_channel_conf.set_burst_types(TIMESLOT0, FCCH_FRAMES, sizeof(FCCH_FRAMES) / sizeof(unsigned), fcch_burst);  //tell where to find fcch bursts
+            d_channel_conf.set_burst_types(TIMESLOT0, SCH_FRAMES, sizeof(SCH_FRAMES) / sizeof(unsigned), sch_burst);     //sch bursts
+            d_channel_conf.set_burst_types(TIMESLOT0, BCCH_FRAMES, sizeof(BCCH_FRAMES) / sizeof(unsigned), normal_burst);//!and maybe normal bursts of the BCCH logical channel
             d_burst_nr++;
 
             consume_each(burst_start + BURST_SIZE * d_OSR);   //consume samples up to next guard period
@@ -222,34 +222,34 @@ gsm_receiver_cf::general_work(int noutput_items,
         burst_type b_type = d_channel_conf.get_burst_type(d_burst_nr); //get burst type for given burst number
 
         switch (b_type) {
-          case fcch_burst: {
+          case fcch_burst: {                                                                    //if it's FCCH  burst
               const unsigned first_sample = ceil((GUARD_PERIOD + 2 * TAIL_BITS) * d_OSR) + 1;
               const unsigned last_sample = first_sample + USEFUL_BITS * d_OSR;
-              double freq_offset = compute_freq_offset(input, first_sample, last_sample);
+              double freq_offset = compute_freq_offset(input, first_sample, last_sample);       //extract frequency offset from it
               if (abs(freq_offset) > FCCH_MAX_FREQ_OFFSET) {
-                d_freq_offset -= freq_offset;
-                set_frequency(d_freq_offset);
+                d_freq_offset -= freq_offset;                                                   //and adjust frequency if it have changed beyond
+                set_frequency(d_freq_offset);                                                   //some limit
                 DCOUT("Adjusting frequency, new frequency offset: " << d_freq_offset << "\n");
               }
             }
             break;
-          case sch_burst: { 
+          case sch_burst: {                                                                    //if it's SCH burst
               int t1, t2, t3, d_ncc, d_bcc;
-              burst_start = get_sch_chan_imp_resp(input, &channel_imp_resp[0]);
-              detect_burst(input, &channel_imp_resp[0], burst_start, output_binary);
-              if (decode_sch(&output_binary[3], &t1, &t2, &t3, &d_ncc, &d_bcc) == 0) {
-                // d_burst_nr.set(t1, t2, t3, 0);
+              burst_start = get_sch_chan_imp_resp(input, &channel_imp_resp[0]);                //get channel impulse response
+              detect_burst(input, &channel_imp_resp[0], burst_start, output_binary);           //MLSE detection of bits
+              if (decode_sch(&output_binary[3], &t1, &t2, &t3, &d_ncc, &d_bcc) == 0) {         //and decode SCH data
+                // d_burst_nr.set(t1, t2, t3, 0);                                              //but only to check if burst_start value is correct
                 DCOUT("bcc: " << d_bcc << " ncc: " << d_ncc << " t1: " << t1 << " t2: " << t2 << " t3: " << t3);
-                offset =  burst_start - floor((GUARD_PERIOD) * d_OSR);
+                offset =  burst_start - floor((GUARD_PERIOD) * d_OSR);                         //compute offset from burst_start - burst should start after a guard period
                 DCOUT(offset);
-                to_consume += offset;
+                to_consume += offset;                                                          //adjust with offset number of samples to be consumed
               }
             }
             break;
 
-          case normal_burst: //?
-            burst_start = get_norm_chan_imp_resp(input, &channel_imp_resp[0], TRAIN_SEARCH_RANGE, d_bcc);
-            detect_burst(input, &channel_imp_resp[0], burst_start, output_binary);
+          case normal_burst:                                                                  //if it's normal burst
+            burst_start = get_norm_chan_imp_resp(input, &channel_imp_resp[0], TRAIN_SEARCH_RANGE, d_bcc); //get channel impulse response for given training sequence number - d_bcc
+            detect_burst(input, &channel_imp_resp[0], burst_start, output_binary);            //MLSE detection of bits
             przetwarzaj_normalny_pakiet(d_burst_nr, output_binary); //TODO: this shouldn't be here - remove it when gsm receiver's interface will be ready
             break;
 
@@ -260,17 +260,21 @@ gsm_receiver_cf::general_work(int noutput_items,
             //to C0 (where sch is) back and forth
 
             break;
-          case dummy: //?
-            burst_start = get_norm_chan_imp_resp(input, &channel_imp_resp[0], TRAIN_SEARCH_RANGE, 8);
-            detect_burst(input, &channel_imp_resp[0], burst_start, output_binary);
+          case dummy:                                                         //if it's dummy
+            burst_start = get_norm_chan_imp_resp(input, &channel_imp_resp[0], TRAIN_SEARCH_RANGE, TS_DUMMY); //read dummy
+            detect_burst(input, &channel_imp_resp[0], burst_start, output_binary);   // but as far as I know it's pointless
             break;
-          case empty:
-            break;
+          case empty:   //if it's empty burst
+            break;      //do nothing
         }
 
-        d_burst_nr++;   //?
+        d_burst_nr++;   //go to next burst
 
-        to_consume += TS_BITS * d_OSR + d_burst_nr.get_offset();  //?
+        to_consume += TS_BITS * d_OSR + d_burst_nr.get_offset();  //consume samples of the burst up to next guard period
+        //and add offset which is introduced by
+        //0.25 fractional part of a guard period
+        //burst_number computes this offset
+        //but choice of this class to do this was random
         consume_each(to_consume);
       }
       break;
@@ -281,8 +285,8 @@ gsm_receiver_cf::general_work(int noutput_items,
 
 bool gsm_receiver_cf::find_fcch_burst(const gr_complex *input, const int nitems)
 {
-  circular_buffer_float phase_diff_buffer(FCCH_BUFFER_SIZE * d_OSR);
-
+  circular_buffer_float phase_diff_buffer(FCCH_HITS_NEEDED * d_OSR); //circular buffer used to scan throug signal to find
+  //best match for FCCH burst
   float phase_diff = 0;
   gr_complex conjprod;
   int start_pos = -1;
@@ -292,23 +296,30 @@ bool gsm_receiver_cf::find_fcch_burst(const gr_complex *input, const int nitems)
   float max_phase_diff;
   double best_sum = 0;
   float lowest_max_min_diff = 99999;
+
   int to_consume = 0;
   int sample_number = 0;
   bool end = false;
   bool result = false;
   circular_buffer_float::iterator buffer_iter;
 
-   //?
+  /**@name Possible states of FCCH search algorithm*/
+  //@{
   enum states {
-    init, search, found_something, fcch_found, search_fail //?
+    init,               ///< initialize variables
+    search,             ///< search for positive samples
+    found_something,    ///< search for FCCH and the best position of it
+    fcch_found,         ///< when FCCH was found
+    search_fail         ///< when there is no FCCH in the input vector
   } fcch_search_state;
+  //@}
 
   fcch_search_state = init;
 
   while (!end) {
     switch (fcch_search_state) {
 
-      case init:
+      case init: //initialize variables
         hit_count = 0;
         miss_count = 0;
         start_pos = -1;
@@ -318,18 +329,20 @@ bool gsm_receiver_cf::find_fcch_burst(const gr_complex *input, const int nitems)
 
         break;
 
-      case search:
+      case search: // search for positive samples
         sample_number++;
 
-        if (sample_number > nitems - FCCH_BUFFER_SIZE * d_OSR) {
-          to_consume = sample_number;
+        if (sample_number > nitems - FCCH_HITS_NEEDED * d_OSR) { //if it isn't possible to find FCCH because
+          //there's too few samples left to look into,
+          to_consume = sample_number;                            //don't do anything with those samples which are left
+          //and consume only those which were checked
           fcch_search_state = search_fail;
         } else {
           phase_diff = compute_phase_diff(input[sample_number], input[sample_number-1]);
 
-          if (phase_diff > 0) {
+          if (phase_diff > 0) {                                 //if a positive phase difference was found
             to_consume = sample_number;
-            fcch_search_state = found_something;
+            fcch_search_state = found_something;                //switch to state in which searches for FCCH
           } else {
             fcch_search_state = search;
           }
@@ -337,18 +350,19 @@ bool gsm_receiver_cf::find_fcch_burst(const gr_complex *input, const int nitems)
 
         break;
 
-      case found_something: {
-
+      case found_something: {// search for FCCH and the best position of it
           if (phase_diff > 0) {
-            hit_count++;
+            hit_count++;       //positive phase differencies increases hits_count
           } else {
-            miss_count++;
+            miss_count++;      //negative increases miss_count
           }
 
           if ((miss_count >= FCCH_MAX_MISSES * d_OSR) && (hit_count <= FCCH_HITS_NEEDED * d_OSR)) {
-            fcch_search_state = init;
+            //if miss_count exceeds limit before hit_count
+            fcch_search_state = init;       //go to init
             continue;
           } else if (((miss_count >= FCCH_MAX_MISSES * d_OSR) && (hit_count > FCCH_HITS_NEEDED * d_OSR)) || (hit_count > 2 * FCCH_HITS_NEEDED * d_OSR)) {
+            //if hit_count and miss_count exceeds limit then FCCH was found
             fcch_search_state = fcch_found;
             continue;
           } else if ((miss_count < FCCH_MAX_MISSES * d_OSR) && (hit_count > FCCH_HITS_NEEDED * d_OSR)) {
@@ -360,21 +374,21 @@ bool gsm_receiver_cf::find_fcch_burst(const gr_complex *input, const int nitems)
 
             if (lowest_max_min_diff > max_phase_diff - min_phase_diff) {
               lowest_max_min_diff = max_phase_diff - min_phase_diff;
-              start_pos = sample_number - FCCH_HITS_NEEDED * d_OSR - FCCH_MAX_MISSES * d_OSR;
+              start_pos = sample_number - FCCH_HITS_NEEDED * d_OSR - FCCH_MAX_MISSES * d_OSR; //store start pos
               best_sum = 0;
 
               for (buffer_iter = phase_diff_buffer.begin();
                    buffer_iter != (phase_diff_buffer.end());
                    buffer_iter++) {
-                best_sum += *buffer_iter - (M_PI / 2) / d_OSR;
+                best_sum += *buffer_iter - (M_PI / 2) / d_OSR;   //store best value of phase offset sum
               }
             }
           }
 
           sample_number++;
 
-          if (sample_number >= nitems) {
-            fcch_search_state = search_fail;
+          if (sample_number >= nitems) {    //if there's no single sample left to check
+            fcch_search_state = search_fail;//FCCH search failed
             continue;
           }
 
@@ -440,50 +454,24 @@ inline float gsm_receiver_cf::compute_phase_diff(gr_complex val1, gr_complex val
   return gr_fast_atan2f(imag(conjprod), real(conjprod));
 }
 
-bool gsm_receiver_cf::find_sch_burst(const int nitems)
+bool gsm_receiver_cf::reach_sch_burst(const int nitems)
 {
+  //it just consumes samples to get near to a SCH burst
   int to_consume = 0;
-  bool end = false;
   bool result = false;
   unsigned sample_nr_near_sch_start = d_fcch_start_pos + (FRAME_BITS - SAFETY_MARGIN) * d_OSR;
 
-  enum states {
-    start, reach_sch, search_not_finished, sch_found
-  } sch_search_state;
-
-  sch_search_state = start;
-
-  while (!end) {
-    switch (sch_search_state) {
-
-      case start:
-        if (d_counter < sample_nr_near_sch_start) {
-          sch_search_state = reach_sch;
-        } else {
-          sch_search_state = sch_found;
-        }
-        break;
-
-      case reach_sch:
-        if (d_counter + nitems >= sample_nr_near_sch_start) {
-          to_consume = sample_nr_near_sch_start - d_counter;
-        } else {
-          to_consume = nitems;
-        }
-        sch_search_state = search_not_finished;
-        break;
-
-      case search_not_finished:
-        result = false;
-        end = true;
-        break;
-
-      case sch_found:
-        to_consume = 0;
-        result = true;
-        end = true;
-        break;
+  //consume samples until d_counter will be equal to sample_nr_near_sch_start
+  if (d_counter < sample_nr_near_sch_start) {
+    if (d_counter + nitems >= sample_nr_near_sch_start) {
+      to_consume = sample_nr_near_sch_start - d_counter;
+    } else {
+      to_consume = nitems;
     }
+    result = false;
+  } else {
+    to_consume = 0;
+    result = true;
   }
 
   d_counter += to_consume;
