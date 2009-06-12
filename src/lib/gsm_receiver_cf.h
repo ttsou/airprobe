@@ -37,8 +37,9 @@ typedef std::vector<gr_complex> vector_complex;
 gsm_receiver_cf_sptr gsm_make_receiver_cf(gr_feval_dd *tuner, int osr);
 
 /** GSM Receiver GNU Radio block
+ *
  * GSM Receiver class supports frequency correction, synchronisation and
- * MLSE (Maximum Likelihood Sequence Estimation) estimation of synchronisation 
+ * MLSE (Maximum Likelihood Sequence Estimation) estimation of synchronisation
  * bursts and normal bursts.
  * \ingroup block
  */
@@ -46,148 +47,169 @@ gsm_receiver_cf_sptr gsm_make_receiver_cf(gr_feval_dd *tuner, int osr);
 class gsm_receiver_cf : public gr_block
 {
   private:
-    
-    const int d_OSR;
-    const int d_chan_imp_length;
+
+    /**@name Configuration of the receiver */
+    //@{
+    const int d_OSR; ///< oversampling ratio
+    const int d_chan_imp_length; ///< channel impulse length
+    //@}
 
     gr_complex d_sch_training_seq[N_SYNC_BITS]; ///<encoded training sequence of a SCH burst
     gr_complex d_norm_training_seq[TRAIN_SEQ_NUM][N_TRAIN_BITS]; ///<encoded training sequences of a normal bursts and dummy bursts
 
     gr_feval_dd *d_tuner; ///<callback to a python object which is used for frequency tunning
-    unsigned d_samples_counter; ///<samples counter - this is used in beetween find_fcch_burst and find_sch_burst
 
-    //variables used to store result of the find_fcch_burst fuction
-//     unsigned d_fcch_start_pos; 
-    float d_freq_offset;
+    /** Countes samples consumed by the receiver
+     *
+     * It is used in beetween find_fcch_burst and find_sch_burst calls.
+     * My intention was to synchronize this counter with some internal sample
+     * counter of the USRP. Simple access to such USRP's counter isn't possible
+     * so this variable isn't used in the "synchronized" state of the receiver yet.
+     */
+    unsigned d_counter;
 
-    burst_counter d_burst_nr;
-    channel_configuration d_channel_conf;
+    /**@name Variables used to store result of the find_fcch_burst fuction */
+    //@{
+    unsigned d_fcch_start_pos; ///< position of the first sample of the fcch burst
+    float d_freq_offset; ///< frequency offset of the received signal
+    //@}
 
-    vector_complex d_channel_imp_resp;
+    /**@name Identifiers of the BTS extracted from the SCH burst */
+    //@{
+    int d_ncc; ///< network color code
+    int d_bcc; ///< base station color code
+    //@}
 
-    int d_ncc;
-    int d_bcc;
-
+    /**@name Internal state of the gsm receiver */
+    //@{
     enum states {
-      first_fcch_search, next_fcch_search, sch_search, //synchronization search part
-      synchronized //receiver is synchronized in this state
+      first_fcch_search, next_fcch_search, sch_search, // synchronization search part
+      synchronized // receiver is synchronized in this state
     } d_state;
+    //@}
+
+    /**@name Variables which make internal state in the "synchronized" state */
+    //@{
+    burst_counter d_burst_nr; ///< frame number and timeslot number
+    channel_configuration d_channel_conf; ///< mapping of burst_counter to burst_type
+    //@}
 
     friend gsm_receiver_cf_sptr gsm_make_receiver_cf(gr_feval_dd *tuner, int osr);
     gsm_receiver_cf(gr_feval_dd *tuner, int osr);
 
-    
-    /**
-     * 
-     * @param in 
-     * @param nitems 
-     * @return 
+    /** Function whis is used to search a FCCH burst and to compute frequency offset before
+     * "synchronized" state of the receiver
+     *
+     * TODO: Describe the FCCH search algorithm in the documentation
+     * @param input vector with input signal
+     * @param nitems number of samples in the input vector
+     * @return
      */
-    bool find_fcch_burst(const gr_complex *in, const int nitems);
-    
-    /**
-     * 
-     * @param best_sum 
-     * @param denominator 
-     * @return 
+    bool find_fcch_burst(const gr_complex *input, const int nitems);
+
+    /** Computes frequency offset from FCCH burst samples
+     *
+     * @param input vector with input samples
+     * @param first_sample number of the first sample of the FCCH busrt
+     * @param last_sample number of the last sample of the FCCH busrt
+     * @return frequency offset
      */
-    double compute_freq_offset(double best_sum, unsigned denominator);
-    
-    /**
-     * 
-     * @param freq_offset 
+    double compute_freq_offset(const gr_complex * input, unsigned first_sample, unsigned last_sample);
+
+    /** Calls d_tuner's method to set frequency offset from Python level
+     *
+     * @param freq_offset absolute frequency offset of the received signal
      */
     void set_frequency(double freq_offset);
-    
-    /**
-     * 
-     * @param val1 
-     * @param val2 
-     * @return 
+
+    /** Computes angle between two complex numbers
+     *
+     * @param val1 first complex number
+     * @param val2 second complex number
+     * @return
      */
     inline float compute_phase_diff(gr_complex val1, gr_complex val2);
 
-    /**
-     * 
-     * @param in 
-     * @param nitems 
-     * @param out 
-     * @return 
+    /** Function whis is used to get near to SCH burst
+     *
+     * @param nitems number of samples in the gsm_receiver's buffer
+     * @return true if SCH burst is near, false otherwise
      */
-    bool find_sch_burst(const gr_complex *in, const int nitems , float *out);
-    
-    /**
-     * 
-     * @param in 
-     * @param chan_imp_resp 
-     * @return 
+    bool find_sch_burst(const int nitems);
+
+    /** Extracts channel impulse response from a SCH burst and computes first sample number of this burst
+     *
+     * @param input vector with input samples
+     * @param chan_imp_resp complex vector where channel impulse response will be stored
+     * @return number of first sample of the burst
      */
-    int get_sch_chan_imp_resp(const gr_complex *in, gr_complex * chan_imp_resp);
-    
-    /**
-     * 
-     * @param in 
-     * @param chan_imp_resp 
-     * @param burst_start 
-     * @param output_binary 
+    int get_sch_chan_imp_resp(const gr_complex *input, gr_complex * chan_imp_resp);
+
+    /** MLSE detection of a burst bits
+     *
+     * Detects bits of burst using viterbi algorithm.
+     * @param input vector with input samples
+     * @param chan_imp_resp vector with the channel impulse response
+     * @param burst_start number of the first sample of the burst
+     * @param output_binary vector with output bits
      */
-    void detect_burst(const gr_complex * in, gr_complex * chan_imp_resp, int burst_start, unsigned char * output_binary);
-    
-    /**
-     * 
-     * @param input 
-     * @param ninput 
-     * @param gmsk_output 
-     * @param start_point 
+    void detect_burst(const gr_complex * input, gr_complex * chan_imp_resp, int burst_start, unsigned char * output_binary);
+
+    /** Encodes differentially input bits and maps them into MSK states
+     *
+     * @param input vector with input bits
+     * @param nitems number of samples in the "input" vector
+     * @param gmsk_output bits mapped into MSK states
+     * @param start_point first state
      */
-    void gmsk_mapper(const unsigned char * input, int ninput, gr_complex * gmsk_output, gr_complex start_point);
-    
-    /**
-     * 
-     * @param sequence 
-     * @param input_signal 
-     * @param ninput 
-     * @return 
+    void gmsk_mapper(const unsigned char * input, int nitems, gr_complex * gmsk_output, gr_complex start_point);
+
+    /** Correlates MSK mapped sequence with input signal
+     *
+     * @param sequence MKS mapped sequence
+     * @param length length of the sequence
+     * @param input_signal vector with input samples
+     * @return correlation value
      */
-    gr_complex correlate_sequence(const gr_complex * sequence, const gr_complex * input_signal, int ninput);
-    
-    /**
-     * 
-     * @param input 
-     * @param out 
-     * @param length 
+    gr_complex correlate_sequence(const gr_complex * sequence, int length, const gr_complex * input);
+
+    /** Computes autocorrelation of input vector for positive arguments
+     *
+     * @param input vector with input samples
+     * @param out output vector
+     * @param nitems length of the input vector
      */
-    inline void autocorrelation(const gr_complex * input, gr_complex * out, int length);
-    
-    /**
-     * 
-     * @param input 
-     * @param input_length 
-     * @param filter 
-     * @param filter_length 
-     * @param output 
+    inline void autocorrelation(const gr_complex * input, gr_complex * out, int nitems);
+
+    /** Filters input signal through channel impulse response
+     *
+     * @param input vector with input samples
+     * @param nitems number of samples to pass through filter
+     * @param filter filter taps - channel impulse response
+     * @param filter_length nember of filter taps
+     * @param output vector with filtered samples
      */
-    inline void mafi(const gr_complex * input, int input_length, gr_complex * filter, int filter_length, gr_complex * output);
-    
-    /**
-     * 
-     * @param in 
-     * @param chan_imp_resp 
-     * @param search_range 
-     * @param bcc 
-     * @return 
+    inline void mafi(const gr_complex * input, int nitems, gr_complex * filter, int filter_length, gr_complex * output);
+
+    /**  Extracts channel impulse response from a normal burst and computes first sample number of this burst
+     *
+     * @param input vector with input samples
+     * @param chan_imp_resp complex vector where channel impulse response will be stored
+     * @param search_range possible absolute offset of a channel impulse response start
+     * @param bcc base station color code - number of a training sequence
+     * @return first sample number of normal burst
      */
-    int get_norm_chan_imp_resp(const gr_complex *in, gr_complex * chan_imp_resp, unsigned search_range, int bcc);
-    
+    int get_norm_chan_imp_resp(const gr_complex * input, gr_complex * chan_imp_resp, unsigned search_range, int bcc);
+
     /**
-     * 
-     * @param burst_nr 
-     * @param pakiet 
+     *
+     * @param burst_nr
+     * @param pakiet
      */
     void przetwarzaj_normalny_pakiet(burst_counter burst_nr, unsigned char * pakiet);
-    
+
     /**
-     * 
+     *
      */
     void konfiguruj_odbiornik();
 

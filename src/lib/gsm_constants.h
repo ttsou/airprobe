@@ -23,7 +23,7 @@
 #define FCCH_POS          TAIL_BITS
 #define SYNC_POS          39
 #define TRAIN_POS         ( TAIL_BITS + DATA_BITS + 5) //first 5 bits of a training sequence
-//aren't used for channel impulse response estimation
+                                                       //aren't used for channel impulse response estimation
 #define TRAIN_BEGINNING   5
 #define SAFETY_MARGIN     6   //
 
@@ -41,11 +41,11 @@ static const unsigned char SYNC_BITS[] = {
 };
 
 const unsigned FCCH_FRAMES[] = {0, 10, 20, 30, 40};
-const unsigned SCH_FRAMES[] = {1,11,21,31,41};
+const unsigned SCH_FRAMES[] = {1, 11, 21, 31, 41};
 
-const unsigned BCCH_FRAMES[] = {2,3,4,5};             //!!the receiver shouldn't care about logical 
-const unsigned TRAFFIC_CHANNEL_F[] = {0,1,2,3,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,20,21,22,23,24};
-                                                      //!!channels so this will be removed from this header
+const unsigned BCCH_FRAMES[] = {2, 3, 4, 5};          //!!the receiver shouldn't care about logical
+const unsigned TRAFFIC_CHANNEL_F[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24};
+//!!channels so this will be removed from this header
 const unsigned TEST[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50};
 // Sync             : .+...++.+..+++.++++++.++++++....++.+..+.+.+++.+.+...+..++++..+..
 // Diff Encoded Sync: .++..+.+++.+..++.....++.....+...+.+++.+++++..+++++..++.+...+.++.
@@ -106,8 +106,8 @@ static const unsigned char dummy_burst[] = {
  * COMPACT) the center frequency.  One can use this spike with a narrow
  * band filter to accurately determine the center of the channel.
  */
-static const unsigned char fc_fb[] = {               //I don't use this tables, 
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,    //I copied this here from burst_types.h because 
+static const unsigned char fc_fb[] = {               //I don't use this tables,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,    //I copied this here from burst_types.h because
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,    //the description is very informative - p.krysik
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

@@ -36,13 +36,6 @@
 
 // ----------------------------------------------------------------
 
-/*
- * First arg is the package prefix.
- * Second arg is the name of the class minus the prefix.
- *
- * This does some behind-the-scenes magic so we can
- * access howto_square_ff from python as howto.square_ff
- */
 GR_SWIG_BLOCK_MAGIC(gsm,receiver_cf);
 
 gsm_receiver_cf_sptr gsm_make_receiver_cf ( gr_feval_dd *tuner, int osr);
