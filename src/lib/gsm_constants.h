@@ -44,11 +44,9 @@ const unsigned FCCH_FRAMES[] = {0, 10, 20, 30, 40};
 const unsigned SCH_FRAMES[] = {1, 11, 21, 31, 41};
 
 const unsigned BCCH_FRAMES[] = {2, 3, 4, 5};          //!!the receiver shouldn't care about logical
+                                                      //!!channels so this will be removed from this header
 const unsigned TRAFFIC_CHANNEL_F[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24};
-//!!channels so this will be removed from this header
-const unsigned TEST[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50};
-// Sync             : .+...++.+..+++.++++++.++++++....++.+..+.+.+++.+.+...+..++++..+..
-// Diff Encoded Sync: .++..+.+++.+..++.....++.....+...+.+++.+++++..+++++..++.+...+.++.
+const unsigned TEST51[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50};
 
 #define TSC0  0
 #define TSC1  1
@@ -61,6 +59,16 @@ const unsigned TEST[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 1
 #define TS_DUMMY 8
 
 #define TRAIN_SEQ_NUM 9
+
+#define TIMESLOT0  0
+#define TIMESLOT1  1
+#define TIMESLOT2  2
+#define TIMESLOT3  3
+#define TIMESLOT4  4
+#define TIMESLOT5  5
+#define TIMESLOT6  6
+#define TIMESLOT7  7
+
 
 static const unsigned char train_seq[TRAIN_SEQ_NUM][N_TRAIN_BITS] = {
   {0, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1},
@@ -129,18 +137,6 @@ static const unsigned char fc_compact_fb[] = {
   1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
   1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0
 };
-
-//Diff encoded train_seq
-//TSC0: +.++.+++..+...++..++.+++..
-//TSC1: +.+++.++..++...+..++.+++..
-//TSC2: +++...+..++..+++.++...+..+
-//TSC3: +++..+...++.+++..++..+...+
-//TSC4: +..+.++++..+.++....+.++++.
-//TSC5: +++.+..++++.+....++.+..+++
-//TSC6: .+++.+....++.+..++++.+....
-//TSC7: ...++...+..++.+++..++...+.
-//TSC8: ..........................
-//TSC9: ++..+..+++..+..+++..+..+++
 
 
 #endif /* INCLUDED_GSM_CONSTANTS_H */

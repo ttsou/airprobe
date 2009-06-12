@@ -61,7 +61,7 @@ class gsm_receiver_cf : public gr_block
 
     /** Countes samples consumed by the receiver
      *
-     * It is used in beetween find_fcch_burst and find_sch_burst calls.
+     * It is used in beetween find_fcch_burst and reach_sch_burst calls.
      * My intention was to synchronize this counter with some internal sample
      * counter of the USRP. Simple access to such USRP's counter isn't possible
      * so this variable isn't used in the "synchronized" state of the receiver yet.
@@ -135,7 +135,7 @@ class gsm_receiver_cf : public gr_block
      * @param nitems number of samples in the gsm_receiver's buffer
      * @return true if SCH burst is near, false otherwise
      */
-    bool find_sch_burst(const int nitems);
+    bool reach_sch_burst(const int nitems);
 
     /** Extracts channel impulse response from a SCH burst and computes first sample number of this burst
      *
