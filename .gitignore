@@ -20,3 +20,6 @@ build
 *~
 autom4te.cache 
 debug
+html
+latex
+xml
