@@ -1,7 +1,6 @@
-To build gsm receiver use:
+To build the GSM Receiver use:
   $ ./bootstrap
   $ cd debug 
   $ ./configure
   $ make
 
-Usage        
