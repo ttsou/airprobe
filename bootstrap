@@ -27,3 +27,6 @@ autoconf
 autoheader
 libtoolize --automake
 automake --add-missing
+if test ! -d debug; then
+    mkdir debug
+fi
