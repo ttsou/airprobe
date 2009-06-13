@@ -1,0 +1,7 @@
+To build gsm receiver use:
+  $ ./bootstrap
+  $ cd debug 
+  $ ./configure
+  $ make
+
+Usage        
