@@ -39,24 +39,28 @@
 #define TRAIN_SEARCH_RANGE 40
 
 //TODO: this shouldn't be here - remove it when gsm receiver's interface will be ready
-void gsm_receiver_cf::process_normal_burst(burst_counter burst_nr, unsigned char * pakiet)
+void gsm_receiver_cf::process_normal_burst(burst_counter burst_nr, const unsigned char * burst_binary)
 {
   if (burst_nr.get_timeslot_nr() == 0) {
-    printf("burst = [ ");
-    for (int i = 0; i < BURST_SIZE ; i++) {
-      printf(" %d", pakiet[i]);
-    }
-    printf("];\n");
+//     printf("burst = [ ");
+//     for (int i = 0; i < BURST_SIZE ; i++) {
+//       printf(" %d", burst_binary[i]);
+//     }
+//     printf("];\n");
 //     std::cout  << " t2: " << burst_nr.get_t2() << "\n";
+    GS_process(&d_gs_ctx, TIMESLOT0, 6, &burst_binary[3], burst_nr.get_frame_nr());
   }
 }
 //TODO: this shouldn't be here also - the same reason
 void gsm_receiver_cf::configure_receiver()
 {
   d_channel_conf.set_multiframe_type(TSC0, multiframe_51);
+  
+  d_channel_conf.set_burst_types(TSC0, TEST_CCH_FRAMES, sizeof(TEST_CCH_FRAMES) / sizeof(unsigned), normal_burst);
   d_channel_conf.set_burst_types(TSC0, FCCH_FRAMES, sizeof(FCCH_FRAMES) / sizeof(unsigned), fcch_burst);
-  d_channel_conf.set_multiframe_type(TIMESLOT6, multiframe_26);
-  d_channel_conf.set_burst_types(TIMESLOT6, TRAFFIC_CHANNEL_F, sizeof(TRAFFIC_CHANNEL_F) / sizeof(unsigned), normal_burst);
+  
+//   d_channel_conf.set_multiframe_type(TIMESLOT6, multiframe_26);
+//   d_channel_conf.set_burst_types(TIMESLOT6, TRAFFIC_CHANNEL_F, sizeof(TRAFFIC_CHANNEL_F) / sizeof(unsigned), normal_burst);
 }
 
 
@@ -98,6 +102,9 @@ gsm_receiver_cf::gsm_receiver_cf(gr_feval_dd *tuner, int osr)
   for (i = 0; i < TRAIN_SEQ_NUM; i++) {
     gmsk_mapper(train_seq[i], N_TRAIN_BITS, d_norm_training_seq[i], gr_complex(1.0, 0.0));
   }
+  
+  /* Initialize GSM Stack */
+  GS_new(&d_gs_ctx); //TODO: remove it! it'a not right place for a decoder
 }
 
 /*

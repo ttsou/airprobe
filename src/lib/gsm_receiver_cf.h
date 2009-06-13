@@ -29,6 +29,8 @@
 #include <gsm_constants.h>
 #include <gsm_receiver_config.h>
 
+#include <gsmstack.h> //TODO: remember to remove this line in the future!
+
 class gsm_receiver_cf;
 
 typedef boost::shared_ptr<gsm_receiver_cf> gsm_receiver_cf_sptr;
@@ -93,6 +95,9 @@ class gsm_receiver_cf : public gr_block
     burst_counter d_burst_nr; ///< frame number and timeslot number
     channel_configuration d_channel_conf; ///< mapping of burst_counter to burst_type
     //@}
+    
+    // GSM Stack
+    GS_CTX d_gs_ctx;//TODO: remove it! it'a not right place for a decoder
 
     friend gsm_receiver_cf_sptr gsm_make_receiver_cf(gr_feval_dd *tuner, int osr);
     gsm_receiver_cf(gr_feval_dd *tuner, int osr);
@@ -204,9 +209,9 @@ class gsm_receiver_cf : public gr_block
     /**
      *
      * @param burst_nr
-     * @param pakiet
+     * @param burst_binary
      */
-    void process_normal_burst(burst_counter burst_nr, unsigned char * pakiet);
+    void process_normal_burst(burst_counter burst_nr, const unsigned char * burst_binary);
 
     /**
      *

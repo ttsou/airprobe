@@ -104,9 +104,9 @@ GS_new(GS_CTX *ctx)
  * 142 bit
  */
 int
-GS_process(GS_CTX *ctx, int ts, int type, const unsigned char *src)
+GS_process(GS_CTX *ctx, int ts, int type, const unsigned char *src, int fn)
 {
-	int fn;
+// 	int fn;
 	int bsic;
 	int ret;
 	unsigned char *data;
@@ -132,9 +132,9 @@ GS_process(GS_CTX *ctx, int ts, int type, const unsigned char *src)
 	}
 #endif
 
-	if (ts == 0) {
+/*	if (ts == 0) {
 		if (type == SCH) {
-			ret = decode_sch(src, &fn, &bsic);
+//			ret = decode_sch(src, &fn, &bsic);
 			if (ret != 0)
 				return 0;
 			if ((ctx->bsic > 0) && (bsic != ctx->bsic))
@@ -143,17 +143,17 @@ GS_process(GS_CTX *ctx, int ts, int type, const unsigned char *src)
 			ctx->fn = fn;
 			ctx->bsic = bsic;
 			/* Reset message concatenator */
-			ts_ctx->burst_count = 0;
-			return 0;
-		}
+//			ts_ctx->burst_count = 0;
+//			return 0;
+//		}
 
 		/* If we did not get Frame Number yet then return */
-		if (ctx->fn < 0)
-			return 0;
+//		if (ctx->fn < 0)
+//			return 0;
 
-		ctx->fn++;
-	}
-
+//		ctx->fn++;
+//	}
+        ctx->fn = fn;
 	if (type == NORMAL) {
 		/* Interested in these frame numbers (cch)
  		 * 2-5, 12-15, 22-25, 23-35, 42-45

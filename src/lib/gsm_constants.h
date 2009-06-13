@@ -33,6 +33,9 @@
 
 #define CHAN_IMP_RESP_LENGTH  5
 
+typedef enum {empty, fcch_burst, sch_burst, normal_burst, rach_burst, dummy} burst_type;
+typedef enum {unknown, multiframe_26, multiframe_51} multiframe_type;
+
 static const unsigned char SYNC_BITS[] = {
   1, 0, 1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 0,
   0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1,
@@ -45,8 +48,10 @@ const unsigned SCH_FRAMES[] = {1, 11, 21, 31, 41};
 
 const unsigned BCCH_FRAMES[] = {2, 3, 4, 5};          //!!the receiver shouldn't care about logical
                                                       //!!channels so this will be removed from this header
+const unsigned TEST_CCH_FRAMES[] = {2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 14, 15, 16, 17, 18, 19, 22, 23, 24, 25, 26, 27, 28, 29, 32, 33, 34, 35, 36, 37, 38, 39, 42, 43, 44, 45, 46, 47, 48, 49};
 const unsigned TRAFFIC_CHANNEL_F[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24};
 const unsigned TEST51[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50};
+
 
 #define TSC0  0
 #define TSC1  1

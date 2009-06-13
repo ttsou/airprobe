@@ -1,6 +1,6 @@
 
-#ifndef __GSMSTACK_H__
-#define __GSMSTACK_H__ 1
+#ifndef __SCH_H__
+#define __SCH_H__ 1
 
 #ifdef __cplusplus
 extern "C"

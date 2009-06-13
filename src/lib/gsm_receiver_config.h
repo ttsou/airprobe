@@ -33,9 +33,6 @@
 #include <stdint.h>
 #include <gsm_constants.h>
 
-typedef enum {empty, fcch_burst, sch_burst, normal_burst, rach_burst, dummy} burst_type;
-typedef enum {unknown, multiframe_26, multiframe_51} multiframe_type;
-
 class multiframe_configuration
 {
   private:
