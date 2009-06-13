@@ -38,11 +38,7 @@
 #define SYNC_SEARCH_RANGE 30
 #define TRAIN_SEARCH_RANGE 40
 
-//tutaj umieściłem funkcję która dostaje normalny pakiet + numer
-//numer pakietu to numer ramki + numer szczeliny czasowej
-//w tym przykładzie po prostu wyrzuca zawartość pakietu na wyjście
-//ps. pakiety które nie mają trzech zer na początku zazwyczaj są błędnie odebrane
-//ewentulanie innego typu (np. obierasz dummy jako normalny)
+//TODO: this shouldn't be here - remove it when gsm receiver's interface will be ready
 void gsm_receiver_cf::process_normal_burst(burst_counter burst_nr, unsigned char * pakiet)
 {
   if (burst_nr.get_timeslot_nr() == 0) {
@@ -54,35 +50,13 @@ void gsm_receiver_cf::process_normal_burst(burst_counter burst_nr, unsigned char
 //     std::cout  << " t2: " << burst_nr.get_t2() << "\n";
   }
 }
-
-// Tutaj ustawia się jekie rodzaje pakietów przypadają na dane stany licznika.
-// Licznik ramek składa składa się z trzech części: t3,t2,t1.
-// T3 liczy modulo 51, a t2 liczy modulo 26.
-// Ja zakładam, że dla danej szczeliny do określenia jaki typ pakietu przypada
-// dla danej chwili może być używany tylko jeden z tych liczników. Z dokumentu
-// 3gpp 04.03 wynika, że to jest prawda w warstwie fizycznej.
+//TODO: this shouldn't be here also - the same reason
 void gsm_receiver_cf::configure_receiver()
 {
-  // poniżej jest przykład jak się konfiguruje odbiornik
-  // najpierw mówię mu, że szczelina w szczelinie nr.0 typy pakietów zmieniają się wg.
-  // licznika t3, czyli modulo 51:
-
   d_channel_conf.set_multiframe_type(TSC0, multiframe_51);
-  // tutaj mówię mu, gdzie ma szukać pakietów korekcji częstotliwości FCCH
-  // w gsm_constants jest definicja: const unsigned FCCH_FRAMES[] = {0, 10, 20, 30, 40};
-  // kanał fcch jest nadawany zawsze w w szczelinie nr.0 więc podaję najapierw TSC0
-  // potem wartości licznika z tej wcześniej zdefiniowanej tablicy, dalej ilość elementów tablicy,
-  // a na końcu typ pakietu
-  // typy są zdefiniowane w gsm_receiver_config.h
   d_channel_conf.set_burst_types(TSC0, FCCH_FRAMES, sizeof(FCCH_FRAMES) / sizeof(unsigned), fcch_burst);
-
-  //w plikach z danymi są opisy i tam można znaleźć nr. szczeliny, w której nadawany był głos
-  //w pierwszym to jest:
-  //Traffic channel timeslot: 6
-  //mogę skonfigurować żeby odbiornik na ślepo szukał tam pakietów normalnych, bez uciekania
-  //się do dekodowania informacji sterującej:
-//    d_channel_conf.set_multiframe_type(TIMESLOT6, multiframe_26);
-//    d_channel_conf.set_burst_types(TIMESLOT6, TRAFFIC_CHANNEL_F, sizeof(TRAFFIC_CHANNEL_F) / sizeof(unsigned), normal_burst);
+  d_channel_conf.set_multiframe_type(TIMESLOT6, multiframe_26);
+  d_channel_conf.set_burst_types(TIMESLOT6, TRAFFIC_CHANNEL_F, sizeof(TRAFFIC_CHANNEL_F) / sizeof(unsigned), normal_burst);
 }
 
 
@@ -115,8 +89,8 @@ gsm_receiver_cf::gsm_receiver_cf(gr_feval_dd *tuner, int osr)
     d_counter(0),
     d_fcch_start_pos(0),
     d_freq_offset(0),
-    d_burst_nr(osr),
-    d_state(first_fcch_search)
+    d_state(first_fcch_search),
+    d_burst_nr(osr)
 {
   int i;
   gmsk_mapper(SYNC_BITS, N_SYNC_BITS, d_sch_training_seq, gr_complex(0.0, -1.0));
@@ -145,7 +119,7 @@ gsm_receiver_cf::general_work(int noutput_items,
                               gr_vector_void_star &output_items)
 {
   const gr_complex *input = (const gr_complex *) input_items[0];
-  float *out = (float *) output_items[0];
+  //float *out = (float *) output_items[0];
   int produced_out = 0;  //how many output elements were produced - this isn't used yet
   //probably the gsm receiver will be changed into sink so this variable won't be necessary
 
@@ -209,7 +183,6 @@ gsm_receiver_cf::general_work(int noutput_items,
         }
         break;
       }
-
       //in this state receiver is synchronized and it processes bursts according to burst type for given burst number
     case synchronized: {
         vector_complex channel_imp_resp(CHAN_IMP_RESP_LENGTH*d_OSR);
@@ -399,7 +372,7 @@ bool gsm_receiver_cf::find_fcch_burst(const gr_complex *input, const int nitems)
 
       case fcch_found: {
           DCOUT("fcch found on position: " << d_counter + start_pos);
-          to_consume = start_pos + FCCH_HITS_NEEDED * d_OSR + 1;
+          to_consume = start_pos + FCCH_HITS_NEEDED * d_OSR + 1; //consume one FCCH burst
 
           d_fcch_start_pos = d_counter + start_pos;
 
