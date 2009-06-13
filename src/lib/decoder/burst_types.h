@@ -17,6 +17,7 @@ static const unsigned char tail_bits[] = {0, 0, 0};
  * The normal burst is used to carry information on traffic and control
  * channels.
  */
+
 static const int N_TSC_NUM	= 8;	// number of training sequence codes
 static const int N_TSC_CODE_LEN	= 26;	// length of tsc
 static const int N_TSC_OS	= 61;	// tsc offset

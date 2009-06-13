@@ -1,4 +1,3 @@
-//TODO: this file shouldn't be part of the GSM Receiver
 /*
  * Invoke gsmstack() with any kind of burst. Automaticly decode and retrieve
  * information.
@@ -9,14 +8,25 @@
 #include <errno.h>
 #include <string.h>
 #include "gsmstack.h"
-#include "gsm_constants.h"
-#include "gsm_receiver_config.h"
+//#include "gsm_constants.h"
 #include "interleave.h"
-#include "sch.h"
+//#include "sch.h"
 #include "cch.h"
 
-//#include "out_pcap.h"
+static const int USEFUL_BITS = 142;
 
+//#include "out_pcap.h"
+enum BURST_TYPE {
+        UNKNOWN,
+        FCCH, 
+        PARTIAL_SCH,            //successful correlation, but missing data ^
+        SCH,
+        CTS_SCH,
+        COMPACT_SCH, 
+        NORMAL,
+        DUMMY,
+        ACCESS
+};
 static void out_gsmdecode(char type, int arfcn, int ts, int fn, char *data, int len);
 
 /* encode a decoded burst (1 bit per byte) into 8-bit-per-byte */
@@ -74,17 +84,17 @@ GS_new(GS_CTX *ctx)
 	ctx->fn = -1;
 	ctx->bsic = -1;
 
-	ctx->tun_fd = mktun("gsm", ctx->ether_addr);
-	if (ctx->tun_fd < 0)
-		fprintf(stderr, "cannot open 'gsm' tun device, did you create it?\n");
+//	ctx->tun_fd = mktun("gsm", ctx->ether_addr);
+//	if (ctx->tun_fd < 0)
+//		fprintf(stderr, "cannot open 'gsm' tun device, did you create it?\n");
 
-	ctx->pcap_fd = open_pcap_file("tvoid.pcap");
-	if (ctx->pcap_fd < 0)
-		fprintf(stderr, "cannot open PCAP file: %s\n", strerror(errno));
+//	ctx->pcap_fd = open_pcap_file("tvoid.pcap");
+//	if (ctx->pcap_fd < 0)
+//		fprintf(stderr, "cannot open PCAP file: %s\n", strerror(errno));
 
-	ctx->burst_pcap_fd = open_pcap_file("tvoid-burst.pcap");
-	if (ctx->burst_pcap_fd < 0)
-		fprintf(stderr, "cannot open burst PCAP file: %s\n", strerror(errno));
+//	ctx->burst_pcap_fd = open_pcap_file("tvoid-burst.pcap");
+//	if (ctx->burst_pcap_fd < 0)
+//		fprintf(stderr, "cannot open burst PCAP file: %s\n", strerror(errno));
 
 	return 0;
 }
@@ -108,8 +118,8 @@ GS_process(GS_CTX *ctx, int ts, int type, const unsigned char *src)
 
 	/* write burst to burst PCAP file */
 	burst_octify(octified, src, USEFUL_BITS);
-	write_pcap_packet(ctx->burst_pcap_fd, 0 /* arfcn */, ts, ctx->fn,
-			  1, type, octified, BURST_BYTES);
+//	write_pcap_packet(ctx->burst_pcap_fd, 0 /* arfcn */, ts, ctx->fn,
+//			  1, type, octified, BURST_BYTES);
 	
 #if 0
 	if (ts != 0) {
@@ -117,13 +127,13 @@ GS_process(GS_CTX *ctx, int ts, int type, const unsigned char *src)
 		data = decode_cch(ctx, ctx->burst, &len);
 		if (data == NULL)
 			return -1;
-		write_pcap_packet(ctx->pcap_fd, 0 /* arfcn */, ts, ctx->fn, data, len);
+//		write_pcap_packet(ctx->pcap_fd, 0 /* arfcn */, ts, ctx->fn, data, len);
 		return;
 	}
 #endif
 
 	if (ts == 0) {
-		if (type == sch_burst) {
+		if (type == SCH) {
 			ret = decode_sch(src, &fn, &bsic);
 			if (ret != 0)
 				return 0;
@@ -144,7 +154,7 @@ GS_process(GS_CTX *ctx, int ts, int type, const unsigned char *src)
 		ctx->fn++;
 	}
 
-	if (type == normal_burst) {
+	if (type == NORMAL) {
 		/* Interested in these frame numbers (cch)
  		 * 2-5, 12-15, 22-25, 23-35, 42-45
  		 * 6-9, 16-19, 26-29, 36-39, 46-49
@@ -167,9 +177,9 @@ GS_process(GS_CTX *ctx, int ts, int type, const unsigned char *src)
 		//DEBUGF("OK TS %d, len %d\n", ts, len);
 
 		out_gsmdecode(0, 0, ts, ctx->fn - 4, data, len);
-		write_interface(ctx->tun_fd, data+1, len-1, ctx->ether_addr);
-		write_pcap_packet(ctx->pcap_fd, 0 /* arfcn */, ts, ctx->fn,
-				  0, normal_burst, data, len);
+//		write_interface(ctx->tun_fd, data+1, len-1, ctx->ether_addr);
+//		write_pcap_packet(ctx->pcap_fd, 0 /* arfcn */, ts, ctx->fn,
+//				  0, NORMAL, data, len);
 #if 0
 		if (ctx->fn % 51 != 0) && ( (((ctx->fn % 51 + 5) % 10 == 0) || (((ctx->fn % 51) + 1) % 10 ==0) ) )
 			ready = 1;

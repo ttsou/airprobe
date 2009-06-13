@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include <gsm_constants.h>
+#include "gsm_constants.h"
 
 /*
  * Synchronization channel.

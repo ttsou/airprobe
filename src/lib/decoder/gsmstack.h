@@ -29,8 +29,8 @@ typedef struct
 	int tun_fd;
 	unsigned char ether_addr[ETH_ALEN];
 
-	int pcap_fd;
-	int burst_pcap_fd;
+//	int pcap_fd;
+//	int burst_pcap_fd;
 } GS_CTX;
 
 int GS_new(GS_CTX *ctx);
