@@ -33,6 +33,8 @@
 
 #define CHAN_IMP_RESP_LENGTH  5
 
+#define MAX_SCH_ERRORS    2  //maximum number of subsequent sch errors after which gsm receiver goes to find_next_fcch state
+
 typedef enum {empty, fcch_burst, sch_burst, normal_burst, rach_burst, dummy} burst_type;
 typedef enum {unknown, multiframe_26, multiframe_51} multiframe_type;
 

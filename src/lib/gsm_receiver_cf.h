@@ -96,6 +96,8 @@ class gsm_receiver_cf : public gr_block
     channel_configuration d_channel_conf; ///< mapping of burst_counter to burst_type
     //@}
     
+    unsigned d_failed_sch; ///< number of subsequent erroneous SCH bursts
+    
     // GSM Stack
     GS_CTX d_gs_ctx;//TODO: remove it! it'a not right place for a decoder
 

@@ -55,10 +55,10 @@ void gsm_receiver_cf::process_normal_burst(burst_counter burst_nr, const unsigne
 void gsm_receiver_cf::configure_receiver()
 {
   d_channel_conf.set_multiframe_type(TSC0, multiframe_51);
-  
+
   d_channel_conf.set_burst_types(TSC0, TEST_CCH_FRAMES, sizeof(TEST_CCH_FRAMES) / sizeof(unsigned), normal_burst);
   d_channel_conf.set_burst_types(TSC0, FCCH_FRAMES, sizeof(FCCH_FRAMES) / sizeof(unsigned), fcch_burst);
-  
+
 //   d_channel_conf.set_multiframe_type(TIMESLOT6, multiframe_26);
 //   d_channel_conf.set_burst_types(TIMESLOT6, TRAFFIC_CHANNEL_F, sizeof(TRAFFIC_CHANNEL_F) / sizeof(unsigned), normal_burst);
 }
@@ -94,7 +94,8 @@ gsm_receiver_cf::gsm_receiver_cf(gr_feval_dd *tuner, int osr)
     d_fcch_start_pos(0),
     d_freq_offset(0),
     d_state(first_fcch_search),
-    d_burst_nr(osr)
+    d_burst_nr(osr),
+    d_failed_sch(0)
 {
   int i;
   gmsk_mapper(SYNC_BITS, N_SYNC_BITS, d_sch_training_seq, gr_complex(0.0, -1.0));
@@ -102,7 +103,7 @@ gsm_receiver_cf::gsm_receiver_cf(gr_feval_dd *tuner, int osr)
   for (i = 0; i < TRAIN_SEQ_NUM; i++) {
     gmsk_mapper(train_seq[i], N_TRAIN_BITS, d_norm_training_seq[i], gr_complex(1.0, 0.0));
   }
-  
+
   /* Initialize GSM Stack */
   GS_new(&d_gs_ctx); //TODO: remove it! it'a not right place for a decoder
 }
@@ -218,10 +219,16 @@ gsm_receiver_cf::general_work(int noutput_items,
               detect_burst(input, &channel_imp_resp[0], burst_start, output_binary);           //MLSE detection of bits
               if (decode_sch(&output_binary[3], &t1, &t2, &t3, &d_ncc, &d_bcc) == 0) {         //and decode SCH data
                 // d_burst_nr.set(t1, t2, t3, 0);                                              //but only to check if burst_start value is correct
+                d_failed_sch = 0;
                 DCOUT("bcc: " << d_bcc << " ncc: " << d_ncc << " t1: " << t1 << " t2: " << t2 << " t3: " << t3);
                 offset =  burst_start - floor((GUARD_PERIOD) * d_OSR);                         //compute offset from burst_start - burst should start after a guard period
                 DCOUT(offset);
                 to_consume += offset;                                                          //adjust with offset number of samples to be consumed
+              } else {
+                d_failed_sch++;
+                if(d_failed_sch >= MAX_SCH_ERRORS){
+                  d_state = next_fcch_search;
+                }
               }
             }
             break;
@@ -680,6 +687,5 @@ int gsm_receiver_cf::get_norm_chan_imp_resp(const gr_complex *input, gr_complex 
   //std::cout << " burst_start: " << burst_start << " center: " << ((float)(search_start_pos + strongest_window_nr + chan_imp_resp_center)) / d_OSR << " stronegest window nr: " <<  strongest_window_nr << "\n";
 
   return burst_start;
-
 }
 
