@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-#!/usr/bin/env python
 
 from gnuradio import gr, gru, blks2
 #, gsm
