@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+#this file isn't ready to use now - gsm-receiver lacks realtime processing capability 
+#there are many underruns of buffer fom usrp's samples, many blocks of samples get lost and
+#receiver isn't prepared for this situation too well
 
 from gnuradio import gr, gru, blks2
 #, gsm
