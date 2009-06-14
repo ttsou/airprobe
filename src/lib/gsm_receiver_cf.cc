@@ -613,6 +613,9 @@ inline void gsm_receiver_cf::mafi(const gr_complex * input, int nitems, gr_compl
   }
 }
 
+//TODO: get_norm_chan_imp_resp is similar to get_sch_chan_imp_resp - consider joining this two functions
+//TODO: this is place where most errors are introduced and can be corrected by improvements to this fuction
+//especially computations of strongest_window_nr
 int gsm_receiver_cf::get_norm_chan_imp_resp(const gr_complex *input, gr_complex * chan_imp_resp, unsigned search_range, int bcc)
 {
   vector_complex correlation_buffer;
@@ -626,7 +629,8 @@ int gsm_receiver_cf::get_norm_chan_imp_resp(const gr_complex *input, gr_complex 
   float energy = 0;
 
   int search_center = (int)((TRAIN_POS + GUARD_PERIOD) * d_OSR);
-  int search_start_pos = search_center + 1;
+//   int search_start_pos = search_center + 1;
+  int search_start_pos = search_center -  d_chan_imp_length * d_OSR;
   int search_stop_pos = search_center + d_chan_imp_length * d_OSR + 2 * d_OSR;
 
   for (int ii = search_start_pos; ii < search_stop_pos; ii++) {
@@ -643,7 +647,8 @@ int gsm_receiver_cf::get_norm_chan_imp_resp(const gr_complex *input, gr_complex 
     vector_float::iterator iter_ii = iter;
     energy = 0;
 
-    for (int ii = 0; ii < (d_chan_imp_length)*d_OSR; ii++, iter_ii++) {
+    for (int ii = 0; ii < (d_chan_imp_length-2)*d_OSR; ii++, iter_ii++) {
+//    for (int ii = 0; ii < (d_chan_imp_length)*d_OSR; ii++, iter_ii++) {
       if (iter_ii == power_buffer.end()) {
         loop_end = true;
         break;
@@ -657,9 +662,9 @@ int gsm_receiver_cf::get_norm_chan_imp_resp(const gr_complex *input, gr_complex 
 
     window_energy_buffer.push_back(energy);
   }
-
-  strongest_window_nr = max_element(window_energy_buffer.begin(), window_energy_buffer.end()) - window_energy_buffer.begin();
-//   d_channel_imp_resp.clear();
+  //!why doesn't this work
+  strongest_window_nr = max_element(window_energy_buffer.begin(), window_energy_buffer.end()) - window_energy_buffer.begin(); 
+  //strongest_window_nr = 3; //! so I have to override it here
 
   max_correlation = 0;
   for (int ii = 0; ii < (d_chan_imp_length)*d_OSR; ii++) {
