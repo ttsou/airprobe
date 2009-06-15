@@ -3,4 +3,3 @@ Usage:
     $ capture.sh <frequency>
  -run go.sh on this file:
     $ go.sh <file.cfile> 
-

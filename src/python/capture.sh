@@ -1,7 +1,7 @@
 #! /bin/sh
 
 if [ $1"x" = x ]; then
-	echo "./capture.sh <freq> [duration==10] [decim==112]"
+	echo "./capture.sh <freq> [duration==10] [decim==112] [gain==52]"
 	echo "Example: ./capture.sh 940.4M"
 	exit 1
 fi
@@ -15,6 +15,12 @@ DECIM=$3
 if [ $3"x" = x ]; then
 	DECIM=112
 fi
+
+GAIN=$4
+if [ $4"x" = x ]; then
+	GAIN=52
+fi
+
 
 USRP_PROG=usrp_rx_cfile.py
 while :; do
@@ -35,5 +41,5 @@ done
 FILE="capture_${FREQ}_${DECIM}.cfile"
 samples=`expr 64000000 / $DECIM '*' $DURATION`
 echo "Capturing for $DURATION seconds to $FILE ($samples samples)"
-$USRP_PROG -d "$DECIM" -f "$FREQ" -N $samples $FILE
+$USRP_PROG -g $GAIN -d "$DECIM" -f "$FREQ" -N $samples $FILE
 

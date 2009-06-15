@@ -1,6 +1,6 @@
 #! /bin/sh
 
-echo "go.sh <file.cfile> [decim==112]"
+#echo "go.sh <file.cfile> [decim==112]"
 
 DECIM=$2
 FILE=$1

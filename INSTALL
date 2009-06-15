@@ -1,6 +1,8 @@
+Under Ubuntu 9.04 install:
+  $ apt-get install gnuradio libtool automake
+
 To build the GSM Receiver use:
   $ ./bootstrap
   $ cd debug 
   $ ./configure
   $ make
-
