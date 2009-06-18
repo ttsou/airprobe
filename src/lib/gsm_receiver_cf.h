@@ -23,6 +23,7 @@
 #define INCLUDED_GSM_RECEIVER_CF_H
 
 #include <vector>
+#include <list>
 #include <gr_block.h>
 #include <gr_complex.h>
 #include <gr_feval.h>
@@ -75,6 +76,7 @@ class gsm_receiver_cf : public gr_block
     unsigned d_fcch_start_pos; ///< position of the first sample of the fcch burst
     float d_freq_offset; ///< frequency offset of the received signal
     //@}
+    std::list<double> d_freq_offset_vals;
 
     /**@name Identifiers of the BTS extracted from the SCH burst */
     //@{

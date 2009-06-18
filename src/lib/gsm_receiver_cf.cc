@@ -28,9 +28,9 @@
 #include <gr_math.h>
 #include <math.h>
 #include <Assert.h>
-#include <list>
 #include <boost/circular_buffer.hpp>
 #include <algorithm>
+#include <numeric>
 #include <gsm_receiver_cf.h>
 #include <viterbi_detector.h>
 #include <sch.h>
@@ -41,13 +41,15 @@
 //TODO: this shouldn't be here - remove it when gsm receiver's interface will be ready
 void gsm_receiver_cf::process_normal_burst(burst_counter burst_nr, const unsigned char * burst_binary)
 {
-  if (burst_nr.get_timeslot_nr() == 0) {
-//     printf("burst = [ ");
+   if (burst_nr.get_timeslot_nr() == 0) {
+//     std::cout  << " t2:" << burst_nr.get_t2() << " fn:" << burst_nr.get_frame_nr();
+//     printf(" burst = [ ");
 //     for (int i = 0; i < BURST_SIZE ; i++) {
 //       printf(" %d", burst_binary[i]);
 //     }
 //     printf("];\n");
 //     std::cout  << " t2: " << burst_nr.get_t2() << "\n";
+//    std::cout  << " bcc: " << d_bcc << "\n";
     GS_process(&d_gs_ctx, TIMESLOT0, 6, &burst_binary[3], burst_nr.get_frame_nr());
   }
 }
@@ -101,11 +103,19 @@ gsm_receiver_cf::gsm_receiver_cf(gr_feval_dd *tuner, int osr)
   gmsk_mapper(SYNC_BITS, N_SYNC_BITS, d_sch_training_seq, gr_complex(0.0, -1.0));
 
   for (i = 0; i < TRAIN_SEQ_NUM; i++) {
-    gmsk_mapper(train_seq[i], N_TRAIN_BITS, d_norm_training_seq[i], gr_complex(1.0, 0.0));
+    gr_complex startpoint;
+    if (i == 6) {                           //this is nasty hack
+      startpoint = gr_complex(-1.0, 0.0);   //if I don't change it here all bits of normal bursts for BTSes with bcc=6 will have negative values
+    } else {
+      startpoint = gr_complex(1.0, 0.0);    //I've checked this hack for bcc==0,1,2,3,4,6
+    }                                       //I don't know what about bcc==5 and 7 yet
+    //TODO:find source of this situation - this is purely mathematical problem I guess
+
+    gmsk_mapper(train_seq[i], N_TRAIN_BITS, d_norm_training_seq[i], startpoint);
   }
 
   /* Initialize GSM Stack */
-  GS_new(&d_gs_ctx); //TODO: remove it! it'a not right place for a decoder
+  GS_new(&d_gs_ctx); //TODO: remove it! it's not a right place for a decoder
 }
 
 /*
@@ -144,9 +154,8 @@ gsm_receiver_cf::general_work(int noutput_items,
       }
       break;
 
-    case next_fcch_search: {                         //this state is used because it takes a bunch of buffered samples
-        //before previous set_frequqency cause change
-        float prev_freq_offset = d_freq_offset;
+    case next_fcch_search: {                         //this state is used because it takes some time (a bunch of buffered samples)
+      float prev_freq_offset = d_freq_offset;        //before previous set_frequqency cause change
         if (find_fcch_burst(input, nitems_items[0])) {
           if (abs(prev_freq_offset - d_freq_offset) > FCCH_MAX_FREQ_OFFSET) {
             set_frequency(d_freq_offset);              //call set_frequncy only frequency offset change is greater than some value
@@ -159,6 +168,7 @@ gsm_receiver_cf::general_work(int noutput_items,
         }
         break;
       }
+
     case sch_search: {
         vector_complex channel_imp_resp(CHAN_IMP_RESP_LENGTH*d_OSR);
         int t1, t2, t3;
@@ -204,12 +214,21 @@ gsm_receiver_cf::general_work(int noutput_items,
         switch (b_type) {
           case fcch_burst: {                                                                    //if it's FCCH  burst
               const unsigned first_sample = ceil((GUARD_PERIOD + 2 * TAIL_BITS) * d_OSR) + 1;
-              const unsigned last_sample = first_sample + USEFUL_BITS * d_OSR;
+              const unsigned last_sample = first_sample + USEFUL_BITS * d_OSR - TAIL_BITS * d_OSR;
               double freq_offset = compute_freq_offset(input, first_sample, last_sample);       //extract frequency offset from it
-              if (abs(freq_offset) > FCCH_MAX_FREQ_OFFSET) {
-                d_freq_offset -= freq_offset;                                                   //and adjust frequency if it have changed beyond
-                set_frequency(d_freq_offset);                                                   //some limit
-                DCOUT("Adjusting frequency, new frequency offset: " << d_freq_offset << "\n");
+
+              d_freq_offset_vals.push_front(freq_offset);
+
+              if (d_freq_offset_vals.size() >= 10) {
+                double sum = std::accumulate(d_freq_offset_vals.begin(), d_freq_offset_vals.end(), 0);
+                double mean_offset = sum / d_freq_offset_vals.size();                           //compute mean
+                d_freq_offset_vals.clear();
+                if (abs(mean_offset) > FCCH_MAX_FREQ_OFFSET) {
+                  d_freq_offset -= mean_offset;                                                 //and adjust frequency if it have changed beyond
+                  set_frequency(d_freq_offset);                                                 //some limit
+                  DCOUT("mean_offset: " << mean_offset);
+                  DCOUT("Adjusting frequency, new frequency offset: " << d_freq_offset << "\n");
+                }
               }
             }
             break;
@@ -226,8 +245,10 @@ gsm_receiver_cf::general_work(int noutput_items,
                 to_consume += offset;                                                          //adjust with offset number of samples to be consumed
               } else {
                 d_failed_sch++;
-                if(d_failed_sch >= MAX_SCH_ERRORS){
-                  d_state = next_fcch_search;
+                if (d_failed_sch >= MAX_SCH_ERRORS) {
+//                   d_state = next_fcch_search;        //TODO: this isn't good, the receiver is going wild when it goes back to next_fcch_search from here
+//                   d_freq_offset_vals.clear();
+                  DCOUT("many sch decoding errors");
                 }
               }
             }
@@ -646,8 +667,8 @@ int gsm_receiver_cf::get_norm_chan_imp_resp(const gr_complex *input, gr_complex 
   float energy = 0;
 
   int search_center = (int)((TRAIN_POS + GUARD_PERIOD) * d_OSR);
-//   int search_start_pos = search_center + 1;
-  int search_start_pos = search_center -  d_chan_imp_length * d_OSR;
+  int search_start_pos = search_center + 1;
+//   int search_start_pos = search_center -  d_chan_imp_length * d_OSR;
   int search_stop_pos = search_center + d_chan_imp_length * d_OSR + 2 * d_OSR;
 
   for (int ii = search_start_pos; ii < search_stop_pos; ii++) {
@@ -664,7 +685,7 @@ int gsm_receiver_cf::get_norm_chan_imp_resp(const gr_complex *input, gr_complex 
     vector_float::iterator iter_ii = iter;
     energy = 0;
 
-    for (int ii = 0; ii < (d_chan_imp_length-2)*d_OSR; ii++, iter_ii++) {
+    for (int ii = 0; ii < (d_chan_imp_length - 2)*d_OSR; ii++, iter_ii++) {
 //    for (int ii = 0; ii < (d_chan_imp_length)*d_OSR; ii++, iter_ii++) {
       if (iter_ii == power_buffer.end()) {
         loop_end = true;
@@ -680,8 +701,8 @@ int gsm_receiver_cf::get_norm_chan_imp_resp(const gr_complex *input, gr_complex 
     window_energy_buffer.push_back(energy);
   }
   //!why doesn't this work
-  strongest_window_nr = max_element(window_energy_buffer.begin(), window_energy_buffer.end()) - window_energy_buffer.begin(); 
-  //strongest_window_nr = 3; //! so I have to override it here
+  strongest_window_nr = max_element(window_energy_buffer.begin(), window_energy_buffer.end()) - window_energy_buffer.begin();
+  strongest_window_nr = 3; //! so I have to override it here
 
   max_correlation = 0;
   for (int ii = 0; ii < (d_chan_imp_length)*d_OSR; ii++) {
