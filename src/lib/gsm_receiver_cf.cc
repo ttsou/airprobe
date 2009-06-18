@@ -59,8 +59,8 @@ void gsm_receiver_cf::configure_receiver()
   d_channel_conf.set_burst_types(TSC0, TEST_CCH_FRAMES, sizeof(TEST_CCH_FRAMES) / sizeof(unsigned), normal_burst);
   d_channel_conf.set_burst_types(TSC0, FCCH_FRAMES, sizeof(FCCH_FRAMES) / sizeof(unsigned), fcch_burst);
 
-//   d_channel_conf.set_multiframe_type(TIMESLOT6, multiframe_26);
-//   d_channel_conf.set_burst_types(TIMESLOT6, TRAFFIC_CHANNEL_F, sizeof(TRAFFIC_CHANNEL_F) / sizeof(unsigned), normal_burst);
+//   d_channel_conf.set_multiframe_type(TIMESLOT7, multiframe_26);
+//   d_channel_conf.set_burst_types(TIMESLOT7, TRAFFIC_CHANNEL_F, sizeof(TRAFFIC_CHANNEL_F) / sizeof(unsigned), dummy_or_normal);
 }
 
 
@@ -239,6 +239,23 @@ gsm_receiver_cf::general_work(int noutput_items,
             process_normal_burst(d_burst_nr, output_binary); //TODO: this shouldn't be here - remove it when gsm receiver's interface will be ready
             break;
 
+          case dummy_or_normal: {
+              burst_start = get_norm_chan_imp_resp(input, &channel_imp_resp[0], TRAIN_SEARCH_RANGE, TS_DUMMY);
+              detect_burst(input, &channel_imp_resp[0], burst_start, output_binary);
+
+              std::vector<unsigned char> v(20);
+              std::vector<unsigned char>::iterator it;
+              it = std::set_difference(output_binary + TRAIN_POS, output_binary + TRAIN_POS + 16, &train_seq[TS_DUMMY][5], &train_seq[TS_DUMMY][21], v.begin());
+              int different_bits = (it - v.begin());
+
+              if (different_bits > 2) {
+                burst_start = get_norm_chan_imp_resp(input, &channel_imp_resp[0], TRAIN_SEARCH_RANGE, d_bcc);
+                detect_burst(input, &channel_imp_resp[0], burst_start, output_binary);
+                if (!output_binary[0] && !output_binary[1] && !output_binary[2]) {
+                  process_normal_burst(d_burst_nr, output_binary); //TODO: this shouldn't be here - remove it when gsm receiver's interface will be ready
+                }
+              }
+            }
           case rach_burst:
             //implementation of this channel isn't possible in current gsm_receiver
             //it would take some realtime processing, counter of samples from USRP to
