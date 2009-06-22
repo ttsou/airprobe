@@ -84,17 +84,17 @@ GS_new(GS_CTX *ctx)
 	ctx->fn = -1;
 	ctx->bsic = -1;
 
-//	ctx->tun_fd = mktun("gsm", ctx->ether_addr);
-//	if (ctx->tun_fd < 0)
-//		fprintf(stderr, "cannot open 'gsm' tun device, did you create it?\n");
+	ctx->tun_fd = mktun("gsm", ctx->ether_addr);
+	if (ctx->tun_fd < 0)
+		fprintf(stderr, "cannot open 'gsm' tun device, did you create it?\n");
 
-//	ctx->pcap_fd = open_pcap_file("tvoid.pcap");
-//	if (ctx->pcap_fd < 0)
-//		fprintf(stderr, "cannot open PCAP file: %s\n", strerror(errno));
+	ctx->pcap_fd = open_pcap_file("tvoid.pcap");
+	if (ctx->pcap_fd < 0)
+		fprintf(stderr, "cannot open PCAP file: %s\n", strerror(errno));
 
-//	ctx->burst_pcap_fd = open_pcap_file("tvoid-burst.pcap");
-//	if (ctx->burst_pcap_fd < 0)
-//		fprintf(stderr, "cannot open burst PCAP file: %s\n", strerror(errno));
+	ctx->burst_pcap_fd = open_pcap_file("tvoid-burst.pcap");
+	if (ctx->burst_pcap_fd < 0)
+		fprintf(stderr, "cannot open burst PCAP file: %s\n", strerror(errno));
 
 	return 0;
 }
@@ -118,8 +118,8 @@ GS_process(GS_CTX *ctx, int ts, int type, const unsigned char *src, int fn)
 
 	/* write burst to burst PCAP file */
 	burst_octify(octified, src, USEFUL_BITS);
-//	write_pcap_packet(ctx->burst_pcap_fd, 0 /* arfcn */, ts, ctx->fn,
-//			  1, type, octified, BURST_BYTES);
+	write_pcap_packet(ctx->burst_pcap_fd, 0 /* arfcn */, ts, ctx->fn,
+			  1, type, octified, BURST_BYTES);
 	
 #if 0
 	if (ts != 0) {
@@ -177,9 +177,9 @@ GS_process(GS_CTX *ctx, int ts, int type, const unsigned char *src, int fn)
 		//DEBUGF("OK TS %d, len %d\n", ts, len);
 
 		out_gsmdecode(0, 0, ts, ctx->fn - 4, data, len);
-//		write_interface(ctx->tun_fd, data+1, len-1, ctx->ether_addr);
-//		write_pcap_packet(ctx->pcap_fd, 0 /* arfcn */, ts, ctx->fn,
-//				  0, NORMAL, data, len);
+		write_interface(ctx->tun_fd, data+1, len-1, ctx->ether_addr);
+		write_pcap_packet(ctx->pcap_fd, 0 /* arfcn */, ts, ctx->fn,
+				  0, NORMAL, data, len);
 #if 0
 		if (ctx->fn % 51 != 0) && ( (((ctx->fn % 51 + 5) % 10 == 0) || (((ctx->fn % 51) + 1) % 10 ==0) ) )
 			ready = 1;
@@ -204,4 +204,3 @@ out_gsmdecode(char type, int arfcn, int ts, int fn, char *data, int len)
 	printf("\n");
 	fflush(stdout);
 }
-
