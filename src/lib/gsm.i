@@ -38,12 +38,12 @@
 
 GR_SWIG_BLOCK_MAGIC(gsm,receiver_cf);
 
-gsm_receiver_cf_sptr gsm_make_receiver_cf ( gr_feval_dd *tuner, int osr);
+gsm_receiver_cf_sptr gsm_make_receiver_cf ( gr_feval_dd *tuner, gr_feval_dd *synchronizer, int osr);
 
 class gsm_receiver_cf : public gr_block
 {
 private:
-  gsm_receiver_cf ( gr_feval_dd *tuner, int osr);
+  gsm_receiver_cf ( gr_feval_dd *tuner, gr_feval_dd *synchronizer, int osr);
 };
 
 // ----------------------------------------------------------------

@@ -9,23 +9,31 @@ from os import sys
 for extdir in ['../../debug/src/lib','../../debug/src/lib/.libs']:
     if extdir not in sys.path:
         sys.path.append(extdir)
-import gsm                        
+import gsm
 
-class tune(gr.feval_dd):
+class tuner(gr.feval_dd):
     def __init__(self, top_block):
         gr.feval_dd.__init__(self)
         self.top_block = top_block
-        # self.center_freq = 0
     def eval(self, freq_offet):
-        # self.center_freq = self.center_freq - freq_offet
-        self.top_block.set_frequency(freq_offet)
+        self.top_block.set_center_frequency(freq_offet)
+        return freq_offet
+
+class synchronizer(gr.feval_dd):
+    def __init__(self, top_block):
+        gr.feval_dd.__init__(self)
+        self.top_block = top_block
+
+    def eval(self, timing_offset):
+        self.top_block.set_timing(timing_offset)
         return freq_offet
 
 class gsm_receiver_first_blood(gr.top_block):
     def __init__(self):
         gr.top_block.__init__(self)
         (options, args) = self._process_options()
-        self.tune_callback = tune(self)
+        self.tuner_callback = tuner(self)
+        self.synchronizer_callback = synchronizer(self)
         self.options    = options
         self.args       = args
         self._set_rates()
@@ -74,7 +82,7 @@ class gsm_receiver_first_blood(gr.top_block):
         return interpolator
     
     def _set_receiver(self):
-        receiver = gsm.receiver_cf(self.tune_callback, self.options.osr)
+        receiver = gsm.receiver_cf(self.tuner_callback, self.synchronizer_callback, self.options.osr)
         return receiver
     
     def _process_options(self):
@@ -90,8 +98,11 @@ class gsm_receiver_first_blood(gr.top_block):
         (options, args) = parser.parse_args ()
         return (options, args)
     
-    def set_frequency(self, center_freq):
+    def set_center_frequency(self, center_freq):
         self.filtr.set_center_freq(center_freq)
+
+    def set_timing(self, timing_offset):
+        pass
 
 def main():
     try:
@@ -101,5 +112,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-

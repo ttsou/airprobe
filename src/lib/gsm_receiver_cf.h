@@ -37,7 +37,7 @@ class gsm_receiver_cf;
 typedef boost::shared_ptr<gsm_receiver_cf> gsm_receiver_cf_sptr;
 typedef std::vector<gr_complex> vector_complex;
 
-gsm_receiver_cf_sptr gsm_make_receiver_cf(gr_feval_dd *tuner, int osr);
+gsm_receiver_cf_sptr gsm_make_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synchronizer, int osr);
 
 /** GSM Receiver GNU Radio block
  *
@@ -61,6 +61,7 @@ class gsm_receiver_cf : public gr_block
     gr_complex d_norm_training_seq[TRAIN_SEQ_NUM][N_TRAIN_BITS]; ///<encoded training sequences of a normal bursts and dummy bursts
 
     gr_feval_dd *d_tuner; ///<callback to a python object which is used for frequency tunning
+    gr_feval_dd *d_synchronizer; ///<callback to a python object which is used to correct offset of USRP's internal clock
 
     /** Countes samples consumed by the receiver
      *
@@ -103,8 +104,8 @@ class gsm_receiver_cf : public gr_block
     // GSM Stack
     GS_CTX d_gs_ctx;//TODO: remove it! it'a not right place for a decoder
 
-    friend gsm_receiver_cf_sptr gsm_make_receiver_cf(gr_feval_dd *tuner, int osr);
-    gsm_receiver_cf(gr_feval_dd *tuner, int osr);
+    friend gsm_receiver_cf_sptr gsm_make_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synchronizer, int osr);
+    gsm_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synchronizer, int osr);
 
     /** Function whis is used to search a FCCH burst and to compute frequency offset before
      * "synchronized" state of the receiver
@@ -212,8 +213,6 @@ class gsm_receiver_cf : public gr_block
 
     /**
      *
-     * @param burst_nr
-     * @param burst_binary
      */
     void process_normal_burst(burst_counter burst_nr, const unsigned char * burst_binary);
 

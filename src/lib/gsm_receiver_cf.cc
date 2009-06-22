@@ -72,9 +72,9 @@ typedef std::vector<float> vector_float;
 typedef boost::circular_buffer<float> circular_buffer_float;
 
 gsm_receiver_cf_sptr
-gsm_make_receiver_cf(gr_feval_dd *tuner, int osr)
+gsm_make_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synchronizer, int osr)
 {
-  return gsm_receiver_cf_sptr(new gsm_receiver_cf(tuner, osr));
+  return gsm_receiver_cf_sptr(new gsm_receiver_cf(tuner, synchronizer, osr));
 }
 
 static const int MIN_IN = 1; // mininum number of input streams
@@ -85,7 +85,7 @@ static const int MAX_OUT = 1; // maximum number of output streams
 /*
  * The private constructor
  */
-gsm_receiver_cf::gsm_receiver_cf(gr_feval_dd *tuner, int osr)
+gsm_receiver_cf::gsm_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synchronizer, int osr)
     : gr_block("gsm_receiver",
                gr_make_io_signature(MIN_IN, MAX_IN, sizeof(gr_complex)),
                gr_make_io_signature(MIN_OUT, MAX_OUT, 142 * sizeof(float))),
