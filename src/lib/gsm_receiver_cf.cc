@@ -42,13 +42,11 @@
 void gsm_receiver_cf::process_normal_burst(burst_counter burst_nr, const unsigned char * burst_binary)
 {
    if (burst_nr.get_timeslot_nr() == 0) {
-//     std::cout  << " t2:" << burst_nr.get_t2() << " fn:" << burst_nr.get_frame_nr();
-//     printf(" burst = [ ");
+//      printf(" %2d %6x %6x", burst_nr.get_t2(), burst_nr.get_frame_nr(), burst_nr.get_frame_nr_mod());
 //     for (int i = 0; i < BURST_SIZE ; i++) {
 //       printf(" %d", burst_binary[i]);
 //     }
-//     printf("];\n");
-//     std::cout  << " t2: " << burst_nr.get_t2() << "\n";
+//     std::cout  << "\n";
 //    std::cout  << " bcc: " << d_bcc << "\n";
     GS_process(&d_gs_ctx, TIMESLOT0, 6, &burst_binary[3], burst_nr.get_frame_nr());
   }

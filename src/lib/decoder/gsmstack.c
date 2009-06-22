@@ -88,11 +88,11 @@ GS_new(GS_CTX *ctx)
 	if (ctx->tun_fd < 0)
 		fprintf(stderr, "cannot open 'gsm' tun device, did you create it?\n");
 
-	ctx->pcap_fd = open_pcap_file("tvoid.pcap");
+	ctx->pcap_fd = open_pcap_file("gsm-receiver.pcap");
 	if (ctx->pcap_fd < 0)
 		fprintf(stderr, "cannot open PCAP file: %s\n", strerror(errno));
 
-	ctx->burst_pcap_fd = open_pcap_file("tvoid-burst.pcap");
+	ctx->burst_pcap_fd = open_pcap_file("gsm-receiver-burst.pcap");
 	if (ctx->burst_pcap_fd < 0)
 		fprintf(stderr, "cannot open burst PCAP file: %s\n", strerror(errno));
 
