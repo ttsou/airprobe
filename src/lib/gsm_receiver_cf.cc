@@ -59,8 +59,8 @@ void gsm_receiver_cf::configure_receiver()
   d_channel_conf.set_burst_types(TSC0, TEST_CCH_FRAMES, sizeof(TEST_CCH_FRAMES) / sizeof(unsigned), normal_burst);
   d_channel_conf.set_burst_types(TSC0, FCCH_FRAMES, sizeof(FCCH_FRAMES) / sizeof(unsigned), fcch_burst);
 
-//   d_channel_conf.set_multiframe_type(TIMESLOT7, multiframe_26);
-//   d_channel_conf.set_burst_types(TIMESLOT7, TRAFFIC_CHANNEL_F, sizeof(TRAFFIC_CHANNEL_F) / sizeof(unsigned), dummy_or_normal);
+  d_channel_conf.set_multiframe_type(TIMESLOT7, multiframe_26);
+  d_channel_conf.set_burst_types(TIMESLOT7, TRAFFIC_CHANNEL_F, sizeof(TRAFFIC_CHANNEL_F) / sizeof(unsigned), dummy_or_normal);
 }
 
 

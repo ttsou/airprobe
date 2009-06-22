@@ -122,6 +122,10 @@ class burst_counter
     uint32_t get_frame_nr() {
       return (51 * 26 * d_t1) + (51 * (((d_t3 + 26) - d_t2) % 26)) + d_t3;
     }
+    
+    uint32_t get_frame_nr_mod() {
+      return (d_t1 << 11) + (d_t3 << 5) + d_t2;
+    }
 
     unsigned get_offset() {
       return (unsigned)d_offset_integer;
