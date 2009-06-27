@@ -21,28 +21,36 @@
 
 include $(top_srcdir)/Makefile.common
 
-AM_CPPFLAGS = $(STD_DEFINES_AND_INCLUDES) -I$(MAIN_INCLUDEDIR)
+AM_CPPFLAGS = $(STD_DEFINES_AND_INCLUDES)
+
+SUBDIRS = openbtsstuff
 
 noinst_LTLIBRARIES = libdecoder.la
+
+libdecoder_la_LIBADD = \
+	openbtsstuff/libopenbtsdecoder.la
 
 libdecoder_la_SOURCES = \
 	sch.c		\
 	cch.c 		\
 	fire_crc.c	\
 	gsmstack.c	\
+	interleave.c	\
 	out_pcap.c	\
-	tun.c		\
-	interleave.c
-        
-noinst_HEADERS = \
-	sch.h \
+	tun.c		
+#	tch.c		\
+#	conv.c
+
+noinst_HEADERS = 	\
+	sch.h 		\
 	cch.h 		\
 	fire_crc.h	\
 	gsmstack.h	\
 	interleave.h	\
-	system.h	\
 	out_pcap.h	\
 	tun.h		\
-	gsmtap.h
-	
-#	burst_types.h 
+	system.h	\
+	gsmtap.h	\
+	a5-1-2.h	
+#	tch.h		\
+#	conv.h		

@@ -31,13 +31,17 @@
 #include <gsm_receiver_config.h>
 
 #include <gsmstack.h> //TODO: remember to remove this line in the future!
+#include "GSML1FEC.h" //!!
+#include <a5-1-2.h>//!!
+#include <string>//!!
+#include <map>//!!
 
 class gsm_receiver_cf;
 
 typedef boost::shared_ptr<gsm_receiver_cf> gsm_receiver_cf_sptr;
 typedef std::vector<gr_complex> vector_complex;
 
-gsm_receiver_cf_sptr gsm_make_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synchronizer, int osr);
+gsm_receiver_cf_sptr gsm_make_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synchronizer, int osr, std::string key);
 
 /** GSM Receiver GNU Radio block
  *
@@ -50,7 +54,16 @@ gsm_receiver_cf_sptr gsm_make_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synch
 class gsm_receiver_cf : public gr_block
 {
   private:
-
+    std::map<char,int> d_hex_to_int;
+    FILE * d_gsm_file; //!!
+    byte d_KC[8]; //!!
+    GSM::TCHFACCHL1Decoder d_tch_decoder1; //!!
+    GSM::TCHFACCHL1Decoder d_tch_decoder2; //!!
+    GSM::TCHFACCHL1Decoder d_tch_decoder3; //!!
+    GSM::TCHFACCHL1Decoder d_tch_decoder4; //!!
+    GSM::TCHFACCHL1Decoder d_tch_decoder5; //!!
+    GSM::TCHFACCHL1Decoder d_tch_decoder6; //!!
+    GSM::TCHFACCHL1Decoder d_tch_decoder7; //!!
     /**@name Configuration of the receiver */
     //@{
     const int d_OSR; ///< oversampling ratio
@@ -104,8 +117,8 @@ class gsm_receiver_cf : public gr_block
     // GSM Stack
     GS_CTX d_gs_ctx;//TODO: remove it! it'a not right place for a decoder
 
-    friend gsm_receiver_cf_sptr gsm_make_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synchronizer, int osr);
-    gsm_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synchronizer, int osr);
+    friend gsm_receiver_cf_sptr gsm_make_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synchronizer, int osr, std::string key);
+    gsm_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synchronizer, int osr, std::string key);
 
     /** Function whis is used to search a FCCH burst and to compute frequency offset before
      * "synchronized" state of the receiver
@@ -209,8 +222,14 @@ class gsm_receiver_cf : public gr_block
      * @param bcc base station color code - number of a training sequence
      * @return first sample number of normal burst
      */
-    int get_norm_chan_imp_resp(const gr_complex * input, gr_complex * chan_imp_resp, unsigned search_range, int bcc);
+    int get_norm_chan_imp_resp(const gr_complex * input, gr_complex * chan_imp_resp, int bcc);
 
+    
+    /**
+     *
+     */
+    void read_key(std::string key);
+    
     /**
      *
      */
@@ -220,6 +239,8 @@ class gsm_receiver_cf : public gr_block
      *
      */
     void configure_receiver();
+    
+    
 
   public:
     ~gsm_receiver_cf();

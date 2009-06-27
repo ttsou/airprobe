@@ -6,7 +6,7 @@ from gnuradio.eng_option import eng_option
 from optparse import OptionParser
 from os import sys
 
-for extdir in ['../../debug/src/lib','../../debug/src/lib/.libs']:
+for extdir in ['../../debug/src/lib','../../debug/src/lib/.libs','../lib','../lib/.libs','../..debug/src/lib/decoder/openbts/SIP']:
     if extdir not in sys.path:
         sys.path.append(extdir)
 import gsm
@@ -82,7 +82,7 @@ class gsm_receiver_first_blood(gr.top_block):
         return interpolator
     
     def _set_receiver(self):
-        receiver = gsm.receiver_cf(self.tuner_callback, self.synchronizer_callback, self.options.osr)
+        receiver = gsm.receiver_cf(self.tuner_callback, self.synchronizer_callback, self.options.osr, self.options.key.replace(' ', '').lower())
         return receiver
     
     def _process_options(self):
@@ -95,6 +95,9 @@ class gsm_receiver_first_blood(gr.top_block):
                           help="Input filename")
         parser.add_option("-O", "--outputfile", type="string", default="cfile2.out",
                           help="Output filename")
+        parser.add_option("-k", "--key", type="string", default="2B 08 74 9F DD 0D 9C 00",
+                          help="KC session key")
+
         (options, args) = parser.parse_args ()
         return (options, args)
     

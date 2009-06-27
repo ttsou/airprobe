@@ -99,7 +99,8 @@ GR_REQUIRE_BOOST_INCLUDES
 
 STD_DEFINES_AND_INCLUDES="$GNURADIO_CORE_CFLAGS $BOOST_CFLAGS"
 AC_SUBST(STD_DEFINES_AND_INCLUDES)
- 
+
+
 AC_CONFIG_FILES([\
 	  Makefile \
 	  config/Makefile \
@@ -107,10 +108,11 @@ AC_CONFIG_FILES([\
 	  src/lib/Makefile \
 	  src/lib/decoder/Makefile \
 	  src/python/Makefile \
-	  gsm-receiver.pc   
+	  src/lib/decoder/openbtsstuff/Makefile \
+	  gsm-receiver.pc   \
 	])
-#	  doc/Makefile \
-#	  src/python/run_tests \
+dnl #	  doc/Makefile \
+dnl #	  src/python/run_tests \
 
 dnl run_tests is created from run_tests.in.  Make it executable.
 #AC_CONFIG_COMMANDS([run_tests], [chmod +x src/python/run_tests])

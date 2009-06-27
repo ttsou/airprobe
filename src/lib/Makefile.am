@@ -29,7 +29,8 @@ SUBDIRS = decoder
 ourpythondir = $(grpythondir)
 ourlibdir    = $(grpyexecdir)
 
-AM_CPPFLAGS = $(STD_DEFINES_AND_INCLUDES) $(PYTHON_CPPFLAGS) $(WITH_INCLUDES) -I$(DECODER_INCLUDEDIR)
+AM_CPPFLAGS = $(STD_DEFINES_AND_INCLUDES) $(PYTHON_CPPFLAGS) $(WITH_INCLUDES) 
+#		-I$(OPEN_BTS_INCLUDES)
 
 SWIGPYTHONARGS = $(SWIGPYTHONFLAGS) $(SWIGGRFLAGS) $(WITH_SWIG_INCLUDES) \
 	$(WITH_INCLUDES)
@@ -76,11 +77,10 @@ _gsm_la_LDFLAGS = $(NO_UNDEFINED) -module -avoid-version
 # link the library against some comon swig runtime code and the 
 # c++ standard library
 _gsm_la_LIBADD =		\
-	$(PYTHON_LDFLAGS)		\
-	libgsmdemod.la			\
+	$(PYTHON_LDFLAGS)	\
+	libgsmdemod.la		\
 	-lstdc++		\
-	decoder/libdecoder.la
-#	$(DECODER_LA) 	
+	$(DECODER_LA)
 
 #libgsmdemod_la_LIBADD = 
 

@@ -9,10 +9,11 @@
 #define GUARD_BITS        8
 #define GUARD_FRACTIONAL  0.25 //fractional part of guard period
 #define GUARD_PERIOD      GUARD_BITS + GUARD_FRACTIONAL
-#define DATA_BITS         58   //size of 1 data block in normal burst
+#define DATA_BITS         57   //size of 1 data block in normal burst
+#define STEALING_BIT      1
 #define N_TRAIN_BITS      26
 #define N_SYNC_BITS       64
-#define USEFUL_BITS       142  //(2*DATA_BITS + N_TRAIN_BITS )
+#define USEFUL_BITS       142  //(2*(DATA_BITS+STEALING_BIT) + N_TRAIN_BITS )
 #define FCCH_BITS         USEFUL_BITS
 #define BURST_SIZE        (USEFUL_BITS+2*TAIL_BITS)
 
@@ -22,7 +23,7 @@
 #define FRAME_BITS        (TS_PER_FRAME * TS_BITS + 2) // 156.25 * 8
 #define FCCH_POS          TAIL_BITS
 #define SYNC_POS          39
-#define TRAIN_POS         ( TAIL_BITS + DATA_BITS + 5) //first 5 bits of a training sequence
+#define TRAIN_POS         ( TAIL_BITS + (DATA_BITS+STEALING_BIT) + 5) //first 5 bits of a training sequence
                                                        //aren't used for channel impulse response estimation
 #define TRAIN_BEGINNING   5
 #define SAFETY_MARGIN     6   //

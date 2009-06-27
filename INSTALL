@@ -9,5 +9,5 @@ Under Ubuntu 9.04 install:
 To build the GSM Receiver use:
   $ ./bootstrap
   $ cd debug 
-  $ ./configure
+  $ ../configure
   $ make
