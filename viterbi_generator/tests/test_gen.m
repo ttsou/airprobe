@@ -18,7 +18,7 @@ load tests/data/normal_burst.dat;
 
 SYMBOLS = make_symbols(Lh);
 START = make_start(Lh,SYMBOLS);
-STOP = make_stops(Lh,SYMBOLS);
+STOPS = make_stops(Lh,SYMBOLS);
 
 [increment,  pm_candidates_imag, pm_candidates_real] = equations_gen(Lh);
 
@@ -57,11 +57,11 @@ for i=1:BURST_SIZE,
   fprintf(test_file,"   input[%d] = gr_complex(%0.10f,%0.10f);\n",i-1, real(normal_burst(i)), imag(normal_burst(i)));
 end
 
-[STOPS_NUM c] = size(STOP);
+[c STOPS_NUM] = size(STOPS);
 
 stop_states=["   unsigned int stop_states[" int2str(STOPS_NUM) "] = { "];
 for i=1:STOPS_NUM,
-  stop_states=[ stop_states int2str(ceil(STOP(i)/2)-1) ", "];
+  stop_states=[ stop_states int2str(ceil(STOPS(i)/2)-1) ", "];
 end
 stop_states=[ stop_states " };\n\n" ];
 
