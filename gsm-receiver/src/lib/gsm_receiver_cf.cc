@@ -193,13 +193,13 @@ gsm_receiver_cf::gsm_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synchronizer, 
     d_state(first_fcch_search),
     d_burst_nr(osr),
     d_failed_sch(0),
-    d_tch_decoder1( GSM::gFACCH_TCHFMapping ),
-    d_tch_decoder2( GSM::gFACCH_TCHFMapping ),
-    d_tch_decoder3( GSM::gFACCH_TCHFMapping ),
-    d_tch_decoder4( GSM::gFACCH_TCHFMapping ),
-    d_tch_decoder5( GSM::gFACCH_TCHFMapping ),
-    d_tch_decoder6( GSM::gFACCH_TCHFMapping ),
-    d_tch_decoder7( GSM::gFACCH_TCHFMapping )
+    d_tch_decoder1( GSM::gFACCH_TCHFMapping ), //!!
+    d_tch_decoder2( GSM::gFACCH_TCHFMapping ), //!!
+    d_tch_decoder3( GSM::gFACCH_TCHFMapping ), //!!
+    d_tch_decoder4( GSM::gFACCH_TCHFMapping ), //!!
+    d_tch_decoder5( GSM::gFACCH_TCHFMapping ), //!!
+    d_tch_decoder6( GSM::gFACCH_TCHFMapping ), //!!
+    d_tch_decoder7( GSM::gFACCH_TCHFMapping ) //!!
 {
   int i;
   gmsk_mapper(SYNC_BITS, N_SYNC_BITS, d_sch_training_seq, gr_complex(0.0, -1.0));
@@ -214,25 +214,25 @@ gsm_receiver_cf::gsm_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synchronizer, 
 
     gmsk_mapper(train_seq[i], N_TRAIN_BITS, d_norm_training_seq[i], startpoint);
   }
-  d_gsm_file = fopen( "speech.gsm", "wb" );
 
-  d_hex_to_int['0'] = 0;
-  d_hex_to_int['4'] = 4;
-  d_hex_to_int['8'] =   8;
-  d_hex_to_int['c'] = 0xc;
-  d_hex_to_int['1'] = 1;
-  d_hex_to_int['5'] = 5;
-  d_hex_to_int['9'] =   9;
-  d_hex_to_int['d'] = 0xd;
-  d_hex_to_int['2'] = 2;
-  d_hex_to_int['6'] = 6;
-  d_hex_to_int['a'] = 0xa;
-  d_hex_to_int['e'] = 0xe;
-  d_hex_to_int['3'] = 3;
-  d_hex_to_int['7'] = 7;
-  d_hex_to_int['b'] = 0xb;
-  d_hex_to_int['f'] = 0xf;
-  read_key(key);
+  d_gsm_file = fopen( "speech.gsm", "wb" ); //!!
+  d_hex_to_int['0'] = 0; //!!
+  d_hex_to_int['4'] = 4; //!!
+  d_hex_to_int['8'] = 8; //!!
+  d_hex_to_int['c'] = 0xc; //!!
+  d_hex_to_int['1'] = 1; //!!
+  d_hex_to_int['5'] = 5; //!!
+  d_hex_to_int['9'] = 9; //!!
+  d_hex_to_int['d'] = 0xd; //!!
+  d_hex_to_int['2'] = 2; //!!
+  d_hex_to_int['6'] = 6; //!!
+  d_hex_to_int['a'] = 0xa; //!!
+  d_hex_to_int['e'] = 0xe; //!!
+  d_hex_to_int['3'] = 3; //!!
+  d_hex_to_int['7'] = 7; //!!
+  d_hex_to_int['b'] = 0xb; //!!
+  d_hex_to_int['f'] = 0xf; //!!
+  read_key(key); //!!
   /* Initialize GSM Stack */
   GS_new(&d_gs_ctx); //TODO: remove it! it's not a right place for a decoder
 }
