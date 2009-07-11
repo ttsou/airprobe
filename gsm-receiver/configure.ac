@@ -93,9 +93,10 @@ GR_PWIN32
 PKG_CHECK_MODULES(GNURADIO_CORE, gnuradio-core >= 3)
 dnl LIBS="$LIBS $GNURADIO_CORE_LIBS"
 
-dnl Define where to find boost includes
-dnl defines BOOST_CFLAGS
-GR_REQUIRE_BOOST_INCLUDES
+dnl Check for boost, version 1.35 (or higher I guess - this was taken from GNU Radio's configure.ac)
+AX_BOOST_BASE([1.35])
+CXXFLAGS="$CXXFLAGS $BOOST_CXXFLAGS" 
+CFLAGS="$CFLAGS $BOOST_CXXFLAGS"     
 
 STD_DEFINES_AND_INCLUDES="$GNURADIO_CORE_CFLAGS $BOOST_CFLAGS"
 AC_SUBST(STD_DEFINES_AND_INCLUDES)
