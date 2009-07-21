@@ -72,14 +72,11 @@ void gsm_receiver_cf::read_key(std::string key)
   for (i = 0;i < 8;i++) {
     b = d_hex_to_int[(char)key[(i)*2]]*16 + d_hex_to_int[(char)key[i*2+1]];
     d_KC[i] = (byte)b;
-  }
+  }  
 }
 
 void gsm_receiver_cf::process_normal_burst(burst_counter burst_nr, const unsigned char * burst_binary)
 {
-//   static byte KC[] = {  0xAD, 0x6A, 0x3E, 0xC2, 0xB4, 0x42, 0xE4, 0x00 };
-//   static byte KC[] = {  0x2B, 0x08, 0x74, 0x9F, 0xDD, 0x0D, 0x9C, 0x00 };
-//   printf("%x", KC[0]);
   float decrypted_data[148];
   unsigned char * voice_frame;
 

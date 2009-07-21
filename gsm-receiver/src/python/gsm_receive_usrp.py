@@ -10,7 +10,7 @@ from gnuradio.eng_option import eng_option
 from optparse import OptionParser
 from os import sys
 
-for extdir in ['../../debug/src/lib','../../debug/src/lib/.libs']:
+for extdir in ['../../debug/src/lib','../../debug/src/lib/.libs','../lib','../lib/.libs']:
     if extdir not in sys.path:
         sys.path.append(extdir)
 import gsm                        
