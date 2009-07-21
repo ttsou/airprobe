@@ -134,7 +134,7 @@ void gsm_receiver_cf::configure_receiver()
 {
   d_channel_conf.set_multiframe_type(TSC0, multiframe_51);
 
-  d_channel_conf.set_burst_types(TSC0, TEST_CCH_FRAMES, sizeof(TEST_CCH_FRAMES) / sizeof(unsigned), normal_burst);
+  d_channel_conf.set_burst_types(TSC0, TEST_CCH_FRAMES, sizeof(TEST_CCH_FRAMES) / sizeof(unsigned), dummy_or_normal);
   d_channel_conf.set_burst_types(TSC0, FCCH_FRAMES, sizeof(FCCH_FRAMES) / sizeof(unsigned), fcch_burst);
 
   d_channel_conf.set_multiframe_type(TIMESLOT1, multiframe_26);
@@ -202,7 +202,7 @@ gsm_receiver_cf::gsm_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synchronizer, 
   gmsk_mapper(SYNC_BITS, N_SYNC_BITS, d_sch_training_seq, gr_complex(0.0, -1.0));
   for (i = 0; i < TRAIN_SEQ_NUM; i++) {
     gr_complex startpoint;
-    if (i == 6) {                           //this is nasty hack
+    if (i == 6 || i == 7) {                           //this is nasty hack
       startpoint = gr_complex(-1.0, 0.0);   //if I don't change it here all bits of normal bursts for BTSes with bcc=6 will have reversed values
     } else {
       startpoint = gr_complex(1.0, 0.0);    //I've checked this hack for bcc==0,1,2,3,4,6
