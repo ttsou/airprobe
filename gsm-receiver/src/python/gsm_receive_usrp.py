@@ -22,21 +22,28 @@ def pick_subdevice(u):
         return (1, 0)
     return (0, 0)
 
-class tune(gr.feval_dd):
+class tuner(gr.feval_dd):
     def __init__(self, top_block):
         gr.feval_dd.__init__(self)
         self.top_block = top_block
-        # self.center_freq = 0
     def eval(self, freq_offet):
-        # self.center_freq = self.center_freq - freq_offet
-        self.top_block.set_frequency(freq_offet)
+        self.top_block.set_center_frequency(freq_offet)
+        return freq_offet
+        
+class synchronizer(gr.feval_dd):
+    def __init__(self, top_block):
+        gr.feval_dd.__init__(self)
+        self.top_block = top_block
+
+    def eval(self, timing_offset):
+        self.top_block.set_timing(timing_offset)
         return freq_offet
 
 class gsm_receiver_first_blood(gr.top_block):
     def __init__(self):
         gr.top_block.__init__(self)
         (options, args) = self._process_options()
-        self.tune_callback = tune(self)
+        self.tuner_callback = tuner(self)
         self.options    = options
         self.args       = args
         self._set_rates()
@@ -104,19 +111,19 @@ class gsm_receiver_first_blood(gr.top_block):
         return interpolator
     
     def _set_receiver(self):
-        receiver = gsm.receiver_cf(self.tune_callback, self.options.osr)
+        receiver = gsm.receiver_cf(self.tuner_callback, self.synchronizer_callback, self.options.osr, "0000000000000000")
         return receiver
     
     def _process_options(self):
         parser = OptionParser(option_class=eng_option)
-        parser.add_option("-d", "--decim", type="int", default=128,
+        parser.add_option("-d", "--decim", type="int", default=112,
                                     help="Set USRP decimation rate to DECIM [default=%default]")
         parser.add_option("-I", "--inputfile", type="string", default="cfile",
                                     help="Input filename")
         parser.add_option("-O", "--outputfile", type="string", default="cfile2.out",
                                     help="Output filename")
         parser.add_option("-R", "--rx-subdev-spec", type="subdev", default=None,
-                                    help="Select USRP Rx side A or B (default=first one with a daughterboard)")   
+                                    help="Select USRP Rx side A or B (default=first one with a daughterboard)")
         parser.add_option("-r", "--osr", type="int", default=4,
                           help="Oversampling ratio [default=%default]")
         parser.add_option("-f", "--freq", type="eng_float", default="950.4M",
@@ -126,8 +133,11 @@ class gsm_receiver_first_blood(gr.top_block):
         (options, args) = parser.parse_args ()
         return (options, args)
     
-    def set_frequency(self, center_freq):
+    def set_center_frequency(self, center_freq):
         self.filtr.set_center_freq(center_freq)
+
+    def set_timing(self, timing_offset):
+        pass
 
 def main():
     try:
