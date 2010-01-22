@@ -89,9 +89,9 @@ class burst_callback(gr.feval_ll):
 
 ####################
 def pick_subdevice(u):
-	if u.db[0][0].dbid() >= 0:
+	if u.db(0, 0).dbid() >= 0:
 		return (0, 0)
-	if u.db[1][0].dbid() >= 0:
+	if u.db(1, 0).dbid() >= 0:
 		return (1, 0)
 	return (0, 0)
 
@@ -236,12 +236,16 @@ class tvoid_receiver(gr.top_block):
 							help="Set USRP decimation rate to DECIM [default=%default]")
 		parser.add_option("-R", "--rx-subdev-spec", type="subdev", default=None,
 							help="Select USRP Rx side A or B (default=first one with a daughterboard)")
+		parser.add_option("-A", "--antenna", default=None,
+							help="Select Rx Antenna (only on RFX-series boards)")
 		parser.add_option("--fusb-block-size", type="int", default=0,
 							help="Set USRP blocksize")
 		parser.add_option("--fusb-nblocks", type="int", default=0,
 							help="Set USRP block buffers")
 		parser.add_option("--realtime",action="store_true", dest="realtime",
 							help="Use realtime scheduling.")
+		parser.add_option("-F", "--clock-frequency", type="int", default=64e6,
+							help="USRP FPGA master clock frequency")
 		parser.add_option("-C", "--clock-offset", type="eng_float", default=0.0,
 							help="Sample clock offset frequency")
 
@@ -363,7 +367,8 @@ class tvoid_receiver(gr.top_block):
 
 			
 		self.ursp = usrp.source_c(decim_rate=options.decim,fusb_block_size=options.fusb_block_size,fusb_nblocks=options.fusb_nblocks)
-			
+		self.ursp.set_fpga_master_clock_freq(options.clock_frequency)
+
 		if options.rx_subdev_spec is None:
 			options.rx_subdev_spec = pick_subdevice(self.ursp)
 		
@@ -372,6 +377,10 @@ class tvoid_receiver(gr.top_block):
 		# determine the daughterboard subdevice
 		self.subdev = usrp.selected_subdev(self.ursp, options.rx_subdev_spec)
 		input_rate = self.ursp.adc_freq() / self.ursp.decim_rate()
+
+		if options.antenna is not None:
+			print >> sys.stderr, "USRP antenna %s" % (options.antenna,)
+			self.subdev.select_rx_antenna(options.antenna)
 
 		# set initial values
 		if options.gain is None:
@@ -386,10 +395,10 @@ class tvoid_receiver(gr.top_block):
 ####################
 	def setup_timing(self):
 		options = self.options
-		clock_rate = 64e6
+		clock_rate = options.clock_frequency
 
 		if options.clock_offset:
-			clock_rate = 64e6 + options.clock_offset
+			clock_rate = clock_rate + options.clock_offset
 		elif options.channel:		
 			#calculate actual clock rate based on frequency offset (assumes shared clock for sampling and tuning) 
 			f = get_freq_from_arfcn(options.channel,options.region)
