@@ -79,6 +79,7 @@ _gsm_la_LDFLAGS = $(NO_UNDEFINED) -module -avoid-version
 _gsm_la_LIBADD =		\
 	$(PYTHON_LDFLAGS)	\
 	libgsmdemod.la		\
+	$(LIBOSMOCORE_LIBS)	\
 	-lstdc++		\
 	$(DECODER_LA)
 

@@ -36,7 +36,6 @@ libdecoder_la_SOURCES = \
 	fire_crc.c	\
 	gsmstack.c	\
 	interleave.c	\
-	out_pcap.c	\
 	tun.c		
 #	tch.c		\
 #	conv.c
@@ -47,7 +46,6 @@ noinst_HEADERS = 	\
 	fire_crc.h	\
 	gsmstack.h	\
 	interleave.h	\
-	out_pcap.h	\
 	tun.h		\
 	system.h	\
 	gsmtap.h	\

@@ -25,7 +25,7 @@ AC_CONFIG_SRCDIR([src/lib/gsm.i])
 AM_CONFIG_HEADER(config.h)
 AC_CANONICAL_TARGET([])
 AC_CONFIG_AUX_DIR([.])
-AM_INIT_AUTOMAKE(gsm-receiver,0.0.1)
+AM_INIT_AUTOMAKE(gsm-receiver,0.0.2)
 AC_CONFIG_MACRO_DIR([config])
 
 GR_X86_64
@@ -93,14 +93,14 @@ GR_PWIN32
 PKG_CHECK_MODULES(GNURADIO_CORE, gnuradio-core >= 3)
 dnl LIBS="$LIBS $GNURADIO_CORE_LIBS"
 
-dnl Check for boost, version 1.35 (or higher I guess - this was taken from GNU Radio's configure.ac)
-AX_BOOST_BASE([1.35])
-CXXFLAGS="$CXXFLAGS $BOOST_CXXFLAGS" 
-CFLAGS="$CFLAGS $BOOST_CXXFLAGS"     
+dnl Define where to find boost includes
+GR_REQUIRE_BOOST_INCLUDES
 
 STD_DEFINES_AND_INCLUDES="$GNURADIO_CORE_CFLAGS $BOOST_CFLAGS"
 AC_SUBST(STD_DEFINES_AND_INCLUDES)
 
+dnl Check for libosmocore (gsmtap support)
+PKG_CHECK_MODULES(LIBOSMOCORE, libosmocore >= 0.1.13)
 
 AC_CONFIG_FILES([\
 	  Makefile \
