@@ -24,17 +24,6 @@
 
 static const int USEFUL_BITS = 142;
 
-enum BURST_TYPE {
-        UNKNOWN,
-        FCCH, 
-        PARTIAL_SCH,            //successful correlation, but missing data ^
-        SCH,
-        CTS_SCH,
-        COMPACT_SCH, 
-        NORMAL,
-        DUMMY,
-        ACCESS
-};
 static void out_gsmdecode(char type, int arfcn, int ts, int fn, char *data, int len);
 
 /* encode a decoded burst (1 bit per byte) into 8-bit-per-byte */
@@ -80,6 +69,123 @@ diff_decode(char *dst, char *src, int len)
 	}
 }
 #endif
+
+/* TODO: handle mapping in a more elegant way or simplify the function */
+
+uint8_t
+get_chan_type(enum TIMESLOT_TYPE type, int fn, uint8_t *ss)
+{
+  uint8_t chan_type = GSMTAP_CHANNEL_BCCH;
+  *ss = 0;
+  int mf51 = fn % 51;
+
+  if(type == TST_FCCH_SCH_BCCH_CCCH_SDCCH4)
+  {
+      if(mf51 == 22) /* SDCCH */
+      {
+          chan_type = GSMTAP_CHANNEL_SDCCH4;
+          *ss = 0;
+      }
+      else if(mf51 == 26) /* SDCCH */
+      {
+          chan_type = GSMTAP_CHANNEL_SDCCH4;
+          *ss = 1;
+      }
+      else if(mf51 == 32) /* SDCCH */
+      {
+          chan_type = GSMTAP_CHANNEL_SDCCH4;
+          *ss = 2;
+      }
+      else if(mf51 == 36) /* SDCCH */
+      {
+          chan_type = GSMTAP_CHANNEL_SDCCH4;
+          *ss = 3;
+      }
+      else if(mf51 == 42) /* SAACH */
+      {
+          chan_type = GSMTAP_CHANNEL_SDCCH4 | GSMTAP_CHANNEL_ACCH;
+          *ss = ((fn % 102) > 51) ? 2 :  0;
+      }
+      else if(mf51 == 46) /* SAACH */
+      {
+          chan_type = GSMTAP_CHANNEL_SDCCH4 | GSMTAP_CHANNEL_ACCH;
+          *ss = ((fn % 102) > 51) ? 3 :  1;
+      }
+  }
+  else if(type == TST_FCCH_SCH_BCCH_CCCH)
+  {
+      if(mf51 != 2) /* BCCH */
+      {
+          chan_type = GSMTAP_CHANNEL_CCCH;
+          *ss = 0;
+      }
+  }
+  else if(type == TST_SDCCH8)
+  {
+      if(mf51 == 0) /* SDCCH */
+      {
+          chan_type = GSMTAP_CHANNEL_SDCCH8;
+          *ss = 0;
+      }
+      else if(mf51 == 4) /* SDCCH */
+      {
+          chan_type = GSMTAP_CHANNEL_SDCCH8;
+          *ss = 1;
+      }
+      else if(mf51 == 8) /* SDCCH */
+      {
+          chan_type = GSMTAP_CHANNEL_SDCCH8;
+          *ss = 2;
+      }
+      else if(mf51 == 12) /* SDCCH */
+      {
+          chan_type = GSMTAP_CHANNEL_SDCCH8;
+          *ss = 3;
+      }
+      else if(mf51 == 16) /* SDCCH */
+      {
+          chan_type = GSMTAP_CHANNEL_SDCCH8;
+          *ss = 4;
+      }
+      else if(mf51 == 20) /* SDCCH */
+      {
+          chan_type = GSMTAP_CHANNEL_SDCCH8;
+          *ss = 5;
+      }
+      else if(mf51 == 24) /* SDCCH */
+      {
+          chan_type = GSMTAP_CHANNEL_SDCCH8;
+          *ss = 6;
+      }
+      else if(mf51 == 28) /* SDCCH */
+      {
+          chan_type = GSMTAP_CHANNEL_SDCCH8;
+          *ss = 7;
+      }
+      else if(mf51 == 32) /* SAACH */
+      {
+          chan_type = GSMTAP_CHANNEL_SDCCH8 | GSMTAP_CHANNEL_ACCH;
+          *ss = ((fn % 102) > 51) ? 4 :  0;
+      }
+      else if(mf51 == 36) /* SAACH */
+      {
+          chan_type = GSMTAP_CHANNEL_SDCCH8 | GSMTAP_CHANNEL_ACCH;
+          *ss = ((fn % 102) > 51) ? 5 :  1;
+      }
+      else if(mf51 == 40) /* SAACH */
+      {
+          chan_type = GSMTAP_CHANNEL_SDCCH8 | GSMTAP_CHANNEL_ACCH;
+          *ss = ((fn % 102) > 51) ? 6 :  2;
+      }
+      else if(mf51 == 44) /* SAACH */
+      {
+          chan_type = GSMTAP_CHANNEL_SDCCH8 | GSMTAP_CHANNEL_ACCH;
+          *ss = ((fn % 102) > 51) ? 7 :  3;
+      }
+  }
+
+  return chan_type;
+}
 
 /*
  * Initialize a new GSMSTACK context.
