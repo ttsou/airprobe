@@ -415,10 +415,12 @@ static unsigned char *decode_sacch(GS_CTX *ctx, unsigned char *burst, unsigned i
 		if (FC_check_crc(&fc_ctx, decoded_data, crc_result) == 0)
 		{
 			errors = -1;
-			DEBUGF("error: sacch: parity error (%d fn=%d)\n", errors, ctx->fn);
+			DEBUGF("error: sacch: parity error (%d fn=%d)\n",
+				errors, ctx->fn);
 			return NULL;
 		} else {
-			DEBUGF("Successfully corrected parity bits! (errors=%d fn=%d)\n", errors, ctx->fn);
+			DEBUGF("Successfully corrected parity bits! (errors=%d fn=%d)\n",
+				errors, ctx->fn);
 			memcpy(decoded_data, crc_result, sizeof crc_result);
 			errors = 0;
 		}
@@ -481,3 +483,71 @@ unsigned char *decode_cch(GS_CTX *ctx, unsigned char *e, unsigned int *datalen) 
 	   e + 3 * eBLOCK_SIZE, datalen);
 }
 #endif
+
+unsigned char *decode_facch(GS_CTX *ctx, unsigned char *burst, unsigned int *datalen, int offset) {
+
+	int errors, len, data_size;
+	unsigned char conv_data[CONV_SIZE], iBLOCK[BLOCKS * 2][iBLOCK_SIZE],
+	   hl, hn, decoded_data[PARITY_OUTPUT_SIZE];
+	FC_CTX fc_ctx;
+
+	data_size = sizeof ctx->msg;
+	if(datalen)
+		*datalen = 0;
+
+	// unmap the bursts
+	decode_burstmap(iBLOCK[0], burst, &hl, &hn); // XXX ignore stealing bits
+	decode_burstmap(iBLOCK[1], burst + 116, &hl, &hn);
+	decode_burstmap(iBLOCK[2], burst + 116 * 2, &hl, &hn);
+	decode_burstmap(iBLOCK[3], burst + 116 * 3, &hl, &hn);
+	decode_burstmap(iBLOCK[4], burst + 116 * 4, &hl, &hn);
+	decode_burstmap(iBLOCK[5], burst + 116 * 5, &hl, &hn);
+	decode_burstmap(iBLOCK[6], burst + 116 * 6, &hl, &hn);
+	decode_burstmap(iBLOCK[7], burst + 116 * 7, &hl, &hn);
+
+	// remove interleave
+	if (offset == 0)
+		interleave_decode(&ctx->interleave_facch_f1_ctx, conv_data, (unsigned char *)iBLOCK);
+	else
+		interleave_decode(&ctx->interleave_facch_f2_ctx, conv_data, (unsigned char *)iBLOCK);
+	//decode_interleave(conv_data, (unsigned char *)iBLOCK);
+
+	// Viterbi decode
+	errors = conv_decode(decoded_data, conv_data);
+	//DEBUGF("conv_decode: %d\n", errors);
+
+	// check parity
+	// If parity check error detected try to fix it.
+	if (parity_check(decoded_data)) {
+		FC_init(&fc_ctx, 40, 184);
+		unsigned char crc_result[224];
+		if (FC_check_crc(&fc_ctx, decoded_data, crc_result) == 0)
+		{
+			DEBUGF("error: sacch: parity error (errors=%d fn=%d)\n", errors, ctx->fn);
+			errors = -1;
+			return NULL;
+		} else {
+			DEBUGF("Successfully corrected parity bits! (errors=%d fn=%d)\n", errors, ctx->fn);
+			memcpy(decoded_data, crc_result, sizeof crc_result);
+			errors = 0;
+		}
+	}
+
+	if (errors)
+		fprintf(stderr, "WRN: errors=%d fn=%d\n", errors, ctx->fn);
+
+	if ((len = compress_bits(ctx->msg, data_size, decoded_data,
+							DATA_BLOCK_SIZE)) < 0) {
+		fprintf(stderr, "error: compress_bits\n");
+		return NULL;
+	}
+	if (len < data_size) {
+		fprintf(stderr, "error: buf too small (%d < %d)\n",
+		   sizeof(ctx->msg), len);
+		return NULL;
+	}
+
+	if (datalen)
+		*datalen = (unsigned int)len;
+	return ctx->msg;
+}

@@ -96,6 +96,8 @@ GS_new(GS_CTX *ctx)
 
 	memset(ctx, 0, sizeof *ctx);
 	interleave_init(&ctx->interleave_ctx, 456, 114);
+	interleave_init_facch_f(&ctx->interleave_facch_f1_ctx, 456, 114, 0);
+	interleave_init_facch_f(&ctx->interleave_facch_f2_ctx, 456, 114, 4);
 	ctx->fn = -1;
 	ctx->bsic = -1;
 	ctx->gsmtap_fd = -1;

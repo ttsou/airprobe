@@ -46,6 +46,7 @@ extern "C" {
 #define eBLOCK_SIZE		(iBLOCK_SIZE + 2)
 
 unsigned char *decode_cch(GS_CTX *ctx, unsigned char *burst, unsigned int *len);
+unsigned char *decode_facch(GS_CTX *ctx, unsigned char *burst, unsigned int *len, int offset);
 //unsigned char *decode_cch(GS_CTX *ctx, unsigned char *, unsigned char *, unsigned char *, unsigned char *, unsigned int *len);
 //unsigned char *decode_cch(GS_CTX *ctx, unsigned char *, unsigned int *);
 

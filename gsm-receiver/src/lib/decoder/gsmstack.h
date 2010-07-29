@@ -23,6 +23,8 @@ typedef struct
 	char msg[23];	/* last decoded message */
 
 	INTERLEAVE_CTX interleave_ctx;
+	INTERLEAVE_CTX interleave_facch_f1_ctx;
+	INTERLEAVE_CTX interleave_facch_f2_ctx;
 
 	struct gs_ts_ctx ts_ctx[8];
 
