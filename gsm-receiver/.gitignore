@@ -23,3 +23,7 @@ debug
 html
 latex
 xml
+src/lib/gsm.cc
+src/lib/gsm.py
+src/lib/gsm.pyc
+src/python/speech.gsm
