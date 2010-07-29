@@ -201,7 +201,7 @@ GS_new(GS_CTX *ctx)
 
 	sin.sin_family = AF_INET;
 	sin.sin_port = htons(GSMTAP_UDP_PORT);
-	inet_aton("127.0.0.1", &sin.sin_addr);
+	inet_aton("224.0.0.1", &sin.sin_addr);
 
 	memset(ctx, 0, sizeof *ctx);
 	interleave_init(&ctx->interleave_ctx, 456, 114);
