@@ -38,10 +38,12 @@ class multiframe_configuration
   private:
     multiframe_type d_type;
     std::vector<burst_type> d_burst_types;
+    std::vector<bool> d_first_burst;
   public:
     multiframe_configuration() {
       d_type = unknown;
       fill(d_burst_types.begin(), d_burst_types.end(), empty);
+      fill(d_first_burst.begin(), d_first_burst.end(), false);
     }
 
     ~multiframe_configuration() {}
@@ -49,9 +51,13 @@ class multiframe_configuration
     void set_type(multiframe_type type) {
       if (type == multiframe_26) {
         d_burst_types.resize(26);
+        d_first_burst.resize(26);
       } else {
         d_burst_types.resize(51);
+        d_first_burst.resize(51);
       }
+      fill(d_burst_types.begin(), d_burst_types.end(), empty);
+      fill(d_first_burst.begin(), d_first_burst.end(), false);
 
       d_type = type;
     }
@@ -60,12 +66,20 @@ class multiframe_configuration
       d_burst_types[nr] = type;
     }
 
+    void set_first_burst(int nr, bool first_burst) {
+      d_first_burst[nr] = first_burst;
+    }
+
     multiframe_type get_type() {
       return d_type;
     }
 
     burst_type get_burst_type(int nr) {
       return d_burst_types[nr];
+    }
+
+    bool get_first_burst(int nr) {
+      return d_first_burst[nr];
     }
 };
 
@@ -154,11 +168,20 @@ class channel_configuration
       }
     }
 
+    void set_burst_types(int timeslot_nr, const unsigned mapping[], const unsigned first_burst[], unsigned mapping_size, burst_type b_type) {
+      unsigned i;
+      for (i = 0; i < mapping_size; i++) {
+        d_timeslots_descriptions[timeslot_nr].set_burst_type(mapping[i], b_type);
+        d_timeslots_descriptions[timeslot_nr].set_first_burst(mapping[i], first_burst[i] != 0);
+      }
+    }
+
     void set_single_burst_type(int timeslot_nr, int burst_nr, burst_type b_type) {
       d_timeslots_descriptions[timeslot_nr].set_burst_type(burst_nr, b_type);
     }
 
     burst_type get_burst_type(burst_counter burst_nr);
+    bool get_first_burst(burst_counter burst_nr);
 };
 
 #endif /* INCLUDED_GSM_RECEIVER_CONFIG_H */

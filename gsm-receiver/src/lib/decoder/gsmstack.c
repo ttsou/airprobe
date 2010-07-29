@@ -229,9 +229,8 @@ GS_new(GS_CTX *ctx)
  * 142 bit
  */
 int
-GS_process(GS_CTX *ctx, int ts, int type, const unsigned char *src, int fn)
+GS_process(GS_CTX *ctx, int ts, int type, const unsigned char *src, int fn, int first_burst)
 {
-// 	int fn;
 	int bsic;
 	int ret;
 	unsigned char *data;
@@ -240,39 +239,49 @@ GS_process(GS_CTX *ctx, int ts, int type, const unsigned char *src, int fn)
 
 	memset(ctx->msg, 0, sizeof(ctx->msg));
 
-#if 0
-	if (ts != 0) {
-		/* non-0 timeslots should end up in PCAP */
-		data = decode_cch(ctx, ctx->burst, &len);
-		if (data == NULL)
+	if (ts_ctx->type == TST_TCHF && type == NORMAL) {
+		/* Dieter: we came here because the burst might contain FACCH bits */
+		ctx->fn = fn;
+		ts_ctx->burst_count2 = fn % 26;
+
+		if (ts_ctx->burst_count2 >= 12)
+			ts_ctx->burst_count2--;
+		ts_ctx->burst_count2 = ts_ctx->burst_count2 % 8;
+
+		/* copy data bits and stealing flags to buffer */
+		memcpy(ts_ctx->burst2 + (116 * ts_ctx->burst_count2), src, 58);
+		memcpy(ts_ctx->burst2 + (116 * ts_ctx->burst_count2) + 58, src + 58 + 26, 58);
+
+		/* Return if not enough bursts for a full gsm message */
+		if ((ts_ctx->burst_count2 % 4) != 3)
+			return 0;
+
+		data = decode_facch(ctx, ts_ctx->burst2, &len, (ts_ctx->burst_count2 == 3) ? 1 : 0);
+		if (data == NULL) {
+			DEBUGF("cannot decode FACCH fnr=%d ts=%d\n", ctx->fn, ts);
 			return -1;
-//		write_pcap_packet(ctx->pcap_fd, 0 /* arfcn */, ts, ctx->fn, data, len);
-		return;
+		}
+
+		out_gsmdecode(0, 0, ts, ctx->fn, data, len);
+
+		if (ctx->gsmtap_fd >= 0) {
+			struct msgb *msg;
+			uint8_t chan_type = GSMTAP_CHANNEL_TCH_F;
+			uint8_t ss = 0;
+			int fn = (ctx->fn - 3); /*  "- 3" for start of frame */
+
+			msg = gsmtap_makemsg(0, ts, chan_type, ss, ctx->fn, 0, 0, data, len);
+			if (msg)
+				write(ctx->gsmtap_fd, msg->data, msg->len);
+		}
+		return 0;
 	}
-#endif
 
-/*	if (ts == 0) {
-		if (type == SCH) {
-//			ret = decode_sch(src, &fn, &bsic);
-			if (ret != 0)
-				return 0;
-			if ((ctx->bsic > 0) && (bsic != ctx->bsic))
-				fprintf(stderr, "WARN: BSIC changed.\n");
-			//DEBUGF("FN %d, BSIC %d\n", fn, bsic);
-			ctx->fn = fn;
-			ctx->bsic = bsic;
-			/* Reset message concatenator */
-//			ts_ctx->burst_count = 0;
-//			return 0;
-//		}
+	/* normal burst processing */
+	if (first_burst) /* Dieter: it is important to start with the correct burst */
+		ts_ctx->burst_count = 0;
 
-		/* If we did not get Frame Number yet then return */
-//		if (ctx->fn < 0)
-//			return 0;
-
-//		ctx->fn++;
-//	}
-        ctx->fn = fn;
+	ctx->fn = fn;
 	if (type == NORMAL) {
 		/* Interested in these frame numbers (cch)
  		 * 2-5, 12-15, 22-25, 23-35, 42-45
@@ -290,18 +299,25 @@ GS_process(GS_CTX *ctx, int ts, int type, const unsigned char *src, int fn)
 		ts_ctx->burst_count = 0;
 		data = decode_cch(ctx, ts_ctx->burst, &len);
 		if (data == NULL) {
-			DEBUGF("cannot decode fnr=0x%08x ts=%d\n", ctx->fn, ts);
+			DEBUGF("cannot decode fnr=0x%06x (%6d) ts=%d\n", ctx->fn, ctx->fn, ts);
 			return -1;
 		}
 		//DEBUGF("OK TS %d, len %d\n", ts, len);
 
-		out_gsmdecode(0, 0, ts, ctx->fn - 4, data, len);
+		out_gsmdecode(0, 0, ts, ctx->fn, data, len);
 
 		if (ctx->gsmtap_fd >= 0) {
+			/* Dieter: set channel type according to configuration */
 			struct msgb *msg;
+			uint8_t chan_type = GSMTAP_CHANNEL_BCCH;
+			uint8_t ss = 0;
+			int fn = (ctx->fn - 3); /*  "- 3" for start of frame */
+
+			chan_type = get_chan_type(ts_ctx->type, fn, &ss);
+
 			/* arfcn, ts, chan_type, ss, fn, signal, snr, data, len */
-			msg = gsmtap_makemsg(0, ts, GSMTAP_CHANNEL_BCCH, 0,
-					     ctx->fn-4, 0, 0, data, len);
+			msg = gsmtap_makemsg(0, ts, chan_type, ss,
+					     ctx->fn, 0, 0, data, len);
 			if (msg)
 				write(ctx->gsmtap_fd, msg->data,
 				      msg->len);
@@ -318,12 +334,14 @@ GS_process(GS_CTX *ctx, int ts, int type, const unsigned char *src, int fn)
 
 
 /*
- * Output data so that it can be parsed from gsmdeocde.
+ * Output data so that it can be parsed from gsmdecode.
  */
 static void
 out_gsmdecode(char type, int arfcn, int ts, int fn, char *data, int len)
 {
 	char *end = data + len;
+
+	printf("%6d %d:", (fn + 0), ts);
 
 	/* FIXME: speed this up by first printing into an array */
 	while (data < end)

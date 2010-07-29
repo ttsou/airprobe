@@ -59,7 +59,7 @@ typedef struct
 } GS_CTX;
 
 int GS_new(GS_CTX *ctx);
-int GS_process(GS_CTX *ctx, int ts, int type, const unsigned char *src, int fn);
+int GS_process(GS_CTX *ctx, int ts, int type, const unsigned char *src, int fn, int first_burst);
 
 #ifdef __cplusplus
 }

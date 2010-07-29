@@ -82,3 +82,24 @@ burst_type channel_configuration::get_burst_type(burst_counter burst_nr)
 
   return d_timeslots_descriptions[timeslot_nr].get_burst_type(nr);
 }
+
+bool channel_configuration::get_first_burst(burst_counter burst_nr)
+{
+  uint32_t timeslot_nr = burst_nr.get_timeslot_nr();
+  multiframe_type m_type = d_timeslots_descriptions[timeslot_nr].get_type();
+  uint32_t nr;
+
+  switch (m_type) {
+    case multiframe_26:
+      nr = burst_nr.get_t2();
+      break;
+    case multiframe_51:
+      nr = burst_nr.get_t3();
+      break;
+    default:
+      nr = 0;
+      break;
+  }
+
+  return d_timeslots_descriptions[timeslot_nr].get_first_burst(nr);
+}

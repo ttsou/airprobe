@@ -36,12 +36,14 @@
 #include <string>//!!
 #include <map>//!!
 
+#define N_TCH_DECODER 7 /* for TS1..TS7 */
+
 class gsm_receiver_cf;
 
 typedef boost::shared_ptr<gsm_receiver_cf> gsm_receiver_cf_sptr;
 typedef std::vector<gr_complex> vector_complex;
 
-gsm_receiver_cf_sptr gsm_make_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synchronizer, int osr, std::string key);
+gsm_receiver_cf_sptr gsm_make_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synchronizer, int osr, std::string key, std::string configuration);
 
 /** GSM Receiver GNU Radio block
  *
@@ -57,13 +59,8 @@ class gsm_receiver_cf : public gr_block
     std::map<char,int> d_hex_to_int;
     FILE * d_gsm_file; //!!
     byte d_KC[8]; //!!
-    GSM::TCHFACCHL1Decoder d_tch_decoder1; //!!
-    GSM::TCHFACCHL1Decoder d_tch_decoder2; //!!
-    GSM::TCHFACCHL1Decoder d_tch_decoder3; //!!
-    GSM::TCHFACCHL1Decoder d_tch_decoder4; //!!
-    GSM::TCHFACCHL1Decoder d_tch_decoder5; //!!
-    GSM::TCHFACCHL1Decoder d_tch_decoder6; //!!
-    GSM::TCHFACCHL1Decoder d_tch_decoder7; //!!
+    GSM::TCHFACCHL1Decoder *d_tch_decoder[N_TCH_DECODER]; //!!
+    bool d_trace_sch;
     /**@name Configuration of the receiver */
     //@{
     const int d_OSR; ///< oversampling ratio
@@ -117,8 +114,8 @@ class gsm_receiver_cf : public gr_block
     // GSM Stack
     GS_CTX d_gs_ctx;//TODO: remove it! it'a not right place for a decoder
 
-    friend gsm_receiver_cf_sptr gsm_make_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synchronizer, int osr, std::string key);
-    gsm_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synchronizer, int osr, std::string key);
+    friend gsm_receiver_cf_sptr gsm_make_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synchronizer, int osr, std::string key, std::string configuration);
+    gsm_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synchronizer, int osr, std::string key, std::string configuration);
 
     /** Function whis is used to search a FCCH burst and to compute frequency offset before
      * "synchronized" state of the receiver
@@ -233,7 +230,12 @@ class gsm_receiver_cf : public gr_block
     /**
      *
      */
-    void process_normal_burst(burst_counter burst_nr, const unsigned char * burst_binary);
+    void read_configuration(std::string configuration);
+
+    /**
+     *
+     */
+    void process_normal_burst(burst_counter burst_nr, const unsigned char * burst_binary, bool first_burst);
 
     /**
      *

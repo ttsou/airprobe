@@ -38,7 +38,7 @@
 
 GR_SWIG_BLOCK_MAGIC(gsm,receiver_cf);
 
-gsm_receiver_cf_sptr gsm_make_receiver_cf ( gr_feval_dd *tuner, gr_feval_dd *synchronizer, int osr, std::string key);
+gsm_receiver_cf_sptr gsm_make_receiver_cf ( gr_feval_dd *tuner, gr_feval_dd *synchronizer, int osr, std::string key, std::string configuration);
 
 class gsm_receiver_cf : public gr_block
 {

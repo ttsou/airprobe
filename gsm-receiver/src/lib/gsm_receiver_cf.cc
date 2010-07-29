@@ -45,14 +45,25 @@
 //FIXME: decide to use this define or not
 
 //TODO: this shouldn't be here - remove it when gsm receiver's interface will be ready
-void decrypt(const unsigned char * burst_binary, byte * KC, float * decrypted_data, unsigned FN)
+void decrypt(const unsigned char * burst_binary, byte * KC, unsigned char * decrypted_data, unsigned FN)
 {
   byte AtoB[2*DATA_BITS];
+
+  /* KC is all zero: no decryption */
+
+  if(KC[0] == 0 && KC[1] == 0 && KC[2] == 0 && KC[3] == 0 &
+     KC[4] == 0 && KC[5] == 0 && KC[6] == 0 && KC[7] == 0) {
+    for (int i = 0; i < 148; i++) {
+      decrypted_data[i] = burst_binary[i];
+    }
+    return;
+  }
 
   keysetup(KC, FN);
   runA51(AtoB);
 
-  for (int i = 0; i < 148; i++) {
+  /* guard bits */
+  for (int i = 0; i < 3; i++) {
     decrypted_data[i] = burst_binary[i];
   }
 
@@ -60,13 +71,55 @@ void decrypt(const unsigned char * burst_binary, byte * KC, float * decrypted_da
     decrypted_data[i+3] = AtoB[i] ^ burst_binary[i+3];
   }
 
+  /* stealing bits and midamble */
+  for (int i = 60; i < 88; i++) {
+    decrypted_data[i] = burst_binary[i];
+  }
+
   for (int i = 0; i < 57; i++) {
     decrypted_data[i+88] = AtoB[i+57] ^ burst_binary[i+88];
   }
+
+  /* guard bits */
+  for (int i = 145; i < 148; i++) {
+    decrypted_data[i] = burst_binary[i];
+  }
+}
+
+//TODO: this shouldn't be here */
+void dump_bits(const unsigned char * burst_binary, unsigned char * decrypted_data, burst_counter burst_nr, bool first_burst)
+{
+  int i;
+
+  /* Cipher bits */
+  printf("C%d %d %d: ", first_burst, burst_nr.get_frame_nr(), burst_nr.get_frame_nr_mod());
+  for (int i = 0; i < 57; i++)
+    printf("%d", burst_binary[i+3]);
+  for (int i = 0; i < 57; i++)
+    printf("%d", burst_binary[i+88]);
+  printf("\n");
+
+  /* Plain bits */
+  printf("P%d %d %d: ", first_burst, burst_nr.get_frame_nr(), burst_nr.get_frame_nr_mod());
+  for (int i = 0; i < 57; i++)
+    printf("%d", decrypted_data[i+3]);
+  for (int i = 0; i < 57; i++)
+    printf("%d", decrypted_data[i+88]);
+  printf("\n");
+
+  /* Keystream bits */
+  printf("S%d %d %d: ", first_burst, burst_nr.get_frame_nr(), burst_nr.get_frame_nr_mod());
+  for (int i = 0; i < 57; i++)
+    printf("%d", burst_binary[i+3] ^ decrypted_data[i+3]);
+  for (int i = 0; i < 57; i++)
+    printf("%d", burst_binary[i+88] ^ decrypted_data[i+88]);
+  printf("\n");
 }
 
 void gsm_receiver_cf::read_key(std::string key)
 {
+  printf("Key: '%s'\n", key.c_str());
+
   int i;
   int b;
   for (i = 0;i < 8;i++) {
@@ -75,86 +128,133 @@ void gsm_receiver_cf::read_key(std::string key)
   }  
 }
 
-void gsm_receiver_cf::process_normal_burst(burst_counter burst_nr, const unsigned char * burst_binary)
+void gsm_receiver_cf::read_configuration(std::string configuration)
 {
-  float decrypted_data[148];
-  unsigned char * voice_frame;
+  printf("Configuration: '%s'\n", configuration.c_str());
 
-//   if (burst_nr.get_timeslot_nr() == 7) {
+  if ((char)configuration[0] == 0) {
+    printf("  No configuration set.\n");
+    return;
+  }
+
+  /* get timeslot */
+  int ts = atoi(configuration.c_str());
+  if (ts < 0 || ts > 7) {
+    printf("  Invalid TS: %d\n", ts);
+    return;
+  }
+
+  printf("  Configuration TS: %d\n", ts);
+
+  if((char)configuration[1] == 'C')
+    d_gs_ctx.ts_ctx[ts].type = TST_FCCH_SCH_BCCH_CCCH_SDCCH4;
+  else if((char)configuration[1] == 'B')
+    d_gs_ctx.ts_ctx[ts].type = TST_FCCH_SCH_BCCH_CCCH;
+  else if((char)configuration[1] == 'S')
+    d_gs_ctx.ts_ctx[ts].type = TST_SDCCH8;
+  else if((char)configuration[1] == 'T')
+    d_gs_ctx.ts_ctx[ts].type = TST_TCHF;
+  else {
+    printf("  Invalid configuration: %c\n", (char)configuration[1]);
+    return;
+  }
+  /* any other timeslot than 0: turn TS0 off */
+  if(ts != 0) {
+    d_gs_ctx.ts_ctx[0].type = TST_OFF;
+    d_trace_sch = false;
+    printf("  TS0 is turned off\n");
+  }
+}
+
+void gsm_receiver_cf::process_normal_burst(burst_counter burst_nr, const unsigned char * burst_binary, bool first_burst)
+{
+  unsigned char decrypted_data[148];
+  float decrypted_data_float[148];
+  unsigned char * voice_frame;
+  int ts = burst_nr.get_timeslot_nr();
+
+  /* no processing if turned off*/
+  if (d_gs_ctx.ts_ctx[ts].type == TST_OFF)
+    return;
+
+  /* handle traffic timeslots */
+#if 0
+  /* always try to decrypt and decode traffic in TS 1...7 */
+  /* TODO: this will fail if there is unencrypted traffic in more than one TS */
   if (burst_nr.get_timeslot_nr() >= 1 && burst_nr.get_timeslot_nr() <= 7) {
+#else
+  if (d_gs_ctx.ts_ctx[ts].type == TST_TCHF) {
+#endif
     decrypt(burst_binary, d_KC, decrypted_data, burst_nr.get_frame_nr_mod());
 
-    GSM::Time time(burst_nr.get_frame_nr(), burst_nr.get_timeslot_nr());
-    GSM::RxBurst rxbrst(decrypted_data, time);
-    switch (burst_nr.get_timeslot_nr()) {
-      case 1:
-        if ( d_tch_decoder1.processBurst( rxbrst ) == true) {
-          fwrite(d_tch_decoder1.get_voice_frame(), 1 , 33, d_gsm_file);
+    int i;
+    for (i = 0; i< 148; i++)
+      decrypted_data_float[i] = decrypted_data[i];
+
+    GSM::Time time(burst_nr.get_frame_nr(), ts);
+    GSM::RxBurst rxbrst(decrypted_data_float, time);
+    if (ts - TIMESLOT1 >= 0 && ts - TIMESLOT1 < N_TCH_DECODER) {
+        if ( d_tch_decoder[ts - TIMESLOT1]->processBurst( rxbrst ) == true) {
+          fwrite(d_tch_decoder[ts - TIMESLOT1]->get_voice_frame(), 1 , 33, d_gsm_file);
         }
-        break;
-      case 2:
-        if ( d_tch_decoder2.processBurst( rxbrst ) == true) {
-          fwrite(d_tch_decoder2.get_voice_frame(), 1 , 33, d_gsm_file);
+        else if (rxbrst.Hl() || rxbrst.Hu()) {
+        /* Stolen bits are set, might be FACCH */
+          GS_process(&d_gs_ctx, TIMESLOT0 + ts, NORMAL, &decrypted_data[3], burst_nr.get_frame_nr(), first_burst);
         }
-        break;
-      case 3:
-        if ( d_tch_decoder3.processBurst( rxbrst ) == true) {
-          fwrite(d_tch_decoder3.get_voice_frame(), 1 , 33, d_gsm_file);
-        }
-        break;
-      case 4:
-        if ( d_tch_decoder4.processBurst( rxbrst ) == true) {
-          fwrite(d_tch_decoder4.get_voice_frame(), 1 , 33, d_gsm_file);
-        }
-        break;
-      case 5:
-        if ( d_tch_decoder5.processBurst( rxbrst ) == true) {
-          fwrite(d_tch_decoder5.get_voice_frame(), 1 , 33, d_gsm_file);
-        }
-        break;
-      case 6:
-        if ( d_tch_decoder6.processBurst( rxbrst ) == true) {
-          fwrite(d_tch_decoder6.get_voice_frame(), 1 , 33, d_gsm_file);
-        }
-        break;
-      case 7:
-        if ( d_tch_decoder7.processBurst( rxbrst ) == true) {
-          fwrite(d_tch_decoder7.get_voice_frame(), 1 , 33, d_gsm_file);
-        }
-        break;
     }
   }
 
-  if (burst_nr.get_timeslot_nr() == 0) {
-    GS_process(&d_gs_ctx, TIMESLOT0, 6, &burst_binary[3], burst_nr.get_frame_nr());
+  /* handle SDCCH/8 timeslots */
+  if (d_gs_ctx.ts_ctx[ts].type == TST_SDCCH8) {
+    decrypt(burst_binary, d_KC, decrypted_data, burst_nr.get_frame_nr_mod());
+    #if 1 /* dump cipher, plain and keystream bits */
+    dump_bits(burst_binary, decrypted_data, burst_nr, first_burst);
+    #endif
+    GS_process(&d_gs_ctx, TIMESLOT0 + ts, NORMAL, &decrypted_data[3], burst_nr.get_frame_nr(), first_burst);
   }
+
+  /* TS0 is special (TODO) */
+  if (ts == 0) {
+    memcpy(decrypted_data, burst_binary, sizeof(decrypted_data));
+    if (d_gs_ctx.ts_ctx[ts].type == TST_FCCH_SCH_BCCH_CCCH_SDCCH4) {
+      if (SDCCH_SACCH_4_MAP[burst_nr.get_frame_nr() % 51] != 0) { /* SDCCH/4 or SACCH/4 */
+        decrypt(burst_binary, d_KC, decrypted_data, burst_nr.get_frame_nr_mod());
+        #if 1 /* dump cipher, plain and keystream bits */
+        dump_bits(burst_binary, decrypted_data, burst_nr, first_burst);
+        #endif
+      }
+    }
+    GS_process(&d_gs_ctx, TIMESLOT0 + ts, NORMAL, &decrypted_data[3], burst_nr.get_frame_nr(), first_burst);
+  }
+
 }
 //TODO: this shouldn't be here also - the same reason
 void gsm_receiver_cf::configure_receiver()
 {
-  d_channel_conf.set_multiframe_type(TSC0, multiframe_51);
+  int ts;
+  printf("configure_receiver\n");
 
-  d_channel_conf.set_burst_types(TSC0, TEST_CCH_FRAMES, sizeof(TEST_CCH_FRAMES) / sizeof(unsigned), dummy_or_normal);
-  d_channel_conf.set_burst_types(TSC0, FCCH_FRAMES, sizeof(FCCH_FRAMES) / sizeof(unsigned), fcch_burst);
+  /* configure TS0, TS0 is special (TODO)  */
 
-  d_channel_conf.set_multiframe_type(TIMESLOT1, multiframe_26);
-  d_channel_conf.set_burst_types(TIMESLOT1, TRAFFIC_CHANNEL_F, sizeof(TRAFFIC_CHANNEL_F) / sizeof(unsigned), dummy_or_normal);
-  d_channel_conf.set_multiframe_type(TIMESLOT2, multiframe_26);
-  d_channel_conf.set_burst_types(TIMESLOT2, TRAFFIC_CHANNEL_F, sizeof(TRAFFIC_CHANNEL_F) / sizeof(unsigned), dummy_or_normal);
+  d_channel_conf.set_multiframe_type(TIMESLOT0, multiframe_51);
+  d_channel_conf.set_burst_types(TIMESLOT0, TEST_CCH_FRAMES, TEST_CCH_FIRST, sizeof(TEST_CCH_FRAMES) / sizeof(unsigned), normal_burst);
+  /* FCCH bursts */
+  d_channel_conf.set_burst_types(TIMESLOT0, FCCH_FRAMES, sizeof(FCCH_FRAMES) / sizeof(unsigned), fcch_burst);
+  /* SCH bursts */
+  d_channel_conf.set_burst_types(TIMESLOT0, SCH_FRAMES, sizeof(SCH_FRAMES) / sizeof(unsigned), sch_burst);
 
-  d_channel_conf.set_multiframe_type(TIMESLOT3, multiframe_26);
-  d_channel_conf.set_burst_types(TIMESLOT3, TRAFFIC_CHANNEL_F, sizeof(TRAFFIC_CHANNEL_F) / sizeof(unsigned), dummy_or_normal);
-  d_channel_conf.set_multiframe_type(TIMESLOT4, multiframe_26);
-  d_channel_conf.set_burst_types(TIMESLOT4, TRAFFIC_CHANNEL_F, sizeof(TRAFFIC_CHANNEL_F) / sizeof(unsigned), dummy_or_normal);
+  /* configure TS1...TS7 */
 
-  d_channel_conf.set_multiframe_type(TIMESLOT5, multiframe_26);
-  d_channel_conf.set_burst_types(TIMESLOT5, TRAFFIC_CHANNEL_F, sizeof(TRAFFIC_CHANNEL_F) / sizeof(unsigned), dummy_or_normal);
-  d_channel_conf.set_multiframe_type(TIMESLOT6, multiframe_26);
-  d_channel_conf.set_burst_types(TIMESLOT6, TRAFFIC_CHANNEL_F, sizeof(TRAFFIC_CHANNEL_F) / sizeof(unsigned), dummy_or_normal);
-
-  d_channel_conf.set_multiframe_type(TIMESLOT7, multiframe_26);
-  d_channel_conf.set_burst_types(TIMESLOT7, TRAFFIC_CHANNEL_F, sizeof(TRAFFIC_CHANNEL_F) / sizeof(unsigned), dummy_or_normal);
-
+  for (ts = TIMESLOT1; ts < TIMESLOT7; ts++) {
+    if (d_gs_ctx.ts_ctx[ts].type == TST_TCHF) {
+      d_channel_conf.set_multiframe_type(ts, multiframe_26);
+      d_channel_conf.set_burst_types(ts, TRAFFIC_CHANNEL_F, sizeof(TRAFFIC_CHANNEL_F) / sizeof(unsigned), dummy_or_normal);
+    }
+    else if (d_gs_ctx.ts_ctx[ts].type == TST_SDCCH8) {
+      d_channel_conf.set_multiframe_type(ts, multiframe_51);
+      d_channel_conf.set_burst_types(ts, SDCCH_SACCH_8_FRAMES, SDCCH_SACCH_8_FIRST, sizeof(SDCCH_SACCH_8_FRAMES) / sizeof(unsigned), dummy_or_normal);  
+    }
+  }
 }
 
 
@@ -164,9 +264,9 @@ typedef std::vector<float> vector_float;
 typedef boost::circular_buffer<float> circular_buffer_float;
 
 gsm_receiver_cf_sptr
-gsm_make_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synchronizer, int osr, std::string key)
+gsm_make_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synchronizer, int osr, std::string key, std::string configuration)
 {
-  return gsm_receiver_cf_sptr(new gsm_receiver_cf(tuner, synchronizer, osr, key));
+  return gsm_receiver_cf_sptr(new gsm_receiver_cf(tuner, synchronizer, osr, key, configuration));
 }
 
 static const int MIN_IN = 1; // mininum number of input streams
@@ -177,7 +277,7 @@ static const int MAX_OUT = 1; // maximum number of output streams
 /*
  * The private constructor
  */
-gsm_receiver_cf::gsm_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synchronizer, int osr, std::string key)
+gsm_receiver_cf::gsm_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synchronizer, int osr, std::string key, std::string configuration)
     : gr_block("gsm_receiver",
                gr_make_io_signature(MIN_IN, MAX_IN, sizeof(gr_complex)),
                gr_make_io_signature(MIN_OUT, MAX_OUT, 142 * sizeof(float))),
@@ -190,13 +290,7 @@ gsm_receiver_cf::gsm_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synchronizer, 
     d_state(first_fcch_search),
     d_burst_nr(osr),
     d_failed_sch(0),
-    d_tch_decoder1( GSM::gFACCH_TCHFMapping ), //!!
-    d_tch_decoder2( GSM::gFACCH_TCHFMapping ), //!!
-    d_tch_decoder3( GSM::gFACCH_TCHFMapping ), //!!
-    d_tch_decoder4( GSM::gFACCH_TCHFMapping ), //!!
-    d_tch_decoder5( GSM::gFACCH_TCHFMapping ), //!!
-    d_tch_decoder6( GSM::gFACCH_TCHFMapping ), //!!
-    d_tch_decoder7( GSM::gFACCH_TCHFMapping ) //!!
+    d_trace_sch(true)
 {
   int i;
   gmsk_mapper(SYNC_BITS, N_SYNC_BITS, d_sch_training_seq, gr_complex(0.0, -1.0));
@@ -212,7 +306,10 @@ gsm_receiver_cf::gsm_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synchronizer, 
     gmsk_mapper(train_seq[i], N_TRAIN_BITS, d_norm_training_seq[i], startpoint);
   }
 
-  d_gsm_file = fopen( "speech.gsm", "wb" ); //!!
+  for (i = 0; i < N_TCH_DECODER; i++)
+    d_tch_decoder[i] = new GSM::TCHFACCHL1Decoder(GSM::gFACCH_TCHFMapping);
+
+  d_gsm_file = fopen( "speech.au.gsm", "wb" ); //!!
   d_hex_to_int['0'] = 0; //!!
   d_hex_to_int['4'] = 4; //!!
   d_hex_to_int['8'] = 8; //!!
@@ -230,8 +327,14 @@ gsm_receiver_cf::gsm_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synchronizer, 
   d_hex_to_int['b'] = 0xb; //!!
   d_hex_to_int['f'] = 0xf; //!!
   read_key(key); //!!
-  /* Initialize GSM Stack */
+
+  /* Initialize GSM Stack, clear d_gs_ctx */
   GS_new(&d_gs_ctx); //TODO: remove it! it's not a right place for a decoder
+
+  /* configuration is stored in d_gs_ctx */
+  read_configuration(configuration);
+
+  configure_receiver();
 }
 
 /*
@@ -295,16 +398,23 @@ gsm_receiver_cf::general_work(int noutput_items,
           burst_start = get_sch_chan_imp_resp(input, &channel_imp_resp[0]); //get channel impulse response from it
           detect_burst(input, &channel_imp_resp[0], burst_start, output_binary); //detect bits using MLSE detection
           if (decode_sch(&output_binary[3], &t1, &t2, &t3, &d_ncc, &d_bcc) == 0) { //decode SCH burst
-            DCOUT("sch burst_start: " << burst_start);
-            DCOUT("bcc: " << d_bcc << " ncc: " << d_ncc << " t1: " << t1 << " t2: " << t2 << " t3: " << t3);
+            if(d_trace_sch)
+            {
+              DCOUT("sch burst_start: " << burst_start);
+              DCOUT("bcc: " << d_bcc << " ncc: " << d_ncc << " t1: " << t1 << " t2: " << t2 << " t3: " << t3);
+            }
             d_burst_nr.set(t1, t2, t3, 0);                                  //set counter of bursts value
 
+            #if 0 /* Dieter: now done in constructor */
             //configure the receiver - tell him where to find which burst type
             d_channel_conf.set_multiframe_type(TIMESLOT0, multiframe_51);  //in the timeslot nr.0 bursts changes according to t3 counter
             configure_receiver();//TODO: this shouldn't be here - remove it when gsm receiver's interface will be ready
+            // Dieter: don't call it, otherwise overwrites configuration of configure_receiver()
             d_channel_conf.set_burst_types(TIMESLOT0, FCCH_FRAMES, sizeof(FCCH_FRAMES) / sizeof(unsigned), fcch_burst);  //tell where to find fcch bursts
             d_channel_conf.set_burst_types(TIMESLOT0, SCH_FRAMES, sizeof(SCH_FRAMES) / sizeof(unsigned), sch_burst);     //sch bursts
             d_channel_conf.set_burst_types(TIMESLOT0, BCCH_FRAMES, sizeof(BCCH_FRAMES) / sizeof(unsigned), normal_burst);//!and maybe normal bursts of the BCCH logical channel
+            #endif
+
             d_burst_nr++;
 
             consume_each(burst_start + BURST_SIZE * d_OSR);   //consume samples up to next guard period
@@ -326,6 +436,7 @@ gsm_receiver_cf::general_work(int noutput_items,
         unsigned char output_binary[BURST_SIZE];
 
         burst_type b_type = d_channel_conf.get_burst_type(d_burst_nr); //get burst type for given burst number
+        bool first_burst = d_channel_conf.get_first_burst(d_burst_nr); // first burst of four ?
 
         switch (b_type) {
           case fcch_burst: {                                                                    //if it's FCCH  burst
@@ -355,9 +466,12 @@ gsm_receiver_cf::general_work(int noutput_items,
               if (decode_sch(&output_binary[3], &t1, &t2, &t3, &d_ncc, &d_bcc) == 0) {         //and decode SCH data
                 // d_burst_nr.set(t1, t2, t3, 0);                                              //but only to check if burst_start value is correct
                 d_failed_sch = 0;
-                DCOUT("bcc: " << d_bcc << " ncc: " << d_ncc << " t1: " << t1 << " t2: " << t2 << " t3: " << t3);
                 offset =  burst_start - floor((GUARD_PERIOD) * d_OSR);                         //compute offset from burst_start - burst should start after a guard period
-                DCOUT(offset);
+                if(d_trace_sch)
+                {
+                  DCOUT("bcc: " << d_bcc << " ncc: " << d_ncc << " t1: " << t1 << " t2: " << t2 << " t3: " << t3);
+                  DCOUT(offset);
+                }
                 to_consume += offset;                                                          //adjust with offset number of samples to be consumed
               } else {
                 d_failed_sch++;
@@ -373,7 +487,7 @@ gsm_receiver_cf::general_work(int noutput_items,
           case normal_burst:                                                                  //if it's normal burst
             burst_start = get_norm_chan_imp_resp(input, &channel_imp_resp[0], d_bcc); //get channel impulse response for given training sequence number - d_bcc
             detect_burst(input, &channel_imp_resp[0], burst_start, output_binary);            //MLSE detection of bits
-            process_normal_burst(d_burst_nr, output_binary); //TODO: this shouldn't be here - remove it when gsm receiver's interface will be ready
+            process_normal_burst(d_burst_nr, output_binary, first_burst); //TODO: this shouldn't be here - remove it when gsm receiver's interface will be ready
             break;
 
           case dummy_or_normal: {
@@ -389,7 +503,7 @@ gsm_receiver_cf::general_work(int noutput_items,
                 burst_start = get_norm_chan_imp_resp(input, &channel_imp_resp[0], d_bcc);
                 detect_burst(input, &channel_imp_resp[0], burst_start, output_binary);
                 if (!output_binary[0] && !output_binary[1] && !output_binary[2]) {
-                  process_normal_burst(d_burst_nr, output_binary); //TODO: this shouldn't be here - remove it when gsm receiver's interface will be ready
+                  process_normal_burst(d_burst_nr, output_binary, first_burst); //TODO: this shouldn't be here - remove it when gsm receiver's interface will be ready
                 }
               }
             }
