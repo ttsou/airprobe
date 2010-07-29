@@ -183,6 +183,9 @@ get_chan_type(enum TIMESLOT_TYPE type, int fn, uint8_t *ss)
           *ss = ((fn % 102) > 51) ? 7 :  3;
       }
   }
+  else if (type == TST_TCHF) {
+    chan_type = GSMTAP_CHANNEL_TCH_F | GSMTAP_CHANNEL_ACCH;
+  }
 
   return chan_type;
 }
@@ -239,9 +242,12 @@ GS_process(GS_CTX *ctx, int ts, int type, const unsigned char *src, int fn, int 
 
 	memset(ctx->msg, 0, sizeof(ctx->msg));
 
-	if (ts_ctx->type == TST_TCHF && type == NORMAL) {
+	if (ts_ctx->type == TST_TCHF && type == NORMAL &&
+	    (fn % 26) != 12 && (fn % 26) != 25) {
 		/* Dieter: we came here because the burst might contain FACCH bits */
 		ctx->fn = fn;
+
+		/* get burst index to TCH bursts only */
 		ts_ctx->burst_count2 = fn % 26;
 
 		if (ts_ctx->burst_count2 >= 12)

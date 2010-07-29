@@ -187,20 +187,30 @@ void gsm_receiver_cf::process_normal_burst(burst_counter burst_nr, const unsigne
 #endif
     decrypt(burst_binary, d_KC, decrypted_data, burst_nr.get_frame_nr_mod());
 
-    int i;
-    for (i = 0; i< 148; i++)
-      decrypted_data_float[i] = decrypted_data[i];
+    if (burst_nr.get_t2() == 12 || burst_nr.get_t2() == 25) { /* SACCH of Full Rate TCH */
+      if (ts % 2 == 0) /* SACH position and start depends on the timeslot */
+        first_burst = (burst_nr.get_frame_nr() % 104) == (12 + 26 * (ts / 2));
+      else
+        first_burst = (burst_nr.get_frame_nr() % 104) == (25 + 26 * ((ts - 1) / 2));
+#if 0 /* dump cipher, plain and keystream bits */
+      dump_bits(burst_binary, decrypted_data, burst_nr, first_burst);
+#endif
+      GS_process(&d_gs_ctx, TIMESLOT0 + ts, NORMAL, &decrypted_data[3], burst_nr.get_frame_nr(), first_burst);
+    } else {
+      int i;
+      for (i = 0; i< 148; i++)
+	decrypted_data_float[i] = decrypted_data[i];
 
-    GSM::Time time(burst_nr.get_frame_nr(), ts);
-    GSM::RxBurst rxbrst(decrypted_data_float, time);
-    if (ts - TIMESLOT1 >= 0 && ts - TIMESLOT1 < N_TCH_DECODER) {
-        if ( d_tch_decoder[ts - TIMESLOT1]->processBurst( rxbrst ) == true) {
-          fwrite(d_tch_decoder[ts - TIMESLOT1]->get_voice_frame(), 1 , 33, d_gsm_file);
+      GSM::Time time(burst_nr.get_frame_nr(), ts);
+      GSM::RxBurst rxbrst(decrypted_data_float, time);
+      if (ts - TIMESLOT1 >= 0 && ts - TIMESLOT1 < N_TCH_DECODER) {
+	if ( d_tch_decoder[ts - TIMESLOT1]->processBurst( rxbrst ) == true)
+	  fwrite(d_tch_decoder[ts - TIMESLOT1]->get_voice_frame(), 1 , 33, d_gsm_file);
+	else if(rxbrst.Hl() || rxbrst.Hu()) {
+	  /* Stolen bits are set, might be FACCH */
+	  GS_process(&d_gs_ctx, TIMESLOT0 + ts, NORMAL, &decrypted_data[3], burst_nr.get_frame_nr(), first_burst);
         }
-        else if (rxbrst.Hl() || rxbrst.Hu()) {
-        /* Stolen bits are set, might be FACCH */
-          GS_process(&d_gs_ctx, TIMESLOT0 + ts, NORMAL, &decrypted_data[3], burst_nr.get_frame_nr(), first_burst);
-        }
+      }
     }
   }
 
@@ -249,6 +259,14 @@ void gsm_receiver_cf::configure_receiver()
     if (d_gs_ctx.ts_ctx[ts].type == TST_TCHF) {
       d_channel_conf.set_multiframe_type(ts, multiframe_26);
       d_channel_conf.set_burst_types(ts, TRAFFIC_CHANNEL_F, sizeof(TRAFFIC_CHANNEL_F) / sizeof(unsigned), dummy_or_normal);
+      /* SACH position depends on the timeslot */
+      if (ts % 2 == 0) {
+	d_channel_conf.set_single_burst_type(ts, 12, normal_burst); /* SACCH for even timeslots */
+	d_channel_conf.set_single_burst_type(ts, 25, empty); /* IDLE for even timeslots */
+      } else {
+	d_channel_conf.set_single_burst_type(ts, 12, empty); /* IDLE for odd timeslots */
+	d_channel_conf.set_single_burst_type(ts, 25, normal_burst); /* SACCH for odd timeslots */
+      }
     }
     else if (d_gs_ctx.ts_ctx[ts].type == TST_SDCCH8) {
       d_channel_conf.set_multiframe_type(ts, multiframe_51);
