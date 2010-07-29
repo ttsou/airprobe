@@ -3,3 +3,23 @@ Usage:
     $ capture.sh <frequency>
  -run go.sh on this file:
     $ go.sh <file.cfile> 
+
+
+* Configuration parameter for decoding a certain timeslot:
+  Single digit (Timelslot) followed by the configuration, for example:
+     0C : TS0  "Combined configuration", with SDCCH/4 (FCCH + SCH + BCCH + CCCH
+                + SDCCH/4)
+     0B : TS0  "FCCH + SCH + BCCH + CCCH"
+     1S : TS1  SDCCH/8
+     2T : TS2  Traffic
+
+* Specifying a key will decrypt all traffic burst (SDCCH, SACCH, TCH)
+  using A5/1 before decoding
+
+* Use Wireshark and GSMTAP instead of "gsmdecode"
+
+* Limitations:
+   - only TCH_F traffic
+   - no decoder besides "toast" for Full Rate Speech
+   - single ARFCN only
+   - no frequency hopping
