@@ -28,6 +28,8 @@ noinst_LTLIBRARIES = libopenbtsdecoder.la
 libopenbtsdecoder_la_SOURCES = \
 BitVector.cpp \
 GSM610Tables.cpp \
+GSM660Tables.cpp \
+GSM690Tables.cpp \
 GSMCommon.cpp	\
 GSML1FEC.cpp	\
 GSMTDMA.cpp	\
@@ -39,6 +41,8 @@ noinst_HEADERS = 	\
 Assert.h	\
 BitVector.h	\
 GSM610Tables.h	\
+GSM660Tables.h	\
+GSM690Tables.h	\
 GSMCommon.h	\
 GSML1FEC.h	\
 GSMTDMA.h	\
