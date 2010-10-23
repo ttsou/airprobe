@@ -146,18 +146,24 @@ void gsm_receiver_cf::read_configuration(std::string configuration)
 
   printf("  Configuration TS: %d\n", ts);
 
+  d_tch_mode = TM_NONE;
   if((char)configuration[1] == 'C')
     d_gs_ctx.ts_ctx[ts].type = TST_FCCH_SCH_BCCH_CCCH_SDCCH4;
   else if((char)configuration[1] == 'B')
     d_gs_ctx.ts_ctx[ts].type = TST_FCCH_SCH_BCCH_CCCH;
   else if((char)configuration[1] == 'S')
     d_gs_ctx.ts_ctx[ts].type = TST_SDCCH8;
-  else if((char)configuration[1] == 'T')
+  else if((char)configuration[1] == 'T') {
     d_gs_ctx.ts_ctx[ts].type = TST_TCHF;
-  else {
+    if((char)configuration[2] == 'E')
+      d_tch_mode = TM_SPEECH_EFR;
+    else
+      d_tch_mode = TM_SPEECH_FR;
+  } else {
     printf("  Invalid configuration: %c\n", (char)configuration[1]);
     return;
   }
+
   /* any other timeslot than 0: turn TS0 off */
   if(ts != 0) {
     d_gs_ctx.ts_ctx[0].type = TST_OFF;
@@ -205,7 +211,7 @@ void gsm_receiver_cf::process_normal_burst(burst_counter burst_nr, const unsigne
       GSM::RxBurst rxbrst(decrypted_data_float, time);
       if (ts - TIMESLOT1 >= 0 && ts - TIMESLOT1 < N_TCH_DECODER) {
 	if ( d_tch_decoder[ts - TIMESLOT1]->processBurst( rxbrst ) == true)
-	  fwrite(d_tch_decoder[ts - TIMESLOT1]->get_voice_frame(), 1 , 33, d_gsm_file);
+	  fwrite(d_tch_decoder[ts - TIMESLOT1]->get_voice_frame(), 1 , d_tch_decoder[ts - TIMESLOT1]->get_voice_frame_length(), d_speech_file);
 	else if(rxbrst.Hl() || rxbrst.Hu()) {
 	  /* Stolen bits are set, might be FACCH */
 	  GS_process(&d_gs_ctx, TIMESLOT0 + ts, NORMAL, &decrypted_data[3], burst_nr.get_frame_nr(), first_burst);
@@ -310,6 +316,7 @@ gsm_receiver_cf::gsm_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synchronizer, 
     d_failed_sch(0),
     d_trace_sch(true)
 {
+  const unsigned char amr_nb_magic[6] = { 0x23, 0x21, 0x41, 0x4d, 0x52, 0x0a };
   int i;
   gmsk_mapper(SYNC_BITS, N_SYNC_BITS, d_sch_training_seq, gr_complex(0.0, -1.0));
   for (i = 0; i < TRAIN_SEQ_NUM; i++) {
@@ -327,7 +334,6 @@ gsm_receiver_cf::gsm_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synchronizer, 
   for (i = 0; i < N_TCH_DECODER; i++)
     d_tch_decoder[i] = new GSM::TCHFACCHL1Decoder(GSM::gFACCH_TCHFMapping);
 
-  d_gsm_file = fopen( "speech.au.gsm", "wb" ); //!!
   d_hex_to_int['0'] = 0; //!!
   d_hex_to_int['4'] = 4; //!!
   d_hex_to_int['8'] = 8; //!!
@@ -351,6 +357,27 @@ gsm_receiver_cf::gsm_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synchronizer, 
 
   /* configuration is stored in d_gs_ctx */
   read_configuration(configuration);
+
+  /* open speech file and configure d_tch_decoders */
+  switch (d_tch_mode) {
+
+  case TM_SPEECH_FR:
+    d_speech_file = fopen( "speech.au.gsm", "wb" );
+    for (i = 0; i < N_TCH_DECODER; i++)
+        d_tch_decoder[i]->setMode(GSM::MODE_SPEECH_FR);
+    break;
+
+  case TM_SPEECH_EFR:
+    d_speech_file = fopen( "speech.amr", "wb" );
+    fwrite(amr_nb_magic, 1, 6, d_speech_file); /* Write header */
+    for (i = 0; i < N_TCH_DECODER; i++)
+        d_tch_decoder[i]->setMode(GSM::MODE_SPEECH_EFR);
+    break;
+
+  default:
+    d_speech_file = NULL;
+
+  }
 
   configure_receiver();
 }

@@ -57,10 +57,17 @@ class gsm_receiver_cf : public gr_block
 {
   private:
     std::map<char,int> d_hex_to_int;
-    FILE * d_gsm_file; //!!
+    FILE * d_speech_file; //!!
     byte d_KC[8]; //!!
     GSM::TCHFACCHL1Decoder *d_tch_decoder[N_TCH_DECODER]; //!!
     bool d_trace_sch;
+
+    enum {
+        TM_NONE,
+        TM_SPEECH_FR,
+        TM_SPEECH_EFR,
+    } d_tch_mode;
+
     /**@name Configuration of the receiver */
     //@{
     const int d_OSR; ///< oversampling ratio
