@@ -22,4 +22,22 @@ class VocoderFrame : public BitVector {
 
 };
 
+class VocoderAMRFrame : public BitVector {
+
+        public:
+
+        VocoderAMRFrame()
+                :BitVector(244+8)
+        { fillField(0,0x3c,8); /* AMR-NB 12.2 */ }
+
+        /** Construct by unpacking a char[32]. */
+        VocoderAMRFrame(const unsigned char *src)
+                :BitVector(244+8)
+        { unpack(src); }
+
+        BitVector payload() { return tail(8); }
+        const BitVector payload() const { return tail(8); }
+
+};
+
 #endif

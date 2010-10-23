@@ -58,6 +58,10 @@ namespace GSM
   */
 
 
+  enum TCHMode {
+    MODE_SPEECH_FR,
+    MODE_SPEECH_EFR,
+  };
 
 
   /** L1 decoder used for full rate TCH and FACCH -- mostly from GSM 05.03 3.1 and 4.2 */
@@ -75,8 +79,10 @@ namespace GSM
       SoftVector mClass2_c;    ///< the class 2 part of c[]
       ViterbiR2O4 mVCoder;
 
-      VocoderFrame mVFrame;    ///< unpacking buffer for vocoder frame
+      VocoderFrame mVFrame;    ///< buffer for FR vocoder frame
+      VocoderAMRFrame mVFrameAMR; ///< buffer for EFR vocoder frame packed in AMR container
       unsigned char mPrevGoodFrame[33]; ///< previous good frame.
+      unsigned int  mPrevGoodFrameLength;
 
       Parity mTCHParity;
       const TDMAMapping& mMapping; ///< multiplexing description
@@ -85,6 +91,7 @@ namespace GSM
 
       static const unsigned mMaxQSize = 3;
 
+      enum TCHMode mMode;
 
     public:
 
@@ -94,6 +101,14 @@ namespace GSM
         return FACCHType;
       }
 
+      enum TCHMode mode() const {
+        return mMode;
+      }
+
+      void setMode(enum TCHMode mode) {
+        mMode = mode;
+      }
+ 
 
       /** TCH/FACCH has a special-case writeLowSide. */
       void writeLowSide(const RxBurst& inBurst);
@@ -117,6 +132,9 @@ namespace GSM
 
       unsigned char * get_voice_frame(){
         return mPrevGoodFrame;
+      }
+      unsigned int get_voice_frame_length(){
+        return mPrevGoodFrameLength;
       }
       /**
        Receive a traffic frame.

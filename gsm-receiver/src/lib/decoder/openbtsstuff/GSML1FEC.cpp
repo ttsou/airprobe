@@ -30,6 +30,8 @@
 //#include "GSMConfig.h"
 #include "GSMTDMA.h"
 #include "GSM610Tables.h"
+#include "GSM660Tables.h"
+#include "GSM690Tables.h"
 #include "Assert.h"
 
 
@@ -78,7 +80,7 @@ using namespace GSM;
 TCHFACCHL1Decoder::TCHFACCHL1Decoder(const TDMAMapping& wMapping)
     : mTCHU(189), mTCHD(260), mC(456),
     mClass1_c(mC.head(378)), mClass1A_d(mTCHD.head(50)), mClass2_c(mC.segment(378, 78)),
-    mTCHParity(0x0b, 3, 50), mMapping(wMapping)
+    mTCHParity(0x0b, 3, 50), mMapping(wMapping), mMode(MODE_SPEECH_FR)
 {
   for (int i = 0; i < 8; i++) {
     mI[i] = SoftVector(114);
@@ -186,10 +188,6 @@ bool TCHFACCHL1Decoder::decodeTCH(bool stolen)
   // If the frame wasn't stolen, we'll update this with parity later.
   bool good = !stolen;
 
-  // Good or bad, we will be sending *something* to the speech channel.
-  // Allocate it in this scope.
-  unsigned char * newFrame = new unsigned char[33];
-
   if (!stolen) {
 
     // 3.1.2.2
@@ -226,29 +224,47 @@ bool TCHFACCHL1Decoder::decodeTCH(bool stolen)
              << " calcParity=" << calcParity << " tail=" << tail);
     good = (sentParity == calcParity) && (tail == 0);
     if (good) {
-      // Undo Um's importance-sorted bit ordering.
-      // See GSM 05.03 3.1 and Tablee 2.
-      BitVector payload = mVFrame.payload();
-      mTCHD.unmap(g610BitOrder, 260, payload);
-      mVFrame.pack(newFrame);
-      // Save a copy for bad frame processing.
-      memcpy(mPrevGoodFrame, newFrame, 33);
+      if (mMode == MODE_SPEECH_FR) {
+        // Undo Um's importance-sorted bit ordering.
+        // See GSM 05.03 3.1 and Tablee 2.
+        BitVector payload = mVFrame.payload();
+        mTCHD.unmap(g610BitOrder, 260, payload);
+        mVFrame.pack(mPrevGoodFrame);
+        mPrevGoodFrameLength = 33;
+      } else if (mMode == MODE_SPEECH_EFR) {
+        BitVector payload = mVFrameAMR.payload();
+        BitVector TCHW(260), EFRBits(244);
+
+        // Undo Um's EFR bit ordering.
+        mTCHD.unmap(g660BitOrder, 260, TCHW);
+
+        // Remove repeating bits and CRC to get raw EFR frame (244 bits)
+        for (unsigned k=0; k<71; k++)
+          EFRBits[k] = TCHW[k] & 1;
+
+        for (unsigned k=73; k<123; k++)
+          EFRBits[k-2] = TCHW[k] & 1;
+
+        for (unsigned k=125; k<178; k++)
+          EFRBits[k-4] = TCHW[k] & 1;
+
+        for (unsigned k=180; k<230; k++)
+          EFRBits[k-6] = TCHW[k] & 1;
+
+        for (unsigned k=232; k<252; k++)
+          EFRBits[k-8] = TCHW[k] & 1;
+
+        // Map bits as AMR 12.2k
+        EFRBits.map(g690_12_2_BitOrder, 244, payload);
+
+        // Put the whole frame (hdr + payload)
+        mVFrameAMR.pack(mPrevGoodFrame);
+        mPrevGoodFrameLength = 32;
+      }
+
       return true;
     }
   }
-
-  if (!good) {
-    // TODO -- Bad frame processing, GSM 06.11.
-    // For now, just repeat the last good frame.
-    // TODO -- Need to apply attenuation and randomization of grid positions.
-    memcpy(newFrame, mPrevGoodFrame, 33);
-    //d_gsm_file.write((char *)newFrame, 33);
-  }
-
-  
-  // Good or bad, we must feed the speech channel.
-// mSpeechQ.write(newFrame);
-
 
   return false;
 }
