@@ -6,7 +6,7 @@
 extern "C" {
 #endif
 
-#include <linux/if_ether.h>
+//#include <linux/if_ether.h>
 #include "interleave.h"
 
 enum BURST_TYPE {
@@ -51,9 +51,6 @@ typedef struct
 	INTERLEAVE_CTX interleave_facch_f2_ctx;
 
 	struct gs_ts_ctx ts_ctx[8];
-
-	int tun_fd;
-	unsigned char ether_addr[ETH_ALEN];
 
 	int gsmtap_fd;
 } GS_CTX;
