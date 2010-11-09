@@ -6,7 +6,6 @@
 extern "C" {
 #endif
 
-#include <linux/if_ether.h>
 #include "interleave.h"
 
 struct gs_ts_ctx {
@@ -25,9 +24,6 @@ typedef struct
 	INTERLEAVE_CTX interleave_ctx;
 
 	struct gs_ts_ctx ts_ctx[8];
-
-	int tun_fd;
-	unsigned char ether_addr[ETH_ALEN];
 
 	int pcap_fd;
 	int burst_pcap_fd;

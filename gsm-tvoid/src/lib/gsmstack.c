@@ -72,10 +72,6 @@ GS_new(GS_CTX *ctx)
 	ctx->fn = -1;
 	ctx->bsic = -1;
 
-	ctx->tun_fd = mktun("gsm", ctx->ether_addr);
-	if (ctx->tun_fd < 0)
-		fprintf(stderr, "cannot open 'gsm' tun device, did you create it?\n");
-
 	ctx->pcap_fd = open_pcap_file("tvoid.pcap");
 	if (ctx->pcap_fd < 0)
 		fprintf(stderr, "cannot open PCAP file: %s\n", strerror(errno));
@@ -165,7 +161,6 @@ GS_process(GS_CTX *ctx, int ts, int type, const unsigned char *src)
 		//DEBUGF("OK TS %d, len %d\n", ts, len);
 
 		out_gsmdecode(0, 0, ts, ctx->fn - 4, data, len);
-		write_interface(ctx->tun_fd, data+1, len-1, ctx->ether_addr);
 		write_pcap_packet(ctx->pcap_fd, 0 /* arfcn */, ts, ctx->fn,
 				  0, NORMAL, data, len);
 #if 0

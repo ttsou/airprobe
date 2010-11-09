@@ -51,7 +51,6 @@ _gsm_la_SOURCES = 		\
 	mm_f.cc				\
 	gsm_burst_cf.cc		\
 	gsm_burst_sink_c.cc	\
-	tun.c			\
 	out_pcap.c
 	
 
@@ -83,7 +82,6 @@ grinclude_HEADERS =		\
 	gsm_burst_cf.h		\
 	gsm_burst_sink_c.h	\
 	gsm_constants.h		\
-	tun.h			\
 	out_pcap.h		\
 	gsmtap.h
 
