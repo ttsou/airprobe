@@ -111,25 +111,30 @@ class gsm_receiver_first_blood(gr.top_block):
         return interpolator
     
     def _set_receiver(self):
-        receiver = gsm.receiver_cf(self.tuner_callback, self.synchronizer_callback, self.options.osr, "0000000000000000")
+        receiver = gsm.receiver_cf(self.tuner_callback, self.synchronizer_callback, self.options.osr, self.options.key.replace(' ', '').lower(), self.options.configuration.upper())
         return receiver
     
     def _process_options(self):
         parser = OptionParser(option_class=eng_option)
         parser.add_option("-d", "--decim", type="int", default=112,
                                     help="Set USRP decimation rate to DECIM [default=%default]")
+        parser.add_option("-r", "--osr", type="int", default=4,
+                          help="Oversampling ratio [default=%default]")
         parser.add_option("-I", "--inputfile", type="string", default="cfile",
                                     help="Input filename")
         parser.add_option("-O", "--outputfile", type="string", default="cfile2.out",
                                     help="Output filename")
         parser.add_option("-R", "--rx-subdev-spec", type="subdev", default=None,
                                     help="Select USRP Rx side A or B (default=first one with a daughterboard)")
-        parser.add_option("-r", "--osr", type="int", default=4,
-                          help="Oversampling ratio [default=%default]")
         parser.add_option("-f", "--freq", type="eng_float", default="950.4M",
                                     help="set frequency to FREQ", metavar="FREQ")
         parser.add_option("-g", "--gain", type="eng_float", default=None,
                                     help="Set gain in dB (default is midpoint)")
+        parser.add_option("-k", "--key", type="string", default="AD 6A 3E C2 B4 42 E4 00",
+                          help="KC session key")
+        parser.add_option("-c", "--configuration", type="string", default="",
+                          help="Decoder configuration")
+
         (options, args) = parser.parse_args ()
         return (options, args)
     
@@ -147,5 +152,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
