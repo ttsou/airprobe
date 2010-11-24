@@ -15,13 +15,6 @@ for extdir in ['../../debug/src/lib','../../debug/src/lib/.libs','../lib','../li
         sys.path.append(extdir)
 import gsm                        
 
-def pick_subdevice(u):
-    if u.db[0][0].dbid() >= 0:
-        return (0, 0)
-    if u.db[1][0].dbid() >= 0:
-        return (1, 0)
-    return (0, 0)
-
 class tuner(gr.feval_dd):
     def __init__(self, top_block):
         gr.feval_dd.__init__(self)
@@ -44,6 +37,7 @@ class gsm_receiver_first_blood(gr.top_block):
         gr.top_block.__init__(self)
         (options, args) = self._process_options()
         self.tuner_callback = tuner(self)
+        self.synchronizer_callback = synchronizer(self)
         self.options    = options
         self.args       = args
         self._set_rates()
@@ -68,7 +62,7 @@ class gsm_receiver_first_blood(gr.top_block):
         self.usrp = usrp.source_c(decim_rate=options.decim, fusb_block_size=fusb_block_size, fusb_nblocks=fusb_nblocks)
         
         if options.rx_subdev_spec is None:
-            options.rx_subdev_spec = pick_subdevice(self.usrp)
+            options.rx_subdev_spec = usrp.pick_rx_subdevice(self.usrp)
         
         self.usrp.set_mux(usrp.determine_rx_mux_value(self.usrp, options.rx_subdev_spec))
         # determine the daughterboard subdevice
