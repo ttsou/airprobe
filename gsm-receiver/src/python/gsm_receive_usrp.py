@@ -3,7 +3,7 @@
 #there are many underruns of buffer for samples from usrp's, many blocks of samples get lost and
 #receiver isn't prepared for this situation too well
 
-from gnuradio import gr, gru, blks2
+from gnuradio import gr, gru, blks2, eng_notation
 #, gsm
 from gnuradio import usrp
 from gnuradio.eng_option import eng_option
@@ -67,7 +67,9 @@ class gsm_receiver_first_blood(gr.top_block):
         self.usrp.set_mux(usrp.determine_rx_mux_value(self.usrp, options.rx_subdev_spec))
         # determine the daughterboard subdevice
         self.subdev = usrp.selected_subdev(self.usrp, options.rx_subdev_spec)
+	print "Using Rx d'board %s" % (self.subdev.side_and_name(),)
         input_rate = self.usrp.adc_freq() / self.usrp.decim_rate()
+	print "USB sample rate %s" % (eng_notation.num_to_str(input_rate))
 
         # set initial values
         if options.gain is None:
