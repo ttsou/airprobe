@@ -25,8 +25,5 @@ rm -fr config.cache autom4te*.cache
 aclocal -I config
 autoconf
 autoheader
-libtoolize --automake
-automake --add-missing
-if test ! -d debug; then
-    mkdir debug
-fi
+libtoolize --automake -c -f
+automake --add-missing -c -f -Wno-portability

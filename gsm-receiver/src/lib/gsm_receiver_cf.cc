@@ -34,7 +34,8 @@
 #include <gsm_receiver_cf.h>
 #include <viterbi_detector.h>
 #include <string.h>
-#include <sch.h>
+#include <decoder/sch.h>
+#include <decoder/a5-1-2.h>//!!
 
 
 #include "RxBurst.h"

@@ -1,6 +1,6 @@
 # -*- Makefile -*-
 #
-# Copyright 2004,2006 Free Software Foundation, Inc.
+# Copyright 2004,2006,2009 Free Software Foundation, Inc.
 # 
 # This file is part of GNU Radio
 # 
@@ -20,12 +20,18 @@
 # Boston, MA 02110-1301, USA.
 # 
 
+# these flags are used when compiling non-SWIG-wrapper files
+# when going into non-SWIG libraries
+AM_CXXFLAGS = @autoconf_default_CXXFLAGS@
+
+AM_CPPFLAGS = \
+	$(STD_DEFINES_AND_INCLUDES) \
+	$(PYTHON_CPPFLAGS) \
+	$(CPPUNIT_INCLUDES) \
+	$(GNURADIO_CORE_CPPFLAGS)
+
 #!! remove this
 TCH_DECODER_INCLUDEDIR = $(top_srcdir)/src/lib/decoder/openbtsstuff
-
-MAIN_INCLUDEDIR = $(top_srcdir)/src/lib
-DECODER_INCLUDEDIR = $(top_srcdir)/src/lib/decoder
-DECODER_LA = $(top_builddir)/src/lib/decoder/libdecoder.la
 
 STD_DEFINES_AND_INCLUDES = \
 	-I$(DECODER_INCLUDEDIR) \
@@ -33,6 +39,11 @@ STD_DEFINES_AND_INCLUDES = \
 	$(GNURADIO_CORE_CFLAGS) \
 	$(LIBOSMOCORE_CFLAGS)  \
 	-I$(TCH_DECODER_INCLUDEDIR)
+
+
+#MAIN_INCLUDEDIR = $(top_srcdir)/src/lib
+#DECODER_INCLUDEDIR = $(top_srcdir)/src/lib/decoder
+#DECODER_LA = $(top_builddir)/src/lib/decoder/libdecoder.la
 
 # includes
 grincludedir   = $(includedir)/gnuradio
@@ -47,12 +58,17 @@ swigincludedir = $(grincludedir)/swig
 grpythondir = $(pythondir)/gnuradio
 grpyexecdir = $(pyexecdir)/gnuradio
 
-# swig flags
-SWIGPYTHONFLAGS = -fvirtual -python -modern
-SWIGGRFLAGS = -I$(GNURADIO_CORE_INCLUDEDIR)/swig -I$(GNURADIO_CORE_INCLUDEDIR)
-
 # Don't assume that make predefines $(RM), because BSD make does
 # not. We define it now in configure.ac using AM_PATH_PROG, but now
 # here have to add a -f to be like GNU make.
 RM=$(RM_PROG) -f
 
+STAMPS =
+MOSTLYCLEANFILES = $(BUILT_SOURCES) $(STAMPS) *.pyc *.pyo *~ *.tmp *.loT
+
+# Don't distribute the files defined in the varialbe 'no_dist_files'
+dist-hook:
+	@for file in $(no_dist_files); do \
+		echo $(RM) $(distdir)/$$file; \
+		$(RM) $(distdir)/$$file;
+	done;

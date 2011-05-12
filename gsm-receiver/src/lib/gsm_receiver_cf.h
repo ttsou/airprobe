@@ -30,9 +30,8 @@
 #include <gsm_constants.h>
 #include <gsm_receiver_config.h>
 
-#include <gsmstack.h> //TODO: remember to remove this line in the future!
+#include <decoder/gsmstack.h> //TODO: remember to remove this line in the future!
 #include "GSML1FEC.h" //!!
-#include <a5-1-2.h>//!!
 #include <string>//!!
 #include <map>//!!
 
@@ -58,7 +57,7 @@ class gsm_receiver_cf : public gr_block
   private:
     std::map<char,int> d_hex_to_int;
     FILE * d_speech_file; //!!
-    byte d_KC[8]; //!!
+    uint8_t d_KC[8]; //!!
     GSM::TCHFACCHL1Decoder *d_tch_decoder[N_TCH_DECODER]; //!!
     bool d_trace_sch;
 

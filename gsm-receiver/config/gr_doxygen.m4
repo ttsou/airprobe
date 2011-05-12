@@ -20,10 +20,10 @@ dnl Boston, MA 02110-1301, USA.
 dnl 
 
 AC_DEFUN([GR_CHECK_DOXYGEN],[
-  AC_ARG_ENABLE(doxygen, [  --enable-doxygen        enable documentation generation with doxygen (no)])
-  AC_ARG_ENABLE(dot, [  --enable-dot            use 'dot' to generate graphs in doxygen (auto)])
-  AC_ARG_ENABLE(html-docs, [  --enable-html-docs      enable HTML generation with doxygen (yes)], [], [ enable_html_docs=yes])
-  AC_ARG_ENABLE(latex-docs, [  --enable-latex-docs     enable LaTeX doc generation with doxygen (no)], [], [ enable_latex_docs=no])
+  AC_ARG_ENABLE(doxygen,
+		AC_HELP_STRING([--enable-doxygen],
+			       [enable documentation generation with doxygen (no)]))
+  AC_ARG_ENABLE(dot, AC_HELP_STRING([--enable-dot],[use 'dot' to generate graphs in doxygen (auto)]))
 
   if test "x$enable_doxygen" = xyes; then
         AC_PATH_PROG(DOXYGEN, doxygen, , $PATH)
@@ -53,7 +53,8 @@ AC_DEFUN([GR_CHECK_DOXYGEN],[
         enable_dot=yes
   fi
   AC_SUBST(enable_dot)
-  AC_SUBST(enable_html_docs)
-  AC_SUBST(enable_latex_docs)
+  AC_SUBST(enable_xml_docs, YES)
+  AC_SUBST(enable_html_docs, YES)
+  AC_SUBST(enable_latex_docs, NO)
   AC_SUBST(generate_docs)
 ])

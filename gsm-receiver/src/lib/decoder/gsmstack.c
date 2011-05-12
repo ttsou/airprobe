@@ -18,9 +18,9 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include <osmocore/msgb.h>
-#include <osmocore/gsmtap.h>
-#include <osmocore/gsmtap_util.h>
+#include <osmocom/core/msgb.h>
+#include <osmocom/core/gsmtap.h>
+#include <osmocom/core/gsmtap_util.h>
 
 static const int USEFUL_BITS = 142;
 

@@ -110,6 +110,8 @@
  *
  */
 
+#ifndef A5_1_2_H
+#define A5_1_2_H
 
 #include <stdio.h>
 
@@ -451,3 +453,4 @@ void test() {
   }
 }
 
+#endif /* A5_1_2_H */

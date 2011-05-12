@@ -21,8 +21,6 @@
 
 include $(top_srcdir)/Makefile.common
 
-AM_CPPFLAGS = $(STD_DEFINES_AND_INCLUDES)
-
 noinst_LTLIBRARIES = libopenbtsdecoder.la
 
 libopenbtsdecoder_la_SOURCES = \

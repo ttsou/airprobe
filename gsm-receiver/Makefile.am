@@ -1,13 +1,14 @@
+ACLOCAL_AMFLAGS = -I config
+
 include $(top_srcdir)/Makefile.common
 
-SUBDIRS = src config
-DIST_SUBDIRS = src config
+SUBDIRS = config src
+DIST_SUBDIRS = config src
 
 EXTRA_DIST = \
-	configure		\
-	gsm-receiver.pc.in	\
+	bootstrap configure config.h.in \
+	Makefile.swig Makefile.swig.gen.t \
 	config.h.in
-#	bootstrap		
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = gsm-receiver.pc
