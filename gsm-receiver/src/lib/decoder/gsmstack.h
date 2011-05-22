@@ -39,6 +39,8 @@ struct gs_ts_ctx {
 	enum TIMESLOT_TYPE type;
 };
 
+struct gsmtap_inst;
+
 typedef struct
 {
 	int flags;
@@ -52,7 +54,7 @@ typedef struct
 
 	struct gs_ts_ctx ts_ctx[8];
 
-	int gsmtap_fd;
+	struct gsmtap_inst *gsmtap_inst;
 } GS_CTX;
 
 int GS_new(GS_CTX *ctx);

@@ -27,7 +27,7 @@ m4_include([config/gr_standalone.m4])
 GR_STANDALONE
 
 dnl Check for libosmocore (gsmtap support)
-PKG_CHECK_MODULES(LIBOSMOCORE, libosmocore >= 0.1.13)
+PKG_CHECK_MODULES(LIBOSMOCORE, libosmocore >= 0.3.1)
 
 AC_CONFIG_FILES([\
 	  Makefile \

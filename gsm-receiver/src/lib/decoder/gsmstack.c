@@ -196,12 +196,11 @@ get_chan_type(enum TIMESLOT_TYPE type, int fn, uint8_t *ss)
 int
 GS_new(GS_CTX *ctx)
 {
-	int rc;
 	struct sockaddr_in sin;
 
 	sin.sin_family = AF_INET;
 	sin.sin_port = htons(GSMTAP_UDP_PORT);
-	inet_aton("224.0.0.1", &sin.sin_addr);
+	inet_aton("127.0.0.1", &sin.sin_addr);
 
 	memset(ctx, 0, sizeof *ctx);
 	interleave_init(&ctx->interleave_ctx, 456, 114);
@@ -209,20 +208,14 @@ GS_new(GS_CTX *ctx)
 	interleave_init_facch_f(&ctx->interleave_facch_f2_ctx, 456, 114, 4);
 	ctx->fn = -1;
 	ctx->bsic = -1;
-	ctx->gsmtap_fd = -1;
 
-	rc = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	if (rc < 0) {
-		perror("creating UDP socket\n");
-		return rc;
+	ctx->gsmtap_inst = gsmtap_source_init("127.0.0.1", GSMTAP_UDP_PORT, 0);
+	if (!ctx->gsmtap_inst) {
+		perror("creating gsmtap socket\n");
+		return -EIO;
 	}
-	ctx->gsmtap_fd = rc;
-	rc = connect(rc, (struct sockaddr *)&sin, sizeof(sin));
-	if (rc < 0) {
-		perror("connectiong UDP socket");
-		close(ctx->gsmtap_fd);
-		return rc;
-	}
+	/* Add a local sink to the existing GSMTAP source */
+	gsmtap_source_add_sink(ctx->gsmtap_inst);
 
 	return 0;
 }
@@ -270,7 +263,7 @@ GS_process(GS_CTX *ctx, int ts, int type, const unsigned char *src, int fn, int 
 
 		out_gsmdecode(0, 0, ts, ctx->fn, data, len);
 
-		if (ctx->gsmtap_fd >= 0) {
+		if (ctx->gsmtap_inst) {
 			struct msgb *msg;
 			uint8_t chan_type = GSMTAP_CHANNEL_TCH_F;
 			uint8_t ss = 0;
@@ -278,7 +271,7 @@ GS_process(GS_CTX *ctx, int ts, int type, const unsigned char *src, int fn, int 
 
 			msg = gsmtap_makemsg(0, ts, chan_type, ss, ctx->fn, 0, 0, data, len);
 			if (msg)
-				write(ctx->gsmtap_fd, msg->data, msg->len);
+				gsmtap_sendmsg(ctx->gsmtap_inst, msg);
 		}
 		return 0;
 	}
@@ -312,7 +305,7 @@ GS_process(GS_CTX *ctx, int ts, int type, const unsigned char *src, int fn, int 
 
 		out_gsmdecode(0, 0, ts, ctx->fn, data, len);
 
-		if (ctx->gsmtap_fd >= 0) {
+		if (ctx->gsmtap_inst) {
 			/* Dieter: set channel type according to configuration */
 			struct msgb *msg;
 			uint8_t chan_type = GSMTAP_CHANNEL_BCCH;
@@ -325,8 +318,7 @@ GS_process(GS_CTX *ctx, int ts, int type, const unsigned char *src, int fn, int 
 			msg = gsmtap_makemsg(0, ts, chan_type, ss,
 					     ctx->fn, 0, 0, data, len);
 			if (msg)
-				write(ctx->gsmtap_fd, msg->data,
-				      msg->len);
+				gsmtap_sendmsg(ctx->gsmtap_inst, msg);
 		}
 
 #if 0
