@@ -262,7 +262,7 @@ void gsm_receiver_cf::configure_receiver()
 
   /* configure TS1...TS7 */
 
-  for (ts = TIMESLOT1; ts < TIMESLOT7; ts++) {
+  for (ts = TIMESLOT1; ts <= TIMESLOT7; ts++) {
     if (d_gs_ctx.ts_ctx[ts].type == TST_TCHF) {
       d_channel_conf.set_multiframe_type(ts, multiframe_26);
       d_channel_conf.set_burst_types(ts, TRAFFIC_CHANNEL_F, sizeof(TRAFFIC_CHANNEL_F) / sizeof(unsigned), dummy_or_normal);
