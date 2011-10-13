@@ -12,6 +12,7 @@ Usage:
      0B : TS0  "FCCH + SCH + BCCH + CCCH"
      1S : TS1  SDCCH/8
      2T : TS2  Traffic
+     7P : TS7  Packet Data Channel
 
 * Specifying a key will decrypt all traffic burst (SDCCH, SACCH, TCH)
   using A5/1 before decoding
