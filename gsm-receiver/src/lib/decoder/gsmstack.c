@@ -183,6 +183,9 @@ get_chan_type(enum TIMESLOT_TYPE type, int fn, uint8_t *ss)
           *ss = ((fn % 102) > 51) ? 7 :  3;
       }
   }
+  else if (type == TST_PDCH) {
+    chan_type = GSMTAP_CHANNEL_PACCH;
+  }
   else if (type == TST_TCHF) {
     chan_type = GSMTAP_CHANNEL_TCH_F | GSMTAP_CHANNEL_ACCH;
   }
@@ -194,7 +197,7 @@ get_chan_type(enum TIMESLOT_TYPE type, int fn, uint8_t *ss)
  * Initialize a new GSMSTACK context.
  */
 int
-GS_new(GS_CTX *ctx)
+GS_new(GS_CTX *ctx, int init_gprs)
 {
 	struct sockaddr_in sin;
 
@@ -216,6 +219,15 @@ GS_new(GS_CTX *ctx)
 	}
 	/* Add a local sink to the existing GSMTAP source */
 	gsmtap_source_add_sink(ctx->gsmtap_inst);
+
+	if (init_gprs) {
+		const char filename[] = "gprs.bursts";
+		ctx->gprsdecode_file = fopen(filename, "w");
+		ctx->gprsdecode_burst = malloc(sizeof(struct l1ctl_burst_ind));
+	} else {
+		ctx->gprsdecode_file = NULL;
+		ctx->gprsdecode_burst = NULL;
+	}
 
 	return 0;
 }

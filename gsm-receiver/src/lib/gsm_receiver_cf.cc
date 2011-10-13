@@ -36,6 +36,7 @@
 #include <string.h>
 #include <decoder/sch.h>
 #include <decoder/a5-1-2.h>//!!
+#include <arpa/inet.h>
 
 
 #include "RxBurst.h"
@@ -85,6 +86,39 @@ void decrypt(const unsigned char * burst_binary, byte * KC, unsigned char * decr
   for (int i = 145; i < 148; i++) {
     decrypted_data[i] = burst_binary[i];
   }
+}
+
+
+//TODO: this shouldn't be here */
+
+
+
+void dump_bits_gprsdecode(GS_CTX *ctx, char * decrypted_data, burst_counter burst_nr)
+{
+  ctx->gprsdecode_burst->frame_nr = htonl(burst_nr.get_frame_nr());
+  ctx->gprsdecode_burst->band_arfcn = 0;//htons(617 | ARFCN_UPLINK);
+  ctx->gprsdecode_burst->chan_nr = RSL_CHAN_Bm_ACCHs | burst_nr.get_timeslot_nr();
+  ctx->gprsdecode_burst->flags = 0;
+  ctx->gprsdecode_burst->rx_level = 0;
+  ctx->gprsdecode_burst->snr = 0;
+
+  static BitVector tmpbits = BitVector(116);
+  BitVector inBurst = BitVector(NULL, decrypted_data, decrypted_data+148);
+  inBurst.segment(3, 57).copyToSegment(tmpbits,0);
+  inBurst.segment(88, 57).copyToSegment(tmpbits,57);
+  tmpbits[114] = inBurst.bit(60);
+  tmpbits[115] = inBurst.bit(87);
+//  LOG(NOTICE) << "PDTCH burst " << inBurst.time() << " " <<  tmpbits;
+  tmpbits.pack(ctx->gprsdecode_burst->bits);
+  fwrite(ctx->gprsdecode_burst, sizeof(*ctx->gprsdecode_burst), 1, ctx->gprsdecode_file);
+
+  /* Plain bits */
+  printf("P0 %d %d: ", burst_nr.get_frame_nr(), burst_nr.get_frame_nr_mod());
+  for (int i = 0; i < 57; i++)
+    printf("%d", decrypted_data[i+3]);
+  for (int i = 0; i < 57; i++)
+    printf("%d", decrypted_data[i+88]);
+  printf("\n");
 }
 
 //TODO: this shouldn't be here */
@@ -154,6 +188,8 @@ void gsm_receiver_cf::read_configuration(std::string configuration)
     d_gs_ctx.ts_ctx[ts].type = TST_FCCH_SCH_BCCH_CCCH;
   else if((char)configuration[1] == 'S')
     d_gs_ctx.ts_ctx[ts].type = TST_SDCCH8;
+  else if((char)configuration[1] == 'P')
+    d_gs_ctx.ts_ctx[ts].type = TST_PDCH;
   else if((char)configuration[1] == 'T') {
     d_gs_ctx.ts_ctx[ts].type = TST_TCHF;
     if((char)configuration[2] == 'E')
@@ -230,6 +266,18 @@ void gsm_receiver_cf::process_normal_burst(burst_counter burst_nr, const unsigne
     GS_process(&d_gs_ctx, TIMESLOT0 + ts, NORMAL, &decrypted_data[3], burst_nr.get_frame_nr(), first_burst);
   }
 
+  /* handle PDCH timeslots */
+  if (d_gs_ctx.ts_ctx[ts].type == TST_PDCH) {
+    // No encryption in GPRS on Um level
+    #if 1 /* dump cipher, plain and keystream bits */
+    dump_bits_gprsdecode(&d_gs_ctx, (char*)burst_binary, burst_nr);
+    #endif
+    // TODO: Implement further processing instead of relying on 'gprsdecode'
+#if 0
+    GS_process(&d_gs_ctx, TIMESLOT0 + ts, NORMAL, &decrypted_data[3], burst_nr.get_frame_nr(), first_burst);
+#endif
+  }
+
   /* TS0 is special (TODO) */
   if (ts == 0) {
     memcpy(decrypted_data, burst_binary, sizeof(decrypted_data));
@@ -278,6 +326,10 @@ void gsm_receiver_cf::configure_receiver()
     else if (d_gs_ctx.ts_ctx[ts].type == TST_SDCCH8) {
       d_channel_conf.set_multiframe_type(ts, multiframe_51);
       d_channel_conf.set_burst_types(ts, SDCCH_SACCH_8_FRAMES, SDCCH_SACCH_8_FIRST, sizeof(SDCCH_SACCH_8_FRAMES) / sizeof(unsigned), dummy_or_normal);  
+    }
+    else if (d_gs_ctx.ts_ctx[ts].type == TST_PDCH) {
+      d_channel_conf.set_multiframe_type(ts, multiframe_52);
+      d_channel_conf.set_burst_types(ts, PDTCH_FRAMES, PDTCH_FIRST, sizeof(PDTCH_FRAMES) / sizeof(unsigned), dummy_or_normal);  
     }
   }
 }
@@ -354,7 +406,7 @@ gsm_receiver_cf::gsm_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synchronizer, 
   read_key(key); //!!
 
   /* Initialize GSM Stack, clear d_gs_ctx */
-  GS_new(&d_gs_ctx); //TODO: remove it! it's not a right place for a decoder
+  GS_new(&d_gs_ctx, 1); //TODO: remove it! it's not a right place for a decoder
 
   /* configuration is stored in d_gs_ctx */
   read_configuration(configuration);

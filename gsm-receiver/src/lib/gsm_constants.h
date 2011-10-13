@@ -37,7 +37,7 @@
 #define MAX_SCH_ERRORS    5  //maximum number of subsequent sch errors after which gsm receiver goes to find_next_fcch state
 
 typedef enum {empty, fcch_burst, sch_burst, normal_burst, rach_burst, dummy, dummy_or_normal} burst_type;
-typedef enum {unknown, multiframe_26, multiframe_51} multiframe_type;
+typedef enum {unknown, multiframe_26, multiframe_51, multiframe_52} multiframe_type;
 
 static const unsigned char SYNC_BITS[] = {
   1, 0, 1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 0,
@@ -61,6 +61,10 @@ const unsigned SDCCH_SACCH_8_FIRST[] =  {1, 0, 0, 0, 1, 0, 0, 0, 1, 0,  0,  0,  
 /* Dieter: 1 if burst is an SDCCH/4 or SACCH/4 frame */
 /*                                       0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50 */
 const unsigned SDCCH_SACCH_4_MAP[51] =  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  1,  1,  1,  1,  0,  0,  1,  1,  1,  1,  1,  1,  1,  1,  0,  0,  1,  1,  1,  1,  1,  1,  1,  1,  0};
+
+const unsigned PDTCH_FRAMES[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50};
+const unsigned PDTCH_FIRST[]  = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0,  0,  0,  1,  0,  0,  0,  1,  0,  0,  0,  1,  0,  0,  0,  1,  0,  0,  0,  1,  0,  0,  0,  1,  0,  0,  0,  1,  0,  0,  0,  1,  0,  0,  0,  1,  0,  0,  0};
+
 
 #define TSC0  0
 #define TSC1  1

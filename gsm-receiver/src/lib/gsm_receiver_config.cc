@@ -75,6 +75,9 @@ burst_type channel_configuration::get_burst_type(burst_counter burst_nr)
     case multiframe_51:
       nr = burst_nr.get_t3();
       break;
+    case multiframe_52:
+      nr = burst_nr.get_frame_nr()%52;
+      break;
     default:
       nr = 0;
       break;
@@ -95,6 +98,9 @@ bool channel_configuration::get_first_burst(burst_counter burst_nr)
       break;
     case multiframe_51:
       nr = burst_nr.get_t3();
+      break;
+    case multiframe_52:
+      nr = burst_nr.get_frame_nr()%52;
       break;
     default:
       nr = 0;
