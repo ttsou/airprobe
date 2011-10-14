@@ -93,10 +93,11 @@ void decrypt(const unsigned char * burst_binary, byte * KC, unsigned char * decr
 
 
 
-void dump_bits_gprsdecode(GS_CTX *ctx, char * decrypted_data, burst_counter burst_nr)
+void dump_bits_gprsdecode(GS_CTX *ctx, char * decrypted_data, burst_counter burst_nr,
+                          bool is_uplink)
 {
   ctx->gprsdecode_burst->frame_nr = htonl(burst_nr.get_frame_nr());
-  ctx->gprsdecode_burst->band_arfcn = 0;//htons(617 | ARFCN_UPLINK);
+  ctx->gprsdecode_burst->band_arfcn = htons(is_uplink?ARFCN_UPLINK:0);
   ctx->gprsdecode_burst->chan_nr = RSL_CHAN_Bm_ACCHs | burst_nr.get_timeslot_nr();
   ctx->gprsdecode_burst->flags = 0;
   ctx->gprsdecode_burst->rx_level = 0;
@@ -113,11 +114,14 @@ void dump_bits_gprsdecode(GS_CTX *ctx, char * decrypted_data, burst_counter burs
   fwrite(ctx->gprsdecode_burst, sizeof(*ctx->gprsdecode_burst), 1, ctx->gprsdecode_file);
 
   /* Plain bits */
-  printf("P0 %d %d: ", burst_nr.get_frame_nr(), burst_nr.get_frame_nr_mod());
-  for (int i = 0; i < 57; i++)
+  printf("%s P0 %d %d: ", is_uplink?"UL":"DL", burst_nr.get_frame_nr(), burst_nr.get_frame_nr_mod());
+  for (int i = 0; i < 144; i++)
     printf("%d", decrypted_data[i+3]);
-  for (int i = 0; i < 57; i++)
-    printf("%d", decrypted_data[i+88]);
+//  for (int i = 0; i < 57; i++)
+//    printf("%d", decrypted_data[i+3]);
+//  for (int i = 0; i < 57; i++)
+//    printf("%d", decrypted_data[i+88]);
+  printf(" %d%d", decrypted_data[60], decrypted_data[87]);
   printf("\n");
 }
 
@@ -127,7 +131,7 @@ void dump_bits(const unsigned char * burst_binary, unsigned char * decrypted_dat
   int i;
 
   /* Cipher bits */
-  printf("C%d %d %d: ", first_burst, burst_nr.get_frame_nr(), burst_nr.get_frame_nr_mod());
+  printf("DL C%d %d %d: ", first_burst, burst_nr.get_frame_nr(), burst_nr.get_frame_nr_mod());
   for (int i = 0; i < 57; i++)
     printf("%d", burst_binary[i+3]);
   for (int i = 0; i < 57; i++)
@@ -135,7 +139,7 @@ void dump_bits(const unsigned char * burst_binary, unsigned char * decrypted_dat
   printf("\n");
 
   /* Plain bits */
-  printf("P%d %d %d: ", first_burst, burst_nr.get_frame_nr(), burst_nr.get_frame_nr_mod());
+  printf("DL P%d %d %d: ", first_burst, burst_nr.get_frame_nr(), burst_nr.get_frame_nr_mod());
   for (int i = 0; i < 57; i++)
     printf("%d", decrypted_data[i+3]);
   for (int i = 0; i < 57; i++)
@@ -143,7 +147,7 @@ void dump_bits(const unsigned char * burst_binary, unsigned char * decrypted_dat
   printf("\n");
 
   /* Keystream bits */
-  printf("S%d %d %d: ", first_burst, burst_nr.get_frame_nr(), burst_nr.get_frame_nr_mod());
+  printf("DL S%d %d %d: ", first_burst, burst_nr.get_frame_nr(), burst_nr.get_frame_nr_mod());
   for (int i = 0; i < 57; i++)
     printf("%d", burst_binary[i+3] ^ decrypted_data[i+3]);
   for (int i = 0; i < 57; i++)
@@ -204,12 +208,12 @@ void gsm_receiver_cf::read_configuration(std::string configuration)
   /* any other timeslot than 0: turn TS0 off */
   if(ts != 0) {
     d_gs_ctx.ts_ctx[0].type = TST_OFF;
-    d_trace_sch = false;
+    d_trace_sch = true;
     printf("  TS0 is turned off\n");
   }
 }
 
-void gsm_receiver_cf::process_normal_burst(burst_counter burst_nr, const unsigned char * burst_binary, bool first_burst)
+void gsm_receiver_cf::process_normal_burst(burst_counter burst_nr, const unsigned char * burst_binary, bool first_burst, bool is_uplink)
 {
   unsigned char decrypted_data[148];
   float decrypted_data_float[148];
@@ -270,7 +274,7 @@ void gsm_receiver_cf::process_normal_burst(burst_counter burst_nr, const unsigne
   if (d_gs_ctx.ts_ctx[ts].type == TST_PDCH) {
     // No encryption in GPRS on Um level
     #if 1 /* dump cipher, plain and keystream bits */
-    dump_bits_gprsdecode(&d_gs_ctx, (char*)burst_binary, burst_nr);
+    dump_bits_gprsdecode(&d_gs_ctx, (char*)burst_binary, burst_nr, is_uplink);
     #endif
     // TODO: Implement further processing instead of relying on 'gprsdecode'
 #if 0
@@ -329,7 +333,7 @@ void gsm_receiver_cf::configure_receiver()
     }
     else if (d_gs_ctx.ts_ctx[ts].type == TST_PDCH) {
       d_channel_conf.set_multiframe_type(ts, multiframe_52);
-      d_channel_conf.set_burst_types(ts, PDTCH_FRAMES, PDTCH_FIRST, sizeof(PDTCH_FRAMES) / sizeof(unsigned), dummy_or_normal);  
+      d_channel_conf.set_burst_types(ts, PDTCH_FRAMES, PDTCH_FIRST, sizeof(PDTCH_FRAMES) / sizeof(unsigned), normal_burst);  
     }
   }
 }
@@ -347,7 +351,7 @@ gsm_make_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synchronizer, int osr, std
 }
 
 static const int MIN_IN = 1; // mininum number of input streams
-static const int MAX_IN = 1; // maximum number of input streams
+static const int MAX_IN = 2; // maximum number of input streams
 static const int MIN_OUT = 0; // minimum number of output streams
 static const int MAX_OUT = 1; // maximum number of output streams
 
@@ -367,8 +371,13 @@ gsm_receiver_cf::gsm_receiver_cf(gr_feval_dd *tuner, gr_feval_dd *synchronizer, 
     d_state(first_fcch_search),
     d_burst_nr(osr),
     d_failed_sch(0),
-    d_trace_sch(true)
+    d_trace_sch(true),
+    d_is_uplink(true),
+    d_load_sync(false)
 {
+  if (d_load_sync) d_state = load_sync_state;
+  if (d_is_uplink) d_state = sync_uplink;
+
   const unsigned char amr_nb_magic[6] = { 0x23, 0x21, 0x41, 0x4d, 0x52, 0x0a };
   int i;
   gmsk_mapper(SYNC_BITS, N_SYNC_BITS, d_sch_training_seq, gr_complex(0.0, -1.0));
@@ -454,12 +463,42 @@ gsm_receiver_cf::general_work(int noutput_items,
                               gr_vector_void_star &output_items)
 {
   const gr_complex *input = (const gr_complex *) input_items[0];
+  const gr_complex *input_ul = (const gr_complex *) input_items[1];
   //float *out = (float *) output_items[0];
   int produced_out = 0;  //how many output elements were produced - this isn't used yet
   //probably the gsm receiver will be changed into sink so this variable won't be necessary
 
   switch (d_state) {
       //bootstrapping
+    case sync_uplink: {
+        // adjust to uplink
+        int target = 3*BURST_SIZE * d_OSR;
+
+        //consume samples until d_counter will be equal to sample_nr_near_sch_start
+        if (d_counter < target) {
+            int to_consume = 0;
+            if (d_counter + nitems_items[0] >= target) {
+                to_consume = target - d_counter;
+                DCOUT("sync_uplink finished, to_consume " << to_consume
+                      << " total " << d_counter+to_consume);
+                d_counter = 0;
+                d_state = first_fcch_search;
+            } else {
+                to_consume = nitems_items[0];
+                d_counter += to_consume;
+                DCOUT("sync_uplink working, to_consume " << to_consume
+                      << " total " << d_counter);
+            }
+            consume(1, to_consume);   //consume samples
+        } else {
+            DCOUT("sync_uplink finished, nothing to consume "
+                  << " total " << d_counter);
+            d_counter = 0;
+            d_state = first_fcch_search;
+        }
+
+        break;
+    }
     case first_fcch_search:
       if (find_fcch_burst(input, nitems_items[0])) { //find frequency correction burst in the input buffer
         set_frequency(d_freq_offset);                //if fcch search is successful set frequency offset
@@ -496,9 +535,11 @@ gsm_receiver_cf::general_work(int noutput_items,
           burst_start = get_sch_chan_imp_resp(input, &channel_imp_resp[0]); //get channel impulse response from it
           detect_burst(input, &channel_imp_resp[0], burst_start, output_binary); //detect bits using MLSE detection
           if (decode_sch(&output_binary[3], &t1, &t2, &t3, &d_ncc, &d_bcc) == 0) { //decode SCH burst
+            d_counter += burst_start;
             if(d_trace_sch)
             {
               DCOUT("sch burst_start: " << burst_start);
+              DCOUT("sch absolute position: " << d_counter);
               DCOUT("bcc: " << d_bcc << " ncc: " << d_ncc << " t1: " << t1 << " t2: " << t2 << " t3: " << t3);
             }
             d_burst_nr.set(t1, t2, t3, 0);                                  //set counter of bursts value
@@ -525,6 +566,54 @@ gsm_receiver_cf::general_work(int noutput_items,
         }
         break;
       }
+    case load_sync_state: {
+        int t1, t2, t3;
+
+        int target = 83654 + BURST_SIZE * d_OSR;
+        // adjust to uplink
+//        target += 3*BURST_SIZE * d_OSR;
+
+        //consume samples until d_counter will be equal to sample_nr_near_sch_start
+        int to_consume = 0;
+        bool result = false;
+        if (d_counter < target) {
+            if (d_counter + nitems_items[0] >= target) {
+                to_consume = target - d_counter;
+            } else {
+                to_consume = nitems_items[0];
+            }
+            result = false;
+            consume_each(to_consume);   //consume samples
+        } else {
+            to_consume = 0;
+            result = true;
+        }
+        d_counter += to_consume;
+
+        if (result) {
+        d_freq_offset = -400.727966;
+        set_frequency(d_freq_offset);              //call set_frequncy only frequency offset change is greater than some value
+
+        d_bcc = 7;
+        d_ncc = 7;
+        t1 = 597;
+        t2 = 15;
+        t3 = 21;
+        d_burst_nr.set(t1, t2, t3, 0);                                  //set counter of bursts value
+        d_burst_nr++;
+
+        if(d_trace_sch)
+        {
+           DCOUT("sch absolute position: " << d_counter);
+           DCOUT("bcc: " << d_bcc << " ncc: " << d_ncc << " t1: " << t1 << " t2: " << t2 << " t3: " << t3);
+        }
+
+
+        d_state = synchronized;
+        }
+
+        break;
+    }
       //in this state receiver is synchronized and it processes bursts according to burst type for given burst number
     case synchronized: {
         vector_complex channel_imp_resp(CHAN_IMP_RESP_LENGTH*d_OSR);
@@ -543,15 +632,17 @@ gsm_receiver_cf::general_work(int noutput_items,
               double freq_offset = compute_freq_offset(input, first_sample, last_sample);       //extract frequency offset from it
 
               d_freq_offset_vals.push_front(freq_offset);
+              DCOUT("FCCH found, frequency offset: " << d_freq_offset+freq_offset);
 
               if (d_freq_offset_vals.size() >= 10) {
                 double sum = std::accumulate(d_freq_offset_vals.begin(), d_freq_offset_vals.end(), 0);
                 double mean_offset = sum / d_freq_offset_vals.size();                           //compute mean
+                DCOUT("mean frequency offset: " << d_freq_offset+mean_offset);
                 d_freq_offset_vals.clear();
                 if (abs(mean_offset) > FCCH_MAX_FREQ_OFFSET) {
                   d_freq_offset -= mean_offset;                                                 //and adjust frequency if it have changed beyond
                   set_frequency(d_freq_offset);                                                 //some limit
-                  DCOUT("mean_offset: " << mean_offset);
+//                  DCOUT("mean frequency offset: " << mean_offset);
                   DCOUT("Adjusting frequency, new frequency offset: " << d_freq_offset << "\n");
                 }
               }
@@ -585,7 +676,11 @@ gsm_receiver_cf::general_work(int noutput_items,
           case normal_burst:                                                                  //if it's normal burst
             burst_start = get_norm_chan_imp_resp(input, &channel_imp_resp[0], d_bcc); //get channel impulse response for given training sequence number - d_bcc
             detect_burst(input, &channel_imp_resp[0], burst_start, output_binary);            //MLSE detection of bits
-            process_normal_burst(d_burst_nr, output_binary, first_burst); //TODO: this shouldn't be here - remove it when gsm receiver's interface will be ready
+            process_normal_burst(d_burst_nr, output_binary, first_burst, false); //TODO: this shouldn't be here - remove it when gsm receiver's interface will be ready
+
+            burst_start = get_norm_chan_imp_resp(input_ul, &channel_imp_resp[0], d_bcc); //get channel impulse response for given training sequence number - d_bcc
+            detect_burst(input_ul, &channel_imp_resp[0], burst_start, output_binary);            //MLSE detection of bits
+            process_normal_burst(d_burst_nr, output_binary, first_burst, true); //TODO: this shouldn't be here - remove it when gsm receiver's interface will be ready
             break;
 
           case dummy_or_normal: {
@@ -601,10 +696,11 @@ gsm_receiver_cf::general_work(int noutput_items,
                 burst_start = get_norm_chan_imp_resp(input, &channel_imp_resp[0], d_bcc);
                 detect_burst(input, &channel_imp_resp[0], burst_start, output_binary);
                 if (!output_binary[0] && !output_binary[1] && !output_binary[2]) {
-                  process_normal_burst(d_burst_nr, output_binary, first_burst); //TODO: this shouldn't be here - remove it when gsm receiver's interface will be ready
+                  process_normal_burst(d_burst_nr, output_binary, first_burst, false); //TODO: this shouldn't be here - remove it when gsm receiver's interface will be ready
                 }
               }
             }
+            break;
           case rach_burst:
             //implementation of this channel isn't possible in current gsm_receiver
             //it would take some realtime processing, counter of samples from USRP to

@@ -60,6 +60,8 @@ class gsm_receiver_cf : public gr_block
     uint8_t d_KC[8]; //!!
     GSM::TCHFACCHL1Decoder *d_tch_decoder[N_TCH_DECODER]; //!!
     bool d_trace_sch;
+    bool d_is_uplink; // Are we loading uplink?
+    bool d_load_sync;
 
     enum {
         TM_NONE,
@@ -105,6 +107,7 @@ class gsm_receiver_cf : public gr_block
     //@{
     enum states {
       first_fcch_search, next_fcch_search, sch_search, // synchronization search part
+      sync_uplink, load_sync_state, // load existing synchronization
       synchronized // receiver is synchronized in this state
     } d_state;
     //@}
@@ -241,7 +244,7 @@ class gsm_receiver_cf : public gr_block
     /**
      *
      */
-    void process_normal_burst(burst_counter burst_nr, const unsigned char * burst_binary, bool first_burst);
+    void process_normal_burst(burst_counter burst_nr, const unsigned char * burst_binary, bool first_burst, bool is_uplink);
 
     /**
      *
