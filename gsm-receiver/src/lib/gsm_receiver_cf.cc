@@ -120,8 +120,8 @@ void dump_bits_gprsdecode(GS_CTX *ctx, char * decrypted_data, burst_counter burs
   BitVector inBurst = BitVector(NULL, decrypted_data, decrypted_data+148);
   inBurst.segment(3, 57).copyToSegment(tmpbits,0);
   inBurst.segment(88, 57).copyToSegment(tmpbits,57);
-  tmpbits[114] = inBurst.bit(60);
-  tmpbits[115] = inBurst.bit(87);
+  tmpbits[114] = inBurst.bit(87);
+  tmpbits[115] = inBurst.bit(60);
 //  LOG(NOTICE) << "PDTCH burst " << inBurst.time() << " " <<  tmpbits;
   tmpbits.pack(ctx->gprsdecode_burst->bits);
   fwrite(ctx->gprsdecode_burst, sizeof(*ctx->gprsdecode_burst), 1, ctx->gprsdecode_file);
