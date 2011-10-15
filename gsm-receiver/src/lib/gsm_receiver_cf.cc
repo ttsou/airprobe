@@ -478,6 +478,7 @@ gsm_receiver_cf::general_work(int noutput_items,
 {
   const gr_complex *input = (const gr_complex *) input_items[0];
   const gr_complex *input_ul = (const gr_complex *) input_items[1];
+  const int ninput_items = d_is_uplink?min(nitems_items[0],nitems_items[1]):nitems_items[0];
   //float *out = (float *) output_items[0];
   int produced_out = 0;  //how many output elements were produced - this isn't used yet
   //probably the gsm receiver will be changed into sink so this variable won't be necessary
@@ -514,7 +515,7 @@ gsm_receiver_cf::general_work(int noutput_items,
         break;
     }
     case first_fcch_search:
-      if (find_fcch_burst(input, min(nitems_items[0],nitems_items[1]))) { //find frequency correction burst in the input buffer
+      if (find_fcch_burst(input, ninput_items)) { //find frequency correction burst in the input buffer
         set_frequency(d_freq_offset);                //if fcch search is successful set frequency offset
         //produced_out = 0;
         d_state = next_fcch_search;
@@ -526,7 +527,7 @@ gsm_receiver_cf::general_work(int noutput_items,
 
     case next_fcch_search: {                         //this state is used because it takes some time (a bunch of buffered samples)
         float prev_freq_offset = d_freq_offset;        //before previous set_frequqency cause change
-        if (find_fcch_burst(input, min(nitems_items[0],nitems_items[1]))) {
+        if (find_fcch_burst(input, ninput_items)) {
           if (abs(prev_freq_offset - d_freq_offset) > FCCH_MAX_FREQ_OFFSET) {
             set_frequency(d_freq_offset);              //call set_frequncy only frequency offset change is greater than some value
           }
@@ -545,7 +546,7 @@ gsm_receiver_cf::general_work(int noutput_items,
         int burst_start = 0;
         unsigned char output_binary[BURST_SIZE];
 
-        if (reach_sch_burst(min(nitems_items[0],nitems_items[1]))) {                              //wait for a SCH burst
+        if (reach_sch_burst(ninput_items)) {                              //wait for a SCH burst
           burst_start = get_sch_chan_imp_resp(input, &channel_imp_resp[0]); //get channel impulse response from it
           detect_burst(input, &channel_imp_resp[0], burst_start, output_binary); //detect bits using MLSE detection
           if (decode_sch(&output_binary[3], &t1, &t2, &t3, &d_ncc, &d_bcc) == 0) { //decode SCH burst
@@ -695,15 +696,17 @@ gsm_receiver_cf::general_work(int noutput_items,
               detect_burst(input, &channel_imp_resp[0], burst_start, output_binary);            //MLSE detection of bits
               process_normal_burst(d_burst_nr, output_binary, first_burst, false); //TODO: this shouldn't be here - remove it when gsm receiver's interface will be ready
 
-              double power_ul = power_complex(input_ul+burst_start, BURST_SIZE * d_OSR);
-              if (power_ul > 0 /*15000*/) {
-                  burst_start = get_norm_chan_imp_resp(input_ul, &channel_imp_resp[0], d_bcc); //get channel impulse response for given training sequence number - d_bcc
-                  if (d_gs_ctx.ts_ctx[d_burst_nr.get_timeslot_nr()].type != TST_OFF) {
-                      DCOUT(d_burst_nr.get_frame_nr()<<":"<<d_burst_nr.get_timeslot_nr()
-                          << " UL normal burst start: " << burst_start << " power: " << power_ul << ((power_ul>15000)?" *":""));
-                  }
-                  detect_burst(input_ul, &channel_imp_resp[0], burst_start, output_binary);            //MLSE detection of bits
-                  process_normal_burst(d_burst_nr, output_binary, first_burst, true); //TODO: this shouldn't be here - remove it when gsm receiver's interface will be ready
+              if (d_is_uplink) {
+                double power_ul = power_complex(input_ul+burst_start, BURST_SIZE * d_OSR);
+                if (power_ul > 0 /*15000*/) {
+                    burst_start = get_norm_chan_imp_resp(input_ul, &channel_imp_resp[0], d_bcc); //get channel impulse response for given training sequence number - d_bcc
+                    if (d_gs_ctx.ts_ctx[d_burst_nr.get_timeslot_nr()].type != TST_OFF) {
+                        DCOUT(d_burst_nr.get_frame_nr()<<":"<<d_burst_nr.get_timeslot_nr()
+                            << " UL normal burst start: " << burst_start << " power: " << power_ul << ((power_ul>15000)?" *":""));
+                    }
+                    detect_burst(input_ul, &channel_imp_resp[0], burst_start, output_binary);            //MLSE detection of bits
+                    process_normal_burst(d_burst_nr, output_binary, first_burst, true); //TODO: this shouldn't be here - remove it when gsm receiver's interface will be ready
+                }
               }
               break;
             }
