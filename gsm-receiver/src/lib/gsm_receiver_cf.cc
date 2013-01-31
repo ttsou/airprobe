@@ -522,8 +522,8 @@ gsm_receiver_cf::general_work(int noutput_items,
               } else {
                 d_failed_sch++;
                 if (d_failed_sch >= MAX_SCH_ERRORS) {
-//                   d_state = next_fcch_search;        //TODO: this isn't good, the receiver is going wild when it goes back to next_fcch_search from here
-//                   d_freq_offset_vals.clear();
+                  d_state = next_fcch_search;        //TODO: this isn't good, the receiver is going wild when it goes back to next_fcch_search from here
+                  d_freq_offset_vals.clear();
                   DCOUT("many sch decoding errors");
                 }
               }
