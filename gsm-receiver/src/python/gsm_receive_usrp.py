@@ -5,7 +5,7 @@
 
 from gnuradio import gr, gru, blks2, eng_notation
 #, gsm
-from gnuradio import usrp
+from gnuradio import uhd
 from gnuradio.eng_option import eng_option
 from optparse import OptionParser
 from os import sys
@@ -57,35 +57,15 @@ class gsm_receiver_first_blood(gr.top_block):
     
     def _set_source(self):
         options = self.options
-        fusb_block_size = gr.prefs().get_long('fusb', 'block_size', 4096)
-        fusb_nblocks    = gr.prefs().get_long('fusb', 'nblocks', 16)
-        self.usrp = usrp.source_c(decim_rate=options.decim, fusb_block_size=fusb_block_size, fusb_nblocks=fusb_nblocks)
-        
-        if options.rx_subdev_spec is None:
-            options.rx_subdev_spec = usrp.pick_rx_subdevice(self.usrp)
-        
-        self.usrp.set_mux(usrp.determine_rx_mux_value(self.usrp, options.rx_subdev_spec))
-        # determine the daughterboard subdevice
-        self.subdev = usrp.selected_subdev(self.usrp, options.rx_subdev_spec)
-	print "Using Rx d'board %s" % (self.subdev.side_and_name(),)
-        input_rate = self.usrp.adc_freq() / self.usrp.decim_rate()
-	print "USB sample rate %s" % (eng_notation.num_to_str(input_rate))
-
-        # set initial values
-        if options.gain is None:
-            # if no gain was specified, use the mid-point in dB
-            g = self.subdev.gain_range()
-            options.gain = float(g[0]+g[1])/2
-
-        r = self.usrp.tune(0, self.subdev, options.freq)
-        self.subdev.set_gain(options.gain)
+        self.usrp = uhd.usrp_source("master_clock_rate=52e6", uhd.io_type_t.COMPLEX_FLOAT32, 1)
+        self.usrp.set_center_freq(self.options.freq)
+        self.usrp.set_gain(self.options.gain)
+        self.usrp.set_samp_rate(400e3)
         return self.usrp
     
     def _set_rates(self):
         options = self.options
-        clock_rate = 64e6
-        self.clock_rate = clock_rate
-        self.input_rate = clock_rate / options.decim
+        self.input_rate = 400e3
         self.gsm_symb_rate = 1625000.0 / 6.0
         self.sps = self.input_rate / self.gsm_symb_rate / self.options.osr
 
@@ -112,7 +92,7 @@ class gsm_receiver_first_blood(gr.top_block):
     
     def _process_options(self):
         parser = OptionParser(option_class=eng_option)
-        parser.add_option("-d", "--decim", type="int", default=112,
+        parser.add_option("-d", "--decim", type="int", default=9999,
                                     help="Set USRP decimation rate to DECIM [default=%default]")
         parser.add_option("-r", "--osr", type="int", default=4,
                           help="Oversampling ratio [default=%default]")
